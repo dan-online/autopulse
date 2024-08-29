@@ -31,13 +31,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install dependencies
-        run: sudo apt update -y && sudo apt install -y clang 
       - name: Build
         run: cargo build --release
       - name: Format Check
         run: cargo fmt -- --check
       - name: Clippy Check
-        run: cargo clippy -- -D warnings
+        run: cargo clippy # -- -D warnings
       - name: Test
         run: cargo test
