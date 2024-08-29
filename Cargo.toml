@@ -1,0 +1,21 @@
+[package]
+name = "autopulse"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.9.0"
+anyhow = "1.0.86"
+config = "0.14.0"
+serde = "1.0.209"
+serde_json = "1.0.127"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+diesel = { version = "2.2.3", features = ["postgres", "r2d2", "chrono"] }
+actix-web-httpauth = "0.8.2"
+chrono = { version = "0.4.38", features = ["serde"] }
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
+tokio = "1.39.3"
+sha2 = "0.10.8"
+reqwest = { version = "0.12.7", features = ["json"] }
+url = "2.5.2"

@@ -1,0 +1,14 @@
+hostname = "localhost"
+port = 2875
+username = "test"
+password = "test"
+database_url = "postgres://test:test@localhost:5432/autopulse"
+
+check_path = true
+
+[triggers.manual]
+type = "manual"
+
+[targets]
+
+[webhooks]
