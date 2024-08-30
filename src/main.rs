@@ -4,7 +4,8 @@ use anyhow::Context;
 use diesel::r2d2;
 use diesel::PgConnection;
 use routes::status::status;
-use routes::{index::hello, trigger::trigger};
+use routes::triggers::trigger_post;
+use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
 use tracing::Level;
 use utils::settings::get_settings;
@@ -12,7 +13,7 @@ use utils::settings::get_settings;
 pub mod routes {
     pub mod index;
     pub mod status;
-    pub mod trigger;
+    pub mod triggers;
 }
 pub mod triggers {
     pub mod manual;
@@ -22,6 +23,7 @@ pub mod triggers {
 pub mod utils {
     pub mod check_auth;
     pub mod checksum;
+    pub mod join_path;
     pub mod settings;
 }
 pub mod db {
@@ -59,7 +61,8 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(Logger::default())
             .service(hello)
-            .service(trigger)
+            .service(trigger_get)
+            .service(trigger_post)
             .service(status)
             .app_data(basic::Config::default().realm("Restricted area"))
             .app_data(Data::new(settings.clone()))

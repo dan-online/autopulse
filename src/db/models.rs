@@ -52,3 +52,13 @@ pub struct NewScanEvent {
     pub file_path: String,
     pub file_hash: Option<String>,
 }
+
+impl Default for NewScanEvent {
+    fn default() -> Self {
+        NewScanEvent {
+            event_source: "unknown".to_string(),
+            file_path: "unknown".to_string(),
+            file_hash: None,
+        }
+    }
+}

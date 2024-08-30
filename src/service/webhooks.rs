@@ -2,15 +2,15 @@ use crate::utils::settings::Settings;
 
 #[derive(Clone)]
 pub struct WebhookManager {
-    settings: Settings,
+    _settings: Settings,
 }
 
 impl WebhookManager {
     pub fn new(settings: Settings) -> Self {
-        Self { settings }
+        Self {
+            _settings: settings,
+        }
     }
 
-    pub fn send(&self, new_ev: &crate::db::models::ScanEvent) {
-        println!("Sending webhooks");
-    }
+    pub fn send(&self, _new_ev: &crate::db::models::ScanEvent) {}
 }

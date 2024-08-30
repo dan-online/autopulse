@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::utils::{join_path::join_path, settings::TriggerRequest};
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieFile {
@@ -31,9 +33,26 @@ pub enum RadarrRequest {
     Test,
 }
 
-impl RadarrRequest {
-    pub fn from_json(json: serde_json::Value) -> anyhow::Result<Self> {
+impl TriggerRequest for RadarrRequest {
+    fn from_json(json: serde_json::Value) -> anyhow::Result<Self> {
         serde_json::from_value(json).map_err(|e| anyhow::anyhow!(e))
+    }
+    fn paths(&self) -> Vec<String> {
+        match self {
+            RadarrRequest::MovieFileDelete { movie, movie_file } => {
+                vec![join_path(&movie.folder_path, &movie_file.relative_path)]
+            }
+            RadarrRequest::Rename { movie } => {
+                vec![movie.folder_path.clone()]
+            }
+            RadarrRequest::MovieDelete { movie } => {
+                vec![movie.folder_path.clone()]
+            }
+            RadarrRequest::Download { movie, movie_file } => {
+                vec![join_path(&movie.folder_path, &movie_file.relative_path)]
+            }
+            RadarrRequest::Test => vec![],
+        }
     }
 }
 

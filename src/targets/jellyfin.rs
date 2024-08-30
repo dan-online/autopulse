@@ -1,7 +1,7 @@
+use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-
-use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
+use tracing::debug;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct Jellyfin {
@@ -30,6 +30,19 @@ struct ScanPayload {
     updates: Vec<UpdateRequest>,
 }
 
+#[derive(Deserialize, Clone, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct Item {
+    id: String,
+    path: Option<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct ItemsResponse {
+    items: Vec<Item>,
+}
+
 impl Jellyfin {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
@@ -55,7 +68,28 @@ impl Jellyfin {
         Ok(libraries)
     }
 
-    // hm, this could maybe use the Item refresh endpoint instead..., just have to find the item first
+    // sadly this is quite memory intensive, maybe a stream option is possible
+    async fn find_item(&self, path: &str) -> anyhow::Result<Option<Item>> {
+        let client = self.get_client()?;
+        let mut url = url::Url::parse(&self.url)?.join("/Items")?;
+
+        url.query_pairs_mut().append_pair("Recursive", "true");
+        url.query_pairs_mut().append_pair("Fields", "Path");
+        url.query_pairs_mut().append_pair("EnableImages", "false");
+
+        let res = client.get(url.to_string()).send().await?;
+
+        let res = res.json::<ItemsResponse>().await?;
+
+        let item = res
+            .items
+            .iter()
+            .find(|item| item.path == Some(path.to_string()));
+
+        Ok(item.cloned())
+    }
+
+    // not as effective as refreshing the item, but good enough
     async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
@@ -83,6 +117,24 @@ impl Jellyfin {
             Err(anyhow::anyhow!("Failed to send scan: {}", body))
         }
     }
+
+    async fn refresh_item(&self, item: &Item) -> anyhow::Result<()> {
+        let client = self.get_client()?;
+        let mut url = url::Url::parse(&self.url)?.join(&format!("/Items/{}/Refresh", item.id))?;
+
+        // TODO: make this a setting the user can choose, along with the other options
+        url.query_pairs_mut()
+            .append_pair("metadataRefreshMode", "FullRefresh");
+
+        let res = client.post(url.to_string()).send().await?;
+
+        if res.status().is_success() {
+            Ok(())
+        } else {
+            let body = res.text().await?;
+            Err(anyhow::anyhow!("Failed to refresh item: {}", body))
+        }
+    }
 }
 
 impl TargetProcess for Jellyfin {
@@ -98,10 +150,17 @@ impl TargetProcess for Jellyfin {
                     .iter()
                     .any(|location| ev.file_path.starts_with(location))
             })
-            .ok_or_else(|| anyhow::anyhow!("No matching library found"))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!("File path {} not in any jellyfin library", ev.file_path)
+            })?;
 
-        // scan the file
-        self.scan(ev).await?;
+        if let Some(item) = self.find_item(&ev.file_path).await? {
+            debug!("Found item: {:?}", item);
+            self.refresh_item(&item).await?;
+        } else {
+            debug!("Item not found, scanning instead");
+            self.scan(ev).await?;
+        }
 
         Ok(())
     }

@@ -1,10 +1,12 @@
 use serde::Deserialize;
 
+use crate::utils::{join_path::join_path, settings::TriggerRequest};
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 
 pub struct EpisodeFile {
-    relative_path: String,
+    pub relative_path: String,
 }
 
 #[derive(Deserialize)]
@@ -48,9 +50,41 @@ pub enum SonarrRequest {
     Test,
 }
 
-impl SonarrRequest {
-    pub fn from_json(json: serde_json::Value) -> anyhow::Result<Self> {
+impl TriggerRequest for SonarrRequest {
+    fn from_json(json: serde_json::Value) -> anyhow::Result<Self> {
         serde_json::from_value(json).map_err(|e| anyhow::anyhow!(e))
+    }
+
+    fn paths(&self) -> Vec<String> {
+        match self {
+            SonarrRequest::EpisodeFileDelete {
+                episode_file,
+                series,
+            } => {
+                vec![join_path(&series.path, &episode_file.relative_path)]
+            }
+            SonarrRequest::Rename {
+                series,
+                renamed_episode_files,
+            } => {
+                let mut paths = vec![];
+
+                for file in renamed_episode_files {
+                    paths.push(file.previous_path.clone());
+                    paths.push(join_path(&series.path, &file.relative_path));
+                }
+
+                paths
+            }
+            SonarrRequest::SeriesDelete { series } => vec![series.path.clone()],
+            SonarrRequest::Download {
+                episode_file,
+                series,
+            } => {
+                vec![join_path(&series.path, &episode_file.relative_path)]
+            }
+            SonarrRequest::Test => vec![],
+        }
     }
 }
 

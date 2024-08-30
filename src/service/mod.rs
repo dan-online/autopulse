@@ -5,14 +5,14 @@ use std::path::PathBuf;
 use crate::{
     db::{
         models::{FoundStatus, NewScanEvent, ScanEvent},
-        schema::scan_events::{dsl::scan_events, found_status, process_status},
+        schema::scan_events::{dsl::scan_events, found_at, found_status, process_status},
     },
     service::webhooks::WebhookManager,
     utils::settings::Settings,
     DbPool,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl, SelectableHelper};
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Clone)]
 pub struct PulseService {
@@ -44,6 +44,8 @@ impl PulseRunner {
             return Ok(());
         }
 
+        let mut count = 0;
+
         let mut conn = self.get_conn();
         let mut evs = scan_events
             .filter(found_status.ne(FoundStatus::Found))
@@ -64,6 +66,7 @@ impl PulseRunner {
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
+                    count += 1;
                 }
             }
 
@@ -71,10 +74,15 @@ impl PulseRunner {
             ev.save_changes::<ScanEvent>(&mut conn)?;
         }
 
+        if count > 0 {
+            info!("Found {} new files", count);
+        }
+
         Ok(())
     }
 
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
+        let mut count = 0;
         let mut conn = self.get_conn();
         let mut evs = if self.settings.check_path {
             scan_events
@@ -95,22 +103,55 @@ impl PulseRunner {
                 ev.process_status = crate::db::models::ProcessStatus::Failed;
             } else {
                 ev.process_status = crate::db::models::ProcessStatus::Complete;
+                count += 1;
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
             ev.save_changes::<ScanEvent>(&mut conn)?;
         }
 
+        if count > 0 {
+            info!(
+                "Sent {} file{} to targets",
+                count,
+                if count > 1 { "s" } else { "" }
+            );
+        }
+
         Ok(())
     }
 
     async fn process_event(&self, ev: &mut ScanEvent) -> anyhow::Result<()> {
-        for target in self.settings.targets.values() {
-            // if target.process(&ev.file_path).await? {
-            //     return Ok(());
-            // }
-            target.process(ev).await?;
-        }
+        let futures = self
+            .settings
+            .targets
+            .values()
+            .map(|target| target.process(ev))
+            .collect::<Vec<_>>();
+
+        futures::future::try_join_all(futures).await?;
+
+        Ok(())
+    }
+
+    async fn cleanup(&self) -> anyhow::Result<()> {
+        let mut conn = self.get_conn();
+
+        // TODO: make this a setting
+        let time_before_cleanup = chrono::Utc::now().naive_utc() - chrono::Duration::days(10);
+
+        let _ = diesel::delete(
+            scan_events
+                .filter(found_status.eq(crate::db::models::FoundStatus::NotFound))
+                .filter(found_at.lt(time_before_cleanup)),
+        );
+
+        let _ = diesel::delete(
+            scan_events
+                .filter(process_status.eq(crate::db::models::ProcessStatus::Failed))
+                .filter(found_at.lt(time_before_cleanup)),
+        )
+        .execute(&mut conn)?;
 
         Ok(())
     }
@@ -118,6 +159,7 @@ impl PulseRunner {
     pub async fn run(&self) -> anyhow::Result<()> {
         self.update_found_status().await?;
         self.update_process_status().await?;
+        self.cleanup().await?;
 
         Ok(())
     }
@@ -171,14 +213,14 @@ impl PulseService {
 
         tokio::spawn(async move {
             let runner = PulseRunner::new(settings.clone(), pool.clone());
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
-                timer.tick().await;
-
                 if let Err(e) = runner.run().await {
                     error!("Error running pulse: {:?}", e);
                 }
+
+                timer.tick().await;
             }
         });
     }

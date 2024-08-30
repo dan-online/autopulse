@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::{
     db::models::ScanEvent,
     targets::{jellyfin::Jellyfin, plex::Plex},
+    triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
 };
 
 #[derive(Deserialize, Clone, Debug)]
@@ -30,6 +31,16 @@ pub struct Trigger {
     pub rewrite: Option<Rewrite>,
 }
 
+impl Trigger {
+    pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<Vec<String>> {
+        match &self.t {
+            TriggerTypes::Sonarr => Ok(SonarrRequest::from_json(body)?.paths()),
+            TriggerTypes::Radarr => Ok(RadarrRequest::from_json(body)?.paths()),
+            _ => todo!(),
+        }
+    }
+}
+
 pub enum WebhookTypes {
     Discord,
     // Slack,
@@ -49,6 +60,14 @@ pub trait TargetProcess {
         &self,
         file_path: &ScanEvent,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send;
+}
+
+pub trait TriggerRequest {
+    fn from_json(json: serde_json::Value) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+
+    fn paths(&self) -> Vec<String>;
 }
 
 #[derive(Deserialize, Clone, Debug)]
