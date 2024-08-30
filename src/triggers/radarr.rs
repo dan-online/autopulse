@@ -2,19 +2,19 @@ use serde::Deserialize;
 
 use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieFile {
     relative_path: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Movie {
     folder_path: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 pub enum RadarrRequest {
     #[serde(rename = "Download")]
@@ -85,12 +85,16 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        if let RadarrRequest::Download { movie_file, movie } = radarr_request {
+        if let RadarrRequest::Download { movie_file, movie } = radarr_request.clone() {
             assert_eq!(
                 movie_file.relative_path,
                 "Interstellar.2014.UHD.BluRay.2160p.REMUX.mkv"
             );
             assert_eq!(movie.folder_path, "/Movies/Interstellar (2014)");
+            assert_eq!(
+                radarr_request.paths(),
+                vec!["/Movies/Interstellar (2014)/Interstellar.2014.UHD.BluRay.2160p.REMUX.mkv"]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -107,8 +111,12 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        if let RadarrRequest::MovieDelete { movie } = radarr_request {
+        if let RadarrRequest::MovieDelete { movie } = radarr_request.clone() {
             assert_eq!(movie.folder_path, "/Movies/Wonder Woman 1984 (2020)");
+            assert_eq!(
+                radarr_request.paths(),
+                vec!["/Movies/Wonder Woman 1984 (2020)"]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -128,9 +136,14 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        if let RadarrRequest::MovieFileDelete { movie_file, movie } = radarr_request {
+        if let RadarrRequest::MovieFileDelete { movie_file, movie } = radarr_request.clone() {
             assert_eq!(movie_file.relative_path, "Tenet.2020.mkv");
             assert_eq!(movie.folder_path, "/Movies/Tenet (2020)");
+
+            assert_eq!(
+                radarr_request.paths(),
+                vec!["/Movies/Tenet (2020)/Tenet.2020.mkv"]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -147,8 +160,9 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        if let RadarrRequest::Rename { movie } = radarr_request {
+        if let RadarrRequest::Rename { movie } = radarr_request.clone() {
             assert_eq!(movie.folder_path, "/Movies/Deadpool (2016)");
+            assert_eq!(radarr_request.paths(), vec!["/Movies/Deadpool (2016)"]);
         } else {
             panic!("Unexpected variant");
         }

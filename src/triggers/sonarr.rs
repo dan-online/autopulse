@@ -2,27 +2,27 @@ use serde::Deserialize;
 
 use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 
 pub struct EpisodeFile {
     pub relative_path: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 
 pub struct Series {
     path: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RenamedEpisodeFile {
     previous_path: String,
     relative_path: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 pub enum SonarrRequest {
     #[serde(rename = "EpisodeFileDelete")]
@@ -120,10 +120,14 @@ mod tests {
         if let SonarrRequest::EpisodeFileDelete {
             episode_file,
             series,
-        } = sonarr_request
+        } = sonarr_request.clone()
         {
             assert_eq!(episode_file.relative_path, "Season 2/Westworld.S02E01.mkv");
             assert_eq!(series.path, "/TV/Westworld");
+            assert_eq!(
+                sonarr_request.paths(),
+                vec!["/TV/Westworld/Season 2/Westworld.S02E01.mkv"]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -157,10 +161,21 @@ mod tests {
         if let SonarrRequest::Rename {
             series,
             renamed_episode_files,
-        } = sonarr_request
+        } = sonarr_request.clone()
         {
             assert_eq!(series.path, "/TV/Westworld [imdb:tt0475784]");
             assert_eq!(renamed_episode_files.len(), 3);
+            assert_eq!(
+                sonarr_request.paths(),
+                vec![
+                    "/TV/Westworld/Season 1/Westworld.S01E01.mkv",
+                    "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E01.mkv",
+                    "/TV/Westworld/Season 1/Westworld.S01E02.mkv",
+                    "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E02.mkv",
+                    "/TV/Westworld/Season 2/Westworld.S01E02.mkv",
+                    "/TV/Westworld [imdb:tt0475784]/Season 2/Westworld.S02E01.mkv"
+                ]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -177,8 +192,9 @@ mod tests {
 
         let sonarr_request = SonarrRequest::from_json(json).unwrap();
 
-        if let SonarrRequest::SeriesDelete { series } = sonarr_request {
+        if let SonarrRequest::SeriesDelete { series } = sonarr_request.clone() {
             assert_eq!(series.path, "/TV/Westworld");
+            assert_eq!(sonarr_request.paths(), vec!["/TV/Westworld"]);
         } else {
             panic!("Unexpected variant");
         }
@@ -201,10 +217,14 @@ mod tests {
         if let SonarrRequest::Download {
             episode_file,
             series,
-        } = sonarr_request
+        } = sonarr_request.clone()
         {
             assert_eq!(episode_file.relative_path, "Season 1/Westworld.S01E01.mkv");
             assert_eq!(series.path, "/TV/Westworld");
+            assert_eq!(
+                sonarr_request.paths(),
+                vec!["/TV/Westworld/Season 1/Westworld.S01E01.mkv"]
+            );
         } else {
             panic!("Unexpected variant");
         }
