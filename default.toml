@@ -1,7 +1,7 @@
 hostname = "0.0.0.0"
 port = 2875
-username = "test"
-password = "test"
+username = "admin"
+password = "password"
 database_url = "postgres://test:test@localhost:5432/autopulse"
 
 check_path = true

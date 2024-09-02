@@ -24,7 +24,7 @@ jobs:
       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push (latest)
         uses: docker/build-push-action@v6
         with:
           # push: true
@@ -34,7 +34,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push
+      - name: Build and push (latest-ubuntu)
         uses: docker/build-push-action@v6
         with:
           # push: true
