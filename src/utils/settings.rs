@@ -5,8 +5,9 @@ use serde::Deserialize;
 
 use crate::{
     db::models::ScanEvent,
-    targets::{jellyfin::Jellyfin, plex::Plex},
-    triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
+    service::targets::{jellyfin::Jellyfin, plex::Plex},
+    service::triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
+    service::webhooks::discord::DiscordWebhook,
 };
 
 #[derive(Deserialize, Clone, Debug)]
@@ -41,18 +42,10 @@ impl Trigger {
     }
 }
 
-pub enum WebhookTypes {
-    Discord,
-    // Slack,
-    // Telegram,
-    // Manual,
-}
-
 #[derive(Deserialize, Clone, Debug)]
-pub struct Webhook {
-    pub url: String,
-    #[serde(rename = "type")]
-    pub t: String,
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Webhook {
+    Discord(DiscordWebhook),
 }
 
 pub trait TargetProcess {
@@ -96,6 +89,7 @@ pub struct Settings {
     pub password: String,
 
     pub check_path: bool,
+    pub max_retries: i32,
 
     pub triggers: HashMap<String, Trigger>,
     pub targets: HashMap<String, Target>,

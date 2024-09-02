@@ -1,18 +1,29 @@
-pub mod webhooks;
-
 use std::path::PathBuf;
 
 use crate::{
     db::{
         models::{FoundStatus, NewScanEvent, ScanEvent},
-        schema::scan_events::{dsl::scan_events, found_at, found_status, process_status},
+        schema::{
+            self,
+            scan_events::{
+                dsl::scan_events, found_at, found_status, next_retry_at, process_status,
+            },
+        },
     },
     service::webhooks::WebhookManager,
     utils::settings::Settings,
     DbPool,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl, SelectableHelper};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl,
+    SelectableHelper,
+};
 use tracing::{error, info};
+use webhooks::EventType;
+
+pub mod targets;
+pub mod triggers;
+pub mod webhooks;
 
 #[derive(Clone)]
 pub struct PulseService {
@@ -22,13 +33,18 @@ pub struct PulseService {
 }
 
 struct PulseRunner {
+    webhooks: WebhookManager,
     settings: Settings,
     pool: DbPool,
 }
 
 impl PulseRunner {
-    pub fn new(settings: Settings, pool: DbPool) -> Self {
-        Self { settings, pool }
+    pub fn new(settings: Settings, pool: DbPool, webhooks: WebhookManager) -> Self {
+        Self {
+            settings,
+            pool,
+            webhooks,
+        }
     }
 
     fn get_conn(
@@ -44,7 +60,7 @@ impl PulseRunner {
             return Ok(());
         }
 
-        let mut count = 0;
+        let mut count = vec![];
 
         let mut conn = self.get_conn();
         let mut evs = scan_events
@@ -66,7 +82,7 @@ impl PulseRunner {
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    count += 1;
+                    count.push(ev.file_path.clone());
                 }
             }
 
@@ -74,54 +90,96 @@ impl PulseRunner {
             ev.save_changes::<ScanEvent>(&mut conn)?;
         }
 
-        if count > 0 {
-            info!("Found {} new files", count);
+        if !count.is_empty() {
+            info!(
+                "found {} new file{}",
+                count.len(),
+                if count.len() > 1 { "s" } else { "" }
+            );
+
+            self.webhooks.send(EventType::Found, None, count).await;
         }
 
         Ok(())
     }
 
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
-        let mut count = 0;
+        let mut processed = vec![];
+        let mut failed = vec![];
+
         let mut conn = self.get_conn();
-        let mut evs = if self.settings.check_path {
-            scan_events
+        let mut evs = {
+            let base_query = scan_events
                 .filter(process_status.ne(crate::db::models::ProcessStatus::Complete))
-                .filter(found_status.eq(FoundStatus::Found))
-                .load::<ScanEvent>(&mut conn)?
-        } else {
-            scan_events
-                .filter(process_status.ne(crate::db::models::ProcessStatus::Complete))
-                .load::<ScanEvent>(&mut conn)?
+                .filter(process_status.ne(crate::db::models::ProcessStatus::Failed))
+                .filter(
+                    next_retry_at
+                        .is_null()
+                        .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
+                );
+
+            if self.settings.check_path {
+                base_query
+                    .filter(found_status.eq(FoundStatus::Found))
+                    .load::<ScanEvent>(&mut conn)?
+            } else {
+                base_query.load::<ScanEvent>(&mut conn)?
+            }
         };
 
         for ev in evs.iter_mut() {
             let res = self.process_event(ev).await;
 
             if let Err(e) = res {
-                error!("Error processing event: {:?}", e);
-                ev.process_status = crate::db::models::ProcessStatus::Failed;
+                error!("unable to process event: {:?}", e);
+                ev.failed_times += 1;
+
+                if ev.failed_times > self.settings.max_retries {
+                    ev.process_status = crate::db::models::ProcessStatus::Failed;
+                    ev.next_retry_at = None;
+                    failed.push(ev.file_path.clone());
+                } else {
+                    let next_retry = chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
+
+                    ev.process_status = crate::db::models::ProcessStatus::Retry;
+                    ev.next_retry_at = Some(next_retry);
+                }
             } else {
                 ev.process_status = crate::db::models::ProcessStatus::Complete;
-                count += 1;
+                processed.push(ev.file_path.clone());
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
             ev.save_changes::<ScanEvent>(&mut conn)?;
         }
 
-        if count > 0 {
+        if !processed.is_empty() {
             info!(
-                "Sent {} file{} to targets",
-                count,
-                if count > 1 { "s" } else { "" }
+                "sent {} file{} to targets",
+                processed.len(),
+                if processed.len() > 1 { "s" } else { "" }
             );
+
+            self.webhooks
+                .send(EventType::Processed, None, processed)
+                .await;
+        }
+
+        if !failed.is_empty() {
+            error!(
+                "failed to send {} file{} to targets",
+                failed.len(),
+                if failed.len() > 1 { "s" } else { "" }
+            );
+
+            self.webhooks.send(EventType::Error, None, failed).await;
         }
 
         Ok(())
     }
 
-    async fn process_event(&self, ev: &mut ScanEvent) -> anyhow::Result<()> {
+    async fn process_event(&self, ev: &ScanEvent) -> anyhow::Result<()> {
         let futures = self
             .settings
             .targets
@@ -185,15 +243,11 @@ impl PulseService {
     pub fn add_event(&self, ev: NewScanEvent) -> ScanEvent {
         let mut conn = self.get_conn();
 
-        let scan_event = diesel::insert_into(crate::db::schema::scan_events::table)
+        diesel::insert_into(schema::scan_events::table)
             .values(&ev)
             .returning(ScanEvent::as_returning())
             .get_result::<ScanEvent>(&mut conn)
-            .expect("Failed to insert new scan event");
-
-        self.webhooks.send(&scan_event);
-
-        scan_event
+            .expect("Failed to insert new scan event")
     }
 
     pub async fn get_event(&self, id: &i32) -> Option<ScanEvent> {
@@ -210,14 +264,15 @@ impl PulseService {
     pub fn start(&self) {
         let settings = self.settings.clone();
         let pool = self.pool.clone();
+        let webhooks = self.webhooks.clone();
 
         tokio::spawn(async move {
-            let runner = PulseRunner::new(settings.clone(), pool.clone());
+            let runner = PulseRunner::new(settings, pool, webhooks);
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
                 if let Err(e) = runner.run().await {
-                    error!("Error running pulse: {:?}", e);
+                    error!("unable to run pulse: {:?}", e);
                 }
 
                 timer.tick().await;

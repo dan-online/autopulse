@@ -71,7 +71,7 @@ impl Plex {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("Failed to send scan: {}", body))
+            Err(anyhow::anyhow!("unable to send scan: {}", body))
         }
     }
 }
@@ -90,7 +90,7 @@ impl TargetProcess for Plex {
                     .iter()
                     .any(|loc| ev.file_path.starts_with(&loc.path))
             })
-            .ok_or_else(|| anyhow::anyhow!("File path {} not in any plex library", ev.file_path))?;
+            .ok_or_else(|| anyhow::anyhow!("file path {} not in any plex library", ev.file_path))?;
 
         self.scan(ev, library).await?;
 

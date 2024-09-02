@@ -9,6 +9,8 @@ pub enum ProcessStatus {
     Pending,
     #[serde(rename = "complete")]
     Complete,
+    #[serde(rename = "retry")]
+    Retry,
     #[serde(rename = "failed")]
     Failed,
 }
@@ -37,6 +39,10 @@ pub struct ScanEvent {
     pub file_hash: Option<String>,
     pub process_status: ProcessStatus,
     pub found_status: FoundStatus,
+
+    pub failed_times: i32,
+    pub next_retry_at: Option<chrono::NaiveDateTime>,
+
     pub found_at: Option<chrono::NaiveDateTime>,
     pub processed_at: Option<chrono::NaiveDateTime>,
 

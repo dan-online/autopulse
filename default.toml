@@ -5,6 +5,7 @@ password = "test"
 database_url = "postgres://test:test@localhost:5432/autopulse"
 
 check_path = true
+max_retries = 3
 
 [triggers.manual]
 type = "manual"

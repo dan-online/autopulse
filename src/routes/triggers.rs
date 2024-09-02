@@ -7,8 +7,7 @@ use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use crate::{
     db::models::NewScanEvent,
-    service::PulseService,
-    triggers::manual::ManualQueryParams,
+    service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
     utils::{
         check_auth::check_auth,
         settings::{Settings, TriggerTypes},
@@ -47,10 +46,10 @@ pub async fn trigger_post(
 
             let mut scan_events = vec![];
 
-            for path in paths {
+            for path in paths.iter() {
                 let new_scan_event = NewScanEvent {
                     event_source: trigger.to_string(),
-                    file_path: path,
+                    file_path: path.clone(),
                     ..Default::default()
                 };
 
@@ -58,6 +57,11 @@ pub async fn trigger_post(
 
                 scan_events.push(scan_event);
             }
+
+            service
+                .webhooks
+                .send(EventType::New, Some(trigger.to_string()), paths)
+                .await;
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
@@ -82,8 +86,6 @@ pub async fn trigger_get(
 
     let trigger_settings = settings.triggers.get(&trigger.to_string());
 
-    println!("{:?}", trigger_settings);
-
     if trigger_settings.is_none() {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
     }
@@ -105,11 +107,16 @@ pub async fn trigger_get(
 
             let new_scan_event = NewScanEvent {
                 event_source: trigger.to_string(),
-                file_path,
+                file_path: file_path.clone(),
                 file_hash: query.hash.clone(),
             };
 
             let scan_event = service.add_event(new_scan_event);
+
+            service
+                .webhooks
+                .send(EventType::New, Some(trigger.to_string()), vec![file_path])
+                .await;
 
             Ok(HttpResponse::Ok().json(scan_event))
         }

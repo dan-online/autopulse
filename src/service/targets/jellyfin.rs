@@ -114,7 +114,7 @@ impl Jellyfin {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("Failed to send scan: {}", body))
+            Err(anyhow::anyhow!("unable to send scan: {}", body))
         }
     }
 
@@ -132,7 +132,7 @@ impl Jellyfin {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("Failed to refresh item: {}", body))
+            Err(anyhow::anyhow!("unable to refresh item: {}", body))
         }
     }
 }
@@ -151,14 +151,14 @@ impl TargetProcess for Jellyfin {
                     .any(|location| ev.file_path.starts_with(location))
             })
             .ok_or_else(|| {
-                anyhow::anyhow!("File path {} not in any jellyfin library", ev.file_path)
+                anyhow::anyhow!("file path {} not in any jellyfin library", ev.file_path)
             })?;
 
         if let Some(item) = self.find_item(&ev.file_path).await? {
-            debug!("Found item: {:?}", item);
+            debug!("found item: {:?}", item);
             self.refresh_item(&item).await?;
         } else {
-            debug!("Item not found, scanning instead");
+            debug!("item not found, scanning instead");
             self.scan(ev).await?;
         }
 

@@ -23,6 +23,8 @@ diesel::table! {
         file_hash -> Nullable<Text>,
         process_status -> Processstatus,
         found_status -> Foundstatus,
+        failed_times -> Int4,
+        next_retry_at -> Nullable<Timestamptz>,
         found_at -> Nullable<Timestamptz>,
         processed_at -> Nullable<Timestamptz>,
         created_at -> Timestamptz,

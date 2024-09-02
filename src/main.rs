@@ -7,6 +7,7 @@ use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
+use tracing::info;
 use tracing::Level;
 use utils::settings::get_settings;
 
@@ -14,11 +15,6 @@ pub mod routes {
     pub mod index;
     pub mod status;
     pub mod triggers;
-}
-pub mod triggers {
-    pub mod manual;
-    pub mod radarr;
-    pub mod sonarr;
 }
 pub mod utils {
     pub mod check_auth;
@@ -31,20 +27,20 @@ pub mod db {
     pub mod schema;
 }
 pub mod service;
-pub mod targets {
-    pub mod jellyfin;
-    pub mod plex;
-}
 
 pub type DbPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+
     let settings = get_settings().with_context(|| "Failed to get settings")?;
 
     let hostname = settings.hostname.clone();
     let port = settings.port;
     let database_url = settings.database_url.clone();
+
+    info!("💫 autopulse starting up...");
 
     let manager = r2d2::ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
@@ -54,8 +50,6 @@ async fn main() -> anyhow::Result<()> {
     let service = PulseService::new(settings.clone(), pool.clone());
 
     service.start();
-
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     HttpServer::new(move || {
         App::new()

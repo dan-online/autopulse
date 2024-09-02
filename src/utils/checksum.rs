@@ -13,7 +13,7 @@ pub fn sha256checksum(file_path: &PathBuf) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::{fs::remove_file, io::Write};
 
     use super::*;
 
@@ -26,7 +26,7 @@ mod tests {
 
         let checksum = sha256checksum(&file_path);
 
-        std::fs::remove_file(&file_path).unwrap();
+        remove_file(&file_path).unwrap();
 
         assert_eq!(
             checksum,
