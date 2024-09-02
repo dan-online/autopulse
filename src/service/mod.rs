@@ -11,7 +11,7 @@ use crate::{
         },
     },
     service::webhooks::WebhookManager,
-    utils::settings::Settings,
+    utils::{conn::get_conn, settings::Settings},
     DbPool,
 };
 use diesel::{
@@ -56,14 +56,6 @@ impl PulseRunner {
         }
     }
 
-    fn get_conn(
-        &self,
-    ) -> diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>> {
-        self.pool
-            .get()
-            .expect("Failed to get database connection from pool")
-    }
-
     async fn update_found_status(&self) -> anyhow::Result<()> {
         if !self.settings.check_path {
             return Ok(());
@@ -71,7 +63,7 @@ impl PulseRunner {
 
         let mut count = vec![];
 
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
         let mut evs = scan_events
             .filter(found_status.ne(FoundStatus::Found))
             .load::<ScanEvent>(&mut conn)?;
@@ -116,7 +108,7 @@ impl PulseRunner {
         let mut processed = vec![];
         let mut failed = vec![];
 
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
         let mut evs = {
             let base_query = scan_events
                 .filter(process_status.ne(crate::db::models::ProcessStatus::Complete))
@@ -202,7 +194,7 @@ impl PulseRunner {
     }
 
     async fn cleanup(&self) -> anyhow::Result<()> {
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
 
         // TODO: make this a setting
         let time_before_cleanup = chrono::Utc::now().naive_utc() - chrono::Duration::days(10);
@@ -241,16 +233,8 @@ impl PulseService {
         }
     }
 
-    pub fn get_conn(
-        &self,
-    ) -> diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>> {
-        self.pool
-            .get()
-            .expect("Failed to get database connection from pool")
-    }
-
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
 
         let total = scan_events.count().get_result::<i64>(&mut conn)?;
         let found = scan_events
@@ -279,7 +263,7 @@ impl PulseService {
     }
 
     pub fn add_event(&self, ev: NewScanEvent) -> ScanEvent {
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
 
         diesel::insert_into(schema::scan_events::table)
             .values(&ev)
@@ -289,7 +273,7 @@ impl PulseService {
     }
 
     pub async fn get_event(&self, id: &i32) -> Option<ScanEvent> {
-        let mut conn = self.get_conn();
+        let mut conn = get_conn(&self.pool);
 
         let res = scan_events.find(id).first::<ScanEvent>(&mut conn);
 

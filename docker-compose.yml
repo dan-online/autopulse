@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  autopulse:
+    image: danonline/autopulse
+    container_name: autopulse
+    restart: always
+    depends_on:
+      - postgres
+    ports:
+      - 2875:2875
+    networks:
+      - db
+    volumes:
+      - ./config.toml:/app/config.toml
+    environment:
+       AUTOPULSE_DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
+      
+  postgres:
+    image: postgres
+    container_name: autopulse-postgres
+    restart: always
+    networks:
+      - db
+    environment:
+      POSTGRES_USER: autopulse
+      POSTGRES_PASSWORD: autopulse
+      POSTGRES_DB: autopulse
+  
+networks:
+  db:
+    driver: bridge

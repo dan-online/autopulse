@@ -1,6 +1,7 @@
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
+use db::migration::run_db_migrations;
 use diesel::r2d2;
 use diesel::PgConnection;
 use routes::stats::stats;
@@ -21,10 +22,12 @@ pub mod routes {
 pub mod utils {
     pub mod check_auth;
     pub mod checksum;
+    pub mod conn;
     pub mod join_path;
     pub mod settings;
 }
 pub mod db {
+    pub mod migration;
     pub mod models;
     pub mod schema;
 }
@@ -48,6 +51,8 @@ async fn main() -> anyhow::Result<()> {
     let pool = r2d2::Pool::builder()
         .build(manager)
         .with_context(|| "Failed to create connection pool")?;
+
+    run_db_migrations(&mut pool.get().expect("Failed to get connection"));
 
     let service = PulseService::new(settings.clone(), pool.clone());
 

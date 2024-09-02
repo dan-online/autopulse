@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Instant};
+use std::collections::HashMap;
 
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
