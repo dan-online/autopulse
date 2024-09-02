@@ -77,7 +77,7 @@ impl Plex {
 }
 
 impl TargetProcess for Plex {
-    async fn process(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         let libraries = self.libraries().await?;
 
         // check if the file path is in any of the libraries and return the location

@@ -3,6 +3,7 @@ use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use diesel::r2d2;
 use diesel::PgConnection;
+use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
@@ -13,6 +14,7 @@ use utils::settings::get_settings;
 
 pub mod routes {
     pub mod index;
+    pub mod stats;
     pub mod status;
     pub mod triggers;
 }
@@ -58,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
             .service(trigger_get)
             .service(trigger_post)
             .service(status)
+            .service(stats)
             .app_data(basic::Config::default().realm("Restricted area"))
             .app_data(Data::new(settings.clone()))
             .app_data(Data::new(pool.clone()))

@@ -1,12 +1,18 @@
+use std::{collections::HashMap, time::Instant};
+
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Jellyfin {
     pub url: String,
     pub token: String,
+    #[serde(skip)]
+    items_cache: HashMap<String, Item>,
+    #[serde(skip)]
+    last_cache: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -68,8 +74,11 @@ impl Jellyfin {
         Ok(libraries)
     }
 
-    // sadly this is quite memory intensive, maybe a stream option is possible
-    async fn find_item(&self, path: &str) -> anyhow::Result<Option<Item>> {
+    async fn get_items(&mut self) -> anyhow::Result<&HashMap<String, Item>> {
+        if chrono::Utc::now() - self.last_cache < chrono::Duration::seconds(10) {
+            return Ok(&self.items_cache);
+        }
+
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
@@ -81,16 +90,26 @@ impl Jellyfin {
 
         let res = res.json::<ItemsResponse>().await?;
 
-        let item = res
+        self.items_cache = res
             .items
             .iter()
-            .find(|item| item.path == Some(path.to_string()));
+            .filter_map(|item| item.path.clone().map(|path| (path, item.clone())))
+            .collect();
 
-        Ok(item.cloned())
+        self.last_cache = chrono::Utc::now();
+
+        Ok(&self.items_cache)
+    }
+
+    // sadly this is quite memory intensive, maybe a stream option is possible
+    async fn find_item(&mut self, path: &str) -> anyhow::Result<Option<Item>> {
+        let items = self.get_items().await?;
+
+        Ok(items.get(path).cloned())
     }
 
     // not as effective as refreshing the item, but good enough
-    async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn scan(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
             .join("/Library/Media/Updated")?
@@ -138,7 +157,7 @@ impl Jellyfin {
 }
 
 impl TargetProcess for Jellyfin {
-    async fn process(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         let libraries = self.libraries().await?;
 
         // check if the file path is in any of the library locations

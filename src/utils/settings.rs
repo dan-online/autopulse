@@ -50,7 +50,7 @@ pub enum Webhook {
 
 pub trait TargetProcess {
     fn process(
-        &self,
+        &mut self,
         file_path: &ScanEvent,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send;
 }
@@ -71,7 +71,7 @@ pub enum Target {
 }
 
 impl Target {
-    pub async fn process(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    pub async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         match self {
             Target::Plex(p) => p.process(ev).await,
             Target::Jellyfin(j) => j.process(ev).await,

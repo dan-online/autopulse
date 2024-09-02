@@ -18,12 +18,21 @@ use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl,
     SelectableHelper,
 };
+use serde::Serialize;
 use tracing::{error, info};
 use webhooks::EventType;
 
 pub mod targets;
 pub mod triggers;
 pub mod webhooks;
+
+#[derive(Clone, Serialize)]
+pub struct Stats {
+    total: i64,
+    found: i64,
+    processed: i64,
+    failed: i64,
+}
 
 #[derive(Clone)]
 pub struct PulseService {
@@ -103,7 +112,7 @@ impl PulseRunner {
         Ok(())
     }
 
-    pub async fn update_process_status(&self) -> anyhow::Result<()> {
+    pub async fn update_process_status(&mut self) -> anyhow::Result<()> {
         let mut processed = vec![];
         let mut failed = vec![];
 
@@ -179,11 +188,11 @@ impl PulseRunner {
         Ok(())
     }
 
-    async fn process_event(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn process_event(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         let futures = self
             .settings
             .targets
-            .values()
+            .values_mut()
             .map(|target| target.process(ev))
             .collect::<Vec<_>>();
 
@@ -214,7 +223,7 @@ impl PulseRunner {
         Ok(())
     }
 
-    pub async fn run(&self) -> anyhow::Result<()> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         self.update_found_status().await?;
         self.update_process_status().await?;
         self.cleanup().await?;
@@ -238,6 +247,35 @@ impl PulseService {
         self.pool
             .get()
             .expect("Failed to get database connection from pool")
+    }
+
+    pub fn get_stats(&self) -> anyhow::Result<Stats> {
+        let mut conn = self.get_conn();
+
+        let total = scan_events.count().get_result::<i64>(&mut conn)?;
+        let found = scan_events
+            .filter(found_status.eq(FoundStatus::Found))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+        let processed = scan_events
+            .filter(process_status.eq(crate::db::models::ProcessStatus::Complete))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+        let failed = scan_events
+            .filter(
+                process_status
+                    .eq(crate::db::models::ProcessStatus::Failed)
+                    .or(process_status.eq(crate::db::models::ProcessStatus::Retry)),
+            )
+            .count()
+            .get_result::<i64>(&mut conn)?;
+
+        Ok(Stats {
+            total,
+            found,
+            processed,
+            failed,
+        })
     }
 
     pub fn add_event(&self, ev: NewScanEvent) -> ScanEvent {
@@ -267,7 +305,7 @@ impl PulseService {
         let webhooks = self.webhooks.clone();
 
         tokio::spawn(async move {
-            let runner = PulseRunner::new(settings, pool, webhooks);
+            let mut runner = PulseRunner::new(settings, pool, webhooks);
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
