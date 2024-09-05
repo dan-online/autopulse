@@ -12,7 +12,7 @@ services:
     networks:
       - db
     volumes:
-      - ./config.toml:/app/config.toml
+      - ./config.yaml:/app/config.yaml
     environment:
        AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
       
