@@ -3,12 +3,14 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct Hello {
-    hello: String,
+    autopulse: String,
 }
 
 #[get("/")]
 pub async fn hello() -> impl Responder {
+    let cargo_version = format!("v{}", env!("CARGO_PKG_VERSION"));
+
     Json(Hello {
-        hello: "world".to_string(),
+        autopulse: cargo_version,
     })
 }

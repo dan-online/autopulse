@@ -87,23 +87,29 @@ password = "yogurt"
 
 #### Examples
 
-```toml
-[triggers.sonarr]
-type = "sonarr"
+```yaml
+triggers:
+  sonarr:
+    type: "sonarr"
+    rewrite:
+      from: "/downloads"
+      to: "/media"
 
-[webhooks.discord]
-type = "discord"
-url = "https://discord.com/api/webhooks/1234567890/abcdefg"
+webhooks:
+  discord:
+    type: "discord"
+    url: "https://discord.com/api/webhooks/1234567890/abcdefg"
 
-[targets.my_cool_plex]
-type = "plex"
-url = "http://plex:32400"
-token = "<your_token>"
+targets:
+  my_cool_plex:
+    type: "plex"
+    url: "http://plex:32400"
+    token: "<your_token>"
 
-[targets.my_awesome_jellyfin]
-type = "jellyfin"
-url = "http://jellyfin:8096"
-token = "<your_token>"
+  my_awesome_jellyfin:
+    type: "jellyfin"
+    url: "http://jellyfin:8096"
+    token: "<your_token>"
 ```
 
 #### Manual
