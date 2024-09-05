@@ -6,7 +6,7 @@ use crate::{
         schema::{
             self,
             scan_events::{
-                dsl::scan_events, found_at, found_status, id, next_retry_at, process_status,
+                dsl::scan_events, found_at, found_status, next_retry_at, process_status,
             },
         },
     },
@@ -15,7 +15,7 @@ use crate::{
     DbPool,
 };
 use diesel::{
-    dsl::count, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl,
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SaveChangesDsl,
     SelectableHelper,
 };
 use serde::Serialize;
@@ -30,8 +30,8 @@ pub mod webhooks;
 pub struct Stats {
     total: i64,
     found: i64,
-    pending: i64,
     processed: i64,
+    retrying: i64,
     failed: i64,
 }
 
@@ -254,31 +254,33 @@ impl PulseService {
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
         let mut conn = get_conn(&self.pool);
 
-        let result = scan_events
-            .select((
-                count(id),
-                count(found_status.eq(FoundStatus::Found)),
-                count(
-                    found_status
-                        .eq(crate::db::models::FoundStatus::Found)
-                        .and(process_status.eq(crate::db::models::ProcessStatus::Pending)),
-                ),
-                count(process_status.eq(crate::db::models::ProcessStatus::Complete)),
-                count(
-                    process_status
-                        .eq(crate::db::models::ProcessStatus::Failed)
-                        .or(process_status.eq(crate::db::models::ProcessStatus::Retry)),
-                ),
-            ))
-            .first::<(i64, i64, i64, i64, i64)>(&mut conn)?;
+        let total = scan_events.count().get_result::<i64>(&mut conn)?;
 
-        let (total, found, pending, processed, failed) = result;
+        let found = scan_events
+            .filter(found_status.eq(FoundStatus::Found))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+
+        let processed = scan_events
+            .filter(process_status.eq(crate::db::models::ProcessStatus::Complete))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+
+        let retrying = scan_events
+            .filter(process_status.eq(crate::db::models::ProcessStatus::Retry))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+
+        let failed = scan_events
+            .filter(process_status.eq(crate::db::models::ProcessStatus::Failed))
+            .count()
+            .get_result::<i64>(&mut conn)?;
 
         Ok(Stats {
             total,
-            pending,
             found,
             processed,
+            retrying,
             failed,
         })
     }
@@ -293,10 +295,10 @@ impl PulseService {
             .map_err(Into::into)
     }
 
-    pub fn get_event(&self, scan_id: &i32) -> Option<ScanEvent> {
+    pub fn get_event(&self, id: &i32) -> Option<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        scan_events.find(scan_id).first::<ScanEvent>(&mut conn).ok()
+        scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
     }
 
     pub fn start(&self) {

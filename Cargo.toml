@@ -17,7 +17,6 @@ chrono = { version = "0.4.38", features = ["serde"] }
 diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
 tokio = { version = "1.39.3", features = ["process"] }
 sha2 = "0.10.8"
-reqwest = { version = "0.12.7", features = ["json", "stream"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 url = "2.5.2"
-futures = "0.3.30"
 diesel_migrations = { version = "2.2.0", features = ["postgres"] }
