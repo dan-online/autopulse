@@ -1,9 +1,13 @@
+[app]
 hostname = "0.0.0.0"
 port = 2875
+database_url = "postgres://autopulse:autopulse@localhost:5432/autopulse"
+
+[auth]
 username = "admin"
 password = "password"
-database_url = "postgres://test:test@localhost:5432/autopulse"
 
+[opts]
 check_path = true
 max_retries = 3
 

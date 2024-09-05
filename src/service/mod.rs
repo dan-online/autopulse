@@ -57,7 +57,7 @@ impl PulseRunner {
     }
 
     async fn update_found_status(&self) -> anyhow::Result<()> {
-        if !self.settings.check_path {
+        if !self.settings.opts.check_path {
             return Ok(());
         }
 
@@ -119,7 +119,7 @@ impl PulseRunner {
                         .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
                 );
 
-            if self.settings.check_path {
+            if self.settings.opts.check_path {
                 base_query
                     .filter(found_status.eq(FoundStatus::Found))
                     .load::<ScanEvent>(&mut conn)?
@@ -135,7 +135,7 @@ impl PulseRunner {
                 error!("unable to process event: {:?}", e);
                 ev.failed_times += 1;
 
-                if ev.failed_times > self.settings.max_retries {
+                if ev.failed_times > self.settings.opts.max_retries {
                     ev.process_status = crate::db::models::ProcessStatus::Failed;
                     ev.next_retry_at = None;
                     failed.push(ev.file_path.clone());
@@ -148,6 +148,7 @@ impl PulseRunner {
                 }
             } else {
                 ev.process_status = crate::db::models::ProcessStatus::Complete;
+                ev.processed_at = Some(chrono::Utc::now().naive_utc());
                 processed.push(ev.file_path.clone());
             }
 

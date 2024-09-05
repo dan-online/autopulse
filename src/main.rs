@@ -11,7 +11,7 @@ use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
 use tracing::info;
 use tracing::Level;
-use utils::settings::get_settings;
+use utils::settings::Settings;
 
 pub mod routes {
     pub mod index;
@@ -39,11 +39,11 @@ pub type DbPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let settings = get_settings().with_context(|| "Failed to get settings")?;
+    let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
-    let hostname = settings.hostname.clone();
-    let port = settings.port;
-    let database_url = settings.database_url.clone();
+    let hostname = settings.app.hostname.clone();
+    let port = settings.app.port;
+    let database_url = settings.app.database_url.clone();
 
     info!("💫 autopulse starting up...");
 

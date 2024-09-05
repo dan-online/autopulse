@@ -20,6 +20,8 @@ services:
     image: postgres
     container_name: autopulse-postgres
     restart: always
+    ports:
+      - 5432:5432
     networks:
       - db
     environment:

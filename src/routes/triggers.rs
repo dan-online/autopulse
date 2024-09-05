@@ -10,7 +10,7 @@ use crate::{
     service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
     utils::{
         check_auth::check_auth,
-        settings::{Settings, TriggerTypes},
+        settings::{Settings, Trigger},
     },
 };
 
@@ -34,8 +34,8 @@ pub async fn trigger_post(
 
     let trigger_settings = trigger_settings.unwrap();
 
-    match &trigger_settings.t {
-        TriggerTypes::Sonarr | TriggerTypes::Radarr => {
+    match &trigger_settings {
+        Trigger::Sonarr { rewrite } | Trigger::Radarr { rewrite } => {
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -47,6 +47,15 @@ pub async fn trigger_post(
             let mut scan_events = vec![];
 
             for path in paths.iter() {
+                let mut path = path.clone();
+
+                if let Some(rewrite) = rewrite {
+                    let from = rewrite.from.clone();
+                    let to = rewrite.to.clone();
+
+                    path = path.replace(&from, &to);
+                }
+
                 let new_scan_event = NewScanEvent {
                     event_source: trigger.to_string(),
                     file_path: path.clone(),
@@ -65,10 +74,9 @@ pub async fn trigger_post(
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
-        TriggerTypes::Manual => {
+        Trigger::Manual { .. } => {
             Ok(HttpResponse::BadRequest().body("Manual triggers must use GET requests"))
         }
-        _ => Ok(HttpResponse::Ok().body("Not implemented")),
     }
 }
 
@@ -92,13 +100,13 @@ pub async fn trigger_get(
 
     let trigger_settings = trigger_settings.unwrap();
 
-    match &trigger_settings.t {
-        TriggerTypes::Manual => {
+    match &trigger_settings {
+        Trigger::Manual { rewrite } => {
             let query = Query::<ManualQueryParams>::from_query(req.query_string())?;
 
             let mut file_path = query.path.clone();
 
-            if let Some(rewrite) = &trigger_settings.rewrite {
+            if let Some(rewrite) = rewrite {
                 let from = rewrite.from.clone();
                 let to = rewrite.to.clone();
 
