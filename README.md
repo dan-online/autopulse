@@ -77,10 +77,10 @@ An example has been provided in the [example](example) directory
 
 autopulse uses basic authorization for the API. You can set the username and password in the config file or by setting the `AUTOPULSE__AUTH__USERNAME` and `AUTOPULSE__AUTH__PASSWORD` environment variables.
 
-```toml
-[auth]
-username = "terry"
-password = "yogurt"
+```yaml
+auth:
+  username: terry
+  password: yoghurt
 ```
 
 > **Note**: By default the username and password are `admin` and `password` respectively, however it is HIGHLY recommended to change these values if you are exposing the API to the internet.
