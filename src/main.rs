@@ -3,13 +3,17 @@ use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use db::migration::run_db_migrations;
 use diesel::r2d2;
+use diesel::sql_query;
+use diesel::Connection;
 use diesel::PgConnection;
+use diesel::RunQueryDsl;
 use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
 use tracing::info;
+use tracing::warn;
 use tracing::Level;
 use utils::settings::Settings;
 
@@ -46,6 +50,32 @@ async fn main() -> anyhow::Result<()> {
     let database_url = settings.app.database_url.clone();
 
     info!("💫 autopulse starting up...");
+
+    if let Err(err) = PgConnection::establish(&database_url) {
+        if let diesel::ConnectionError::BadConnection(err_msg) = &err {
+            if err_msg.contains("database \"autopulse\" does not exist") {
+                warn!("database does not exist. creating database...");
+
+                let uri = database_url
+                    .split("/")
+                    .take(3)
+                    .collect::<Vec<&str>>()
+                    .join("/")
+                    + "/postgres";
+
+                let mut conn =
+                    PgConnection::establish(&uri).expect("Failed to connect to PostgreSQL");
+
+                sql_query("CREATE DATABASE autopulse")
+                    .execute(&mut conn)
+                    .expect("Failed to create database");
+
+                info!("database created successfully");
+            } else {
+                return Err(err).with_context(|| "Failed to establish connection to database");
+            }
+        }
+    }
 
     let manager = r2d2::ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
