@@ -214,7 +214,6 @@ impl PulseRunner {
     fn cleanup(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
-        // TODO: make this a setting
         let time_before_cleanup = chrono::Utc::now().naive_utc() - chrono::Duration::days(10);
 
         let _ = diesel::delete(

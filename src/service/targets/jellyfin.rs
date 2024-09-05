@@ -144,7 +144,6 @@ impl Jellyfin {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join(&format!("/Items/{}/Refresh", item.id))?;
 
-        // TODO: make this a setting the user can choose, along with the other options
         url.query_pairs_mut()
             .append_pair("metadataRefreshMode", "FullRefresh");
 

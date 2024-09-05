@@ -120,6 +120,20 @@ By default a `manual` endpoint is provided which can be used to manually trigger
 $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost:8080/manual?path=/path/to/file&hash=1234567890
 ```
 
+## To-do
+
+- [ ] Add more triggers
+  - [ ] Lidarr
+  - [ ] Readarr
+- [ ] Add more targets
+  - [ ] Emby
+- [ ] Add more webhooks
+  - [ ] Generic JSON
+- [ ] Add more options
+  - [ ] Cleanup duration (currently 10 days)
+  - [ ] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
+
+
 ## License
 
 Distributed under the MIT License. See [`LICENSE`](https://dancodes.mit-license.org/) for more information.
