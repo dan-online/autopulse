@@ -12,7 +12,6 @@ pub struct DiscordEmbedField {
 pub struct DiscordEmbed {
     pub color: i32,
     pub timestamp: String,
-    pub url: String,
     pub fields: Vec<DiscordEmbedField>,
     pub title: String,
 }
@@ -82,7 +81,6 @@ impl DiscordWebhook {
         let embed = DiscordEmbed {
             color,
             timestamp: chrono::Utc::now().to_rfc3339(),
-            url: "https://discord.com".to_string(),
             fields,
             title,
         };
