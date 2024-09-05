@@ -48,11 +48,11 @@ struct PulseRunner {
 }
 
 impl PulseRunner {
-    pub fn new(settings: Settings, pool: DbPool, webhooks: WebhookManager) -> Self {
+    pub const fn new(settings: Settings, pool: DbPool, webhooks: WebhookManager) -> Self {
         Self {
+            webhooks,
             settings,
             pool,
-            webhooks,
         }
     }
 
@@ -68,7 +68,7 @@ impl PulseRunner {
             .filter(found_status.ne(FoundStatus::Found))
             .load::<ScanEvent>(&mut conn)?;
 
-        for ev in evs.iter_mut() {
+        for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
 
             if file_path.exists() {
@@ -98,7 +98,7 @@ impl PulseRunner {
                 if count.len() > 1 { "s" } else { "" }
             );
 
-            self.webhooks.send(EventType::Found, None, count).await;
+            self.webhooks.send(EventType::Found, None, &count).await;
         }
 
         Ok(())
@@ -128,14 +128,14 @@ impl PulseRunner {
             }
         };
 
-        for ev in evs.iter_mut() {
+        for ev in &mut evs {
             let res = self.process_event(ev).await;
 
             if let Ok((succeeded, _)) = &res {
                 ev.targets_hit.append(&mut succeeded.clone());
             }
 
-            if res.is_err() || res.as_ref().unwrap().1.len() > 0 {
+            if res.is_err() || !res.as_ref().unwrap().1.is_empty() {
                 ev.failed_times += 1;
 
                 if ev.failed_times >= self.settings.opts.max_retries {
@@ -167,7 +167,7 @@ impl PulseRunner {
             );
 
             self.webhooks
-                .send(EventType::Processed, None, processed)
+                .send(EventType::Processed, None, &processed)
                 .await;
         }
 
@@ -178,7 +178,7 @@ impl PulseRunner {
                 if failed.len() > 1 { "s" } else { "" }
             );
 
-            self.webhooks.send(EventType::Error, None, failed).await;
+            self.webhooks.send(EventType::Error, None, &failed).await;
         }
 
         Ok(())
@@ -191,15 +191,15 @@ impl PulseRunner {
         let mut succeeded = vec![];
         let mut failed = vec![];
 
-        for (name, target) in self.settings.targets.iter_mut() {
-            if !ev.targets_hit.is_empty() && ev.targets_hit.contains(&name) {
+        for (name, target) in &mut self.settings.targets {
+            if !ev.targets_hit.is_empty() && ev.targets_hit.contains(name) {
                 continue;
             }
 
             let res = target.process(ev).await;
 
             match res {
-                Ok(_) => succeeded.push(name.clone()),
+                Ok(()) => succeeded.push(name.clone()),
                 Err(e) => {
                     failed.push(name.clone());
                     error!("failed to process target '{}': {:?}", name, e);
@@ -210,7 +210,7 @@ impl PulseRunner {
         Ok((succeeded, failed))
     }
 
-    async fn cleanup(&self) -> anyhow::Result<()> {
+    fn cleanup(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
         // TODO: make this a setting
@@ -235,7 +235,7 @@ impl PulseRunner {
     pub async fn run(&mut self) -> anyhow::Result<()> {
         self.update_found_status().await?;
         self.update_process_status().await?;
-        self.cleanup().await?;
+        self.cleanup()?;
 
         Ok(())
     }
@@ -246,7 +246,7 @@ impl PulseService {
         Self {
             settings: settings.clone(),
             pool,
-            webhooks: WebhookManager::new(settings.clone()),
+            webhooks: WebhookManager::new(settings),
         }
     }
 
@@ -279,25 +279,20 @@ impl PulseService {
         })
     }
 
-    pub fn add_event(&self, ev: NewScanEvent) -> ScanEvent {
+    pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
         diesel::insert_into(schema::scan_events::table)
-            .values(&ev)
+            .values(ev)
             .returning(ScanEvent::as_returning())
             .get_result::<ScanEvent>(&mut conn)
-            .expect("Failed to insert new scan event")
+            .map_err(Into::into)
     }
 
-    pub async fn get_event(&self, id: &i32) -> Option<ScanEvent> {
+    pub fn get_event(&self, id: &i32) -> Option<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        let res = scan_events.find(id).first::<ScanEvent>(&mut conn);
-
-        match res {
-            Ok(ev) => Some(ev),
-            Err(_) => None,
-        }
+        scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
     }
 
     pub fn start(&self) {

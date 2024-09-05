@@ -11,7 +11,7 @@ pub mod sql_types {
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
+    use diesel::sql_types::{Array, Int4, Nullable, Text, Timestamptz};
     use super::sql_types::Processstatus;
     use super::sql_types::Foundstatus;
 

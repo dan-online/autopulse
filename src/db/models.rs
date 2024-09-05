@@ -63,7 +63,7 @@ pub struct NewScanEvent {
 
 impl Default for NewScanEvent {
     fn default() -> Self {
-        NewScanEvent {
+        Self {
             event_source: "unknown".to_string(),
             file_path: "unknown".to_string(),
             file_hash: None,

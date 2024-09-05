@@ -44,7 +44,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn get_settings() -> anyhow::Result<Settings> {
+    pub fn get_settings() -> anyhow::Result<Self> {
         let settings = Config::builder()
             .add_source(File::with_name("default.toml"))
             .add_source(config::File::with_name("config").required(false))
@@ -53,7 +53,7 @@ impl Settings {
             .unwrap();
 
         settings
-            .try_deserialize::<Settings>()
+            .try_deserialize::<Self>()
             .map_err(|e| anyhow::anyhow!(e))
     }
 }
@@ -75,8 +75,8 @@ pub enum Trigger {
 impl Trigger {
     pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<Vec<String>> {
         match &self {
-            Trigger::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
-            Trigger::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
+            Self::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
+            Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
             _ => todo!(),
         }
     }
@@ -114,9 +114,9 @@ pub enum Target {
 impl Target {
     pub async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
         match self {
-            Target::Plex(p) => p.process(ev).await,
-            Target::Jellyfin(j) => j.process(ev).await,
-            Target::Command(c) => c.process(ev).await,
+            Self::Plex(p) => p.process(ev).await,
+            Self::Jellyfin(j) => j.process(ev).await,
+            Self::Command(c) => c.process(ev).await,
         }
     }
 }

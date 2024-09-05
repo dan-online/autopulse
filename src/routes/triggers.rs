@@ -46,7 +46,7 @@ pub async fn trigger_post(
 
             let mut scan_events = vec![];
 
-            for path in paths.iter() {
+            for path in &paths {
                 let mut path = path.clone();
 
                 if let Some(rewrite) = rewrite {
@@ -62,15 +62,21 @@ pub async fn trigger_post(
                     ..Default::default()
                 };
 
-                let scan_event = service.add_event(new_scan_event);
+                let scan_event = service.add_event(&new_scan_event);
 
-                scan_events.push(scan_event);
+                if let Ok(scan_event) = scan_event {
+                    scan_events.push(scan_event);
+                }
             }
 
             service
                 .webhooks
-                .send(EventType::New, Some(trigger.to_string()), paths)
+                .send(EventType::New, Some(trigger.to_string()), &paths)
                 .await;
+
+            if scan_events.len() != paths.len() {
+                return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
+            }
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
@@ -119,11 +125,17 @@ pub async fn trigger_get(
                 file_hash: query.hash.clone(),
             };
 
-            let scan_event = service.add_event(new_scan_event);
+            let scan_event = service.add_event(&new_scan_event);
+
+            if let Err(e) = scan_event {
+                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            }
+
+            let scan_event = scan_event.unwrap();
 
             service
                 .webhooks
-                .send(EventType::New, Some(trigger.to_string()), vec![file_path])
+                .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
             Ok(HttpResponse::Ok().json(scan_event))

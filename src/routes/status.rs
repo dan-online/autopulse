@@ -23,7 +23,7 @@ pub async fn status(
 
     let id = id.parse::<i32>().unwrap();
 
-    let scan_ev = service.get_event(&id).await;
+    let scan_ev = service.get_event(&id);
 
     Ok(HttpResponse::Ok().json(scan_ev))
 }

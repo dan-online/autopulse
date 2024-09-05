@@ -110,18 +110,20 @@ impl Jellyfin {
     }
 
     // not as effective as refreshing the item, but good enough
-    async fn scan(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
             .join("/Library/Media/Updated")?
             .to_string();
 
-        let req = UpdateRequest {
+        let new_update_request = UpdateRequest {
             path: ev.file_path.clone(),
             update_type: "Modified".to_string(),
         };
 
-        let body = ScanPayload { updates: vec![req] };
+        let body = ScanPayload {
+            updates: vec![new_update_request],
+        };
 
         let res = client
             .post(&url)

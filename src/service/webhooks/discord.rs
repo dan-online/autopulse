@@ -40,30 +40,33 @@ impl DiscordWebhook {
         files: Vec<String>,
     ) -> DiscordEmbedContent {
         let color = match event {
-            EventType::New => 6061450,     // grey
-            EventType::Found => 52084,     // green
-            EventType::Error => 16711680,  // red
-            EventType::Processed => 39129, // blue
+            EventType::New => 6_061_450,    // grey
+            EventType::Found => 52084,      // green
+            EventType::Error => 16_711_680, // red
+            EventType::Processed => 39129,  // blue
         };
 
-        let title = if let Some(trigger) = trigger {
-            format!(
-                "[{}] - [{}] - {} file{} {}",
-                event,
-                trigger,
-                files.len(),
-                if files.len() > 1 { "s" } else { "" },
-                event.action()
-            )
-        } else {
-            format!(
-                "[{}] - {} file{} {}",
-                event,
-                files.len(),
-                if files.len() > 1 { "s" } else { "" },
-                event.action()
-            )
-        };
+        let title = trigger.map_or_else(
+            || {
+                format!(
+                    "[{}] - {} file{} {}",
+                    event,
+                    files.len(),
+                    if files.len() > 1 { "s" } else { "" },
+                    event.action()
+                )
+            },
+            |trigger| {
+                format!(
+                    "[{}] - [{}] - {} file{} {}",
+                    event,
+                    trigger,
+                    files.len(),
+                    if files.len() > 1 { "s" } else { "" },
+                    event.action()
+                )
+            },
+        );
 
         let fields = vec![
             DiscordEmbedField {

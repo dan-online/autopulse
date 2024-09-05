@@ -24,30 +24,30 @@ pub enum EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let event = match self {
-            EventType::New => "New",
-            EventType::Found => "Found",
-            EventType::Error => "Error",
-            EventType::Processed => "Processed",
+            Self::New => "New",
+            Self::Found => "Found",
+            Self::Error => "Error",
+            Self::Processed => "Processed",
         };
 
-        write!(f, "{}", event)
+        write!(f, "{event}")
     }
 }
 
 impl EventType {
     fn action(&self) -> String {
         match self {
-            EventType::New => "added",
-            EventType::Found => "found",
-            EventType::Error => "failed",
-            EventType::Processed => "processed",
+            Self::New => "added",
+            Self::Found => "found",
+            Self::Error => "failed",
+            Self::Processed => "processed",
         }
         .to_string()
     }
 }
 
 impl WebhookManager {
-    pub fn new(settings: Settings) -> Self {
+    pub const fn new(settings: Settings) -> Self {
         Self { settings }
     }
 
@@ -60,8 +60,11 @@ impl WebhookManager {
         files: Vec<String>,
     ) -> anyhow::Result<()> {
         let embed = DiscordWebhook::generate_json(
-            settings.username.clone().unwrap_or("autopulse".to_string()),
-            settings.avatar_url.clone().unwrap_or("".to_string()),
+            settings
+                .username
+                .clone()
+                .unwrap_or_else(|| "autopulse".to_string()),
+            settings.avatar_url.clone().unwrap_or_default(),
             event,
             trigger,
             files,
@@ -82,10 +85,10 @@ impl WebhookManager {
             .map(|_| ())
     }
 
-    pub async fn send(&self, event: EventType, trigger: Option<String>, files: Vec<String>) {
+    pub async fn send(&self, event: EventType, trigger: Option<String>, files: &[String]) {
         let client = Client::new();
 
-        for (name, webhook) in self.settings.webhooks.iter() {
+        for (name, webhook) in &self.settings.webhooks {
             let result = match webhook {
                 Webhook::Discord(discord) => {
                     self.discord_webhook(
@@ -93,7 +96,7 @@ impl WebhookManager {
                         discord,
                         event.clone(),
                         trigger.clone(),
-                        files.clone(),
+                        files.to_owned(),
                     )
                     .await
                 }

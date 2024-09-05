@@ -4,14 +4,12 @@ use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
 #[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-
 pub struct EpisodeFile {
     pub relative_path: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-
 pub struct Series {
     path: String,
 }
@@ -57,13 +55,13 @@ impl TriggerRequest for SonarrRequest {
 
     fn paths(&self) -> Vec<String> {
         match self {
-            SonarrRequest::EpisodeFileDelete {
+            Self::EpisodeFileDelete {
                 episode_file,
                 series,
             } => {
                 vec![join_path(&series.path, &episode_file.relative_path)]
             }
-            SonarrRequest::Rename {
+            Self::Rename {
                 series,
                 renamed_episode_files,
             } => {
@@ -76,14 +74,14 @@ impl TriggerRequest for SonarrRequest {
 
                 paths
             }
-            SonarrRequest::SeriesDelete { series } => vec![series.path.clone()],
-            SonarrRequest::Download {
+            Self::SeriesDelete { series } => vec![series.path.clone()],
+            Self::Download {
                 episode_file,
                 series,
             } => {
                 vec![join_path(&series.path, &episode_file.relative_path)]
             }
-            SonarrRequest::Test => vec![],
+            Self::Test => vec![],
         }
     }
 }

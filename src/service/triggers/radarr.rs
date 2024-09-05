@@ -39,19 +39,19 @@ impl TriggerRequest for RadarrRequest {
     }
     fn paths(&self) -> Vec<String> {
         match self {
-            RadarrRequest::MovieFileDelete { movie, movie_file } => {
+            Self::MovieFileDelete { movie, movie_file } => {
                 vec![join_path(&movie.folder_path, &movie_file.relative_path)]
             }
-            RadarrRequest::Rename { movie } => {
+            Self::Rename { movie } => {
                 vec![movie.folder_path.clone()]
             }
-            RadarrRequest::MovieDelete { movie } => {
+            Self::MovieDelete { movie } => {
                 vec![movie.folder_path.clone()]
             }
-            RadarrRequest::Download { movie, movie_file } => {
+            Self::Download { movie, movie_file } => {
                 vec![join_path(&movie.folder_path, &movie_file.relative_path)]
             }
-            RadarrRequest::Test => vec![],
+            Self::Test => vec![],
         }
     }
 }

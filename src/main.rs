@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
                 warn!("database does not exist. creating database...");
 
                 let uri = database_url
-                    .split("/")
+                    .split('/')
                     .take(3)
                     .collect::<Vec<&str>>()
                     .join("/")
