@@ -50,7 +50,7 @@ Following autoscan, we use the following terminology:
 
 The easiest way to get started with autopulse is to use the provided Docker image
 
-> Here is a sample [docker-compose.yml](docker/docker-compose.yml)
+> Here is a sample [docker-compose.yml](example/docker-compose.yml)
 
 ```bash
 # create a network
