@@ -1,31 +1,31 @@
 
 
-app:
+# app:
   # hostname: 0.0.0.0
   # port: 2875
   # database_url: postgres://autopulse:autopulse@localhost:5432/autopulse
 
-auth:
+# auth:
   # username: admin
   # password: password
 
-opts:
+# opts:
   # check_path: true # Check if the path exists, assuming the path is available to the container
   # max_retries: 5 # Exponential backoff when a target fails
 
-triggers:
+# triggers:
   # sonarr:
   #   type: sonarr
   #   rewrite:
   #     from: /orig/tv
   #     to: /new/tv
   
-webhooks:
+# webhooks:
   # discord:
   #   type: "discord"
   #   url: "https://discord.com/api/webhooks/1234567890/aBcDeFgHiJkLmNoPqRsTuVwXyZ"
 
-targets:
+# targets:
   # plex:
   #   type: plex
   #   url: http://plex:32400

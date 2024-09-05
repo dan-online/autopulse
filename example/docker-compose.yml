@@ -17,7 +17,7 @@ services:
        AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
       
   postgres:
-    image: postgres
+    image: postgres:alpine
     container_name: autopulse-postgres
     restart: always
     ports:
