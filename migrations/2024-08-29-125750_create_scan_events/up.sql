@@ -20,6 +20,8 @@ CREATE TABLE scan_events (
     failed_times INT DEFAULT 0 NOT NULL,
     next_retry_at TIMESTAMPTZ,
 
+    targets_hit TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL,
+
     found_at TIMESTAMPTZ,
     processed_at TIMESTAMPTZ,
 

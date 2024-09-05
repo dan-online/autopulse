@@ -25,6 +25,7 @@ diesel::table! {
         found_status -> Foundstatus,
         failed_times -> Int4,
         next_retry_at -> Nullable<Timestamptz>,
+        targets_hit -> Array<Text>,
         found_at -> Nullable<Timestamptz>,
         processed_at -> Nullable<Timestamptz>,
         created_at -> Timestamptz,

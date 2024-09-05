@@ -14,7 +14,7 @@ services:
     volumes:
       - ./config.toml:/app/config.toml
     environment:
-       AUTOPULSE_DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
+       AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
       
   postgres:
     image: postgres

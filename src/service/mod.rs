@@ -131,11 +131,14 @@ impl PulseRunner {
         for ev in evs.iter_mut() {
             let res = self.process_event(ev).await;
 
-            if let Err(e) = res {
-                error!("unable to process event: {:?}", e);
+            if let Ok((succeeded, _)) = &res {
+                ev.targets_hit.append(&mut succeeded.clone());
+            }
+
+            if res.is_err() || res.as_ref().unwrap().1.len() > 0 {
                 ev.failed_times += 1;
 
-                if ev.failed_times > self.settings.opts.max_retries {
+                if ev.failed_times >= self.settings.opts.max_retries {
                     ev.process_status = crate::db::models::ProcessStatus::Failed;
                     ev.next_retry_at = None;
                     failed.push(ev.file_path.clone());
@@ -181,17 +184,30 @@ impl PulseRunner {
         Ok(())
     }
 
-    async fn process_event(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
-        let futures = self
-            .settings
-            .targets
-            .values_mut()
-            .map(|target| target.process(ev))
-            .collect::<Vec<_>>();
+    async fn process_event(
+        &mut self,
+        ev: &ScanEvent,
+    ) -> anyhow::Result<(Vec<String>, Vec<String>)> {
+        let mut succeeded = vec![];
+        let mut failed = vec![];
 
-        futures::future::try_join_all(futures).await?;
+        for (name, target) in self.settings.targets.iter_mut() {
+            if !ev.targets_hit.is_empty() && ev.targets_hit.contains(&name) {
+                continue;
+            }
 
-        Ok(())
+            let res = target.process(ev).await;
+
+            match res {
+                Ok(_) => succeeded.push(name.clone()),
+                Err(e) => {
+                    failed.push(name.clone());
+                    error!("failed to process target '{}': {:?}", name, e);
+                }
+            }
+        }
+
+        Ok((succeeded, failed))
     }
 
     async fn cleanup(&self) -> anyhow::Result<()> {

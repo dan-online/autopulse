@@ -9,7 +9,7 @@ password = "password"
 
 [opts]
 check_path = true
-max_retries = 3
+max_retries = 5
 
 [triggers.manual]
 type = "manual"

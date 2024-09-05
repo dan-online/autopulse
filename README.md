@@ -4,16 +4,13 @@
 
 <br />
 <div align="center">
-  <a href="https://github.com/dan-online/autopulse">
-    <img src="assets/logo.webp" alt="Logo" width="80" height="80">
-  </a>
+<a href="https://github.com/dan-online/autopulse">
+  <img src="assets/logo.webp" alt="Logo" width="80" height="80">
+</a>
 
 <h3 align="center">autopulse</h3>
-
   <p align="center">
-    automated scanning tool that bridges media servers<br/> like Plex and Jellyfin with organizers like Sonarr and Radarr
-    <!-- <br /> -->
-    <!-- <a href="https://github.com/dan-online/autopulse"><strong>Explore the docs »</strong></a> -->
+    automated scanning tool that bridges media organizers such as Sonarr and Radarr with media servers such as Plex and Jellyfin
     <br />
     <br />
     <a href="https://github.com/dan-online/autopulse/issues">Report Bug</a>
@@ -31,7 +28,13 @@ autopulse is a simple project, designed after the deprecation of [autoscan](http
 
 Following autoscan, we use the following terminology:
 - **Trigger**: A trigger is a specification for an endpoint that will be called when a file is ready to be processed
+  - Manual (default: /triggers/manual)
+  - Sonarr
+  - Radarr
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
+  - Plex
+  - Jellyfin
+  - Command
 
 ### Features
 
@@ -39,7 +42,7 @@ Following autoscan, we use the following terminology:
 - **Integration**: integrates with Sonarr, Radarr, Plex, Jellyfin, and more in the future
 - **Self-Scans**: checks the file exists before updating the target and optionally waits for the file to match a provided hash
 - **Reliability**: uses a database to store the state of the scan requests
-- **Notifications**: allow for notifications to be sent when a file is ready to be processed with webhooks such as Discord
+- **Webhooks**: allow for notifications to be sent when a file is ready to be processed with webhooks such as Discord
 
 ## Getting Started
 
@@ -57,27 +60,30 @@ $ docker network create autopulse
 $ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -e POSTGRES_DB=autopulse postgres:alpine
 
 # autopulse
-$ docker run -d --net autopulse -e AUTOPULSE_DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
 ```
 
 ### Configuration
 
-autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the [default values](default.toml) using the config.toml or by setting environment variables in the format of: ``AUTOPULSE_{SECTION}_{KEY}``. 
+autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the [default values](default.toml) using [a config file](example/config.toml) or by [setting environment variables](example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``. 
 
-For example: `AUTOPULSE_DATABASE_URL`
+For example: `AUTOPULSE__APP__DATABASE_URL`
+
+An example has been provided in the [example](example) directory
+
+> Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
 
 #### Authorization
 
-autopulse uses basic authorization for the API. You can set the username and password in the config file or by setting the `AUTOPULSE_USERNAME` and `AUTOPULSE_PASSWORD` environment variables.
+autopulse uses basic authorization for the API. You can set the username and password in the config file or by setting the `AUTOPULSE__AUTH__USERNAME` and `AUTOPULSE__AUTH__PASSWORD` environment variables.
 
 ```toml
-# config.toml
-
-username = "admin"
-password = "password"
+[auth]
+username = "terry"
+password = "yogurt"
 ```
 
-> **Note**: By default the default username and password are `admin` and `password` respectively however it is HIGHLY recommended to change these values if you are exposing the API to the internet.
+> **Note**: By default the username and password are `admin` and `password` respectively, however it is HIGHLY recommended to change these values if you are exposing the API to the internet.
 
 #### Examples
 
@@ -117,7 +123,6 @@ Distributed under the MIT License. See [`LICENSE`](https://dancodes.mit-license.
 DanCodes - <dan@dancodes.online>
 
 Project Link: [https://github.com/dan-online/autopulse](https://github.com/dan-online/autopulse)
-
 
 [contributors-shield]: https://img.shields.io/github/contributors/dan-online/autopulse.svg?style=for-the-badge
 [contributors-url]: https://github.com/dan-online/autopulse/graphs/contributors

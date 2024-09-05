@@ -5,9 +5,11 @@ use serde::Deserialize;
 
 use crate::{
     db::models::ScanEvent,
-    service::targets::{jellyfin::Jellyfin, plex::Plex},
-    service::triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
-    service::webhooks::discord::DiscordWebhook,
+    service::{
+        targets::{command::Command, jellyfin::Jellyfin, plex::Plex},
+        triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
+        webhooks::discord::DiscordWebhook,
+    },
 };
 
 #[derive(Deserialize, Clone, Debug)]
@@ -46,7 +48,7 @@ impl Settings {
         let settings = Config::builder()
             .add_source(File::with_name("default.toml"))
             .add_source(config::File::with_name("config").required(false))
-            .add_source(config::Environment::with_prefix("AUTOPULSE"))
+            .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"))
             .build()
             .unwrap();
 
@@ -106,6 +108,7 @@ pub trait TriggerRequest {
 pub enum Target {
     Plex(Plex),
     Jellyfin(Jellyfin),
+    Command(Command),
 }
 
 impl Target {
@@ -113,6 +116,7 @@ impl Target {
         match self {
             Target::Plex(p) => p.process(ev).await,
             Target::Jellyfin(j) => j.process(ev).await,
+            Target::Command(c) => c.process(ev).await,
         }
     }
 }

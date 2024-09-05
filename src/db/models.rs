@@ -43,6 +43,8 @@ pub struct ScanEvent {
     pub failed_times: i32,
     pub next_retry_at: Option<chrono::NaiveDateTime>,
 
+    pub targets_hit: Vec<String>,
+
     pub found_at: Option<chrono::NaiveDateTime>,
     pub processed_at: Option<chrono::NaiveDateTime>,
 
