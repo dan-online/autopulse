@@ -57,6 +57,7 @@ impl Jellyfin {
         headers.insert("Accept", "application/json".parse().unwrap());
 
         reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
             .default_headers(headers)
             .build()
             .map_err(Into::into)
