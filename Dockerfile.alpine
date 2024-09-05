@@ -20,7 +20,14 @@ COPY migrations migrations
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine AS runtime
+
+WORKDIR /app
+
 RUN addgroup -S user && adduser -S user -G user
+
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/autopulse /usr/local/bin/
+COPY default.toml default.toml
+
 USER user
+
 CMD ["/usr/local/bin/autopulse"]
