@@ -27,8 +27,7 @@ jobs:
       - name: Build and push (latest)
         uses: docker/build-push-action@v6
         with:
-          # push: true
-          push: false
+          push: true
           tags: danonline/autopulse:latest
           file: Dockerfile.alpine
           cache-from: type=gha
@@ -37,8 +36,7 @@ jobs:
       - name: Build and push (latest-ubuntu)
         uses: docker/build-push-action@v6
         with:
-          # push: true
-          push: false
+          push: true
           tags: danonline/autopulse:latest-ubuntu
           file: Dockerfile
           cache-from: type=gha
