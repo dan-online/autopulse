@@ -6,7 +6,7 @@ use actix_web::{
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use crate::{
-    db::models::NewScanEvent,
+    db::models::{FoundStatus, NewScanEvent},
     service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
     utils::{
         check_auth::check_auth,
@@ -47,7 +47,7 @@ pub async fn trigger_post(
             let mut scan_events = vec![];
 
             for path in &paths {
-                let mut path = path.clone();
+                let (mut path, search) = path.clone();
 
                 if let Some(rewrite) = rewrite {
                     let from = rewrite.from.clone();
@@ -59,6 +59,11 @@ pub async fn trigger_post(
                 let new_scan_event = NewScanEvent {
                     event_source: trigger.to_string(),
                     file_path: path.clone(),
+                    found_status: if !search {
+                        Some(FoundStatus::Found)
+                    } else {
+                        None
+                    },
                     ..Default::default()
                 };
 
@@ -71,7 +76,15 @@ pub async fn trigger_post(
 
             service
                 .webhooks
-                .send(EventType::New, Some(trigger.to_string()), &paths)
+                .send(
+                    EventType::New,
+                    Some(trigger.to_string()),
+                    &paths
+                        .clone()
+                        .into_iter()
+                        .map(|p| p.0)
+                        .collect::<Vec<String>>(),
+                )
                 .await;
 
             if scan_events.len() != paths.len() {
@@ -123,6 +136,7 @@ pub async fn trigger_get(
                 event_source: trigger.to_string(),
                 file_path: file_path.clone(),
                 file_hash: query.hash.clone(),
+                ..Default::default()
             };
 
             let scan_event = service.add_event(&new_scan_event);

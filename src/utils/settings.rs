@@ -73,7 +73,7 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<Vec<String>> {
+    pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<Vec<(String, bool)>> {
         match &self {
             Self::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
             Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
@@ -100,7 +100,8 @@ pub trait TriggerRequest {
     where
         Self: Sized;
 
-    fn paths(&self) -> Vec<String>;
+    // where the bool represents whether to check found status
+    fn paths(&self) -> Vec<(String, bool)>;
 }
 
 #[derive(Deserialize, Clone, Debug)]

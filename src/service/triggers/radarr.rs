@@ -37,19 +37,25 @@ impl TriggerRequest for RadarrRequest {
     fn from_json(json: serde_json::Value) -> anyhow::Result<Self> {
         serde_json::from_value(json).map_err(|e| anyhow::anyhow!(e))
     }
-    fn paths(&self) -> Vec<String> {
+    fn paths(&self) -> Vec<(String, bool)> {
         match self {
             Self::MovieFileDelete { movie, movie_file } => {
-                vec![join_path(&movie.folder_path, &movie_file.relative_path)]
+                vec![(
+                    join_path(&movie.folder_path, &movie_file.relative_path),
+                    false,
+                )]
             }
             Self::Rename { movie } => {
-                vec![movie.folder_path.clone()]
+                vec![(movie.folder_path.clone(), true)]
             }
             Self::MovieDelete { movie } => {
-                vec![movie.folder_path.clone()]
+                vec![(movie.folder_path.clone(), false)]
             }
             Self::Download { movie, movie_file } => {
-                vec![join_path(&movie.folder_path, &movie_file.relative_path)]
+                vec![(
+                    join_path(&movie.folder_path, &movie_file.relative_path),
+                    true,
+                )]
             }
             Self::Test => vec![],
         }
@@ -93,7 +99,11 @@ mod tests {
             assert_eq!(movie.folder_path, "/Movies/Interstellar (2014)");
             assert_eq!(
                 radarr_request.paths(),
-                vec!["/Movies/Interstellar (2014)/Interstellar.2014.UHD.BluRay.2160p.REMUX.mkv"]
+                vec![(
+                    "/Movies/Interstellar (2014)/Interstellar.2014.UHD.BluRay.2160p.REMUX.mkv"
+                        .to_string(),
+                    true
+                )]
             );
         } else {
             panic!("Unexpected variant");
@@ -113,10 +123,7 @@ mod tests {
 
         if let RadarrRequest::MovieDelete { movie } = radarr_request.clone() {
             assert_eq!(movie.folder_path, "/Movies/Wonder Woman 1984 (2020)");
-            assert_eq!(
-                radarr_request.paths(),
-                vec!["/Movies/Wonder Woman 1984 (2020)"]
-            );
+            assert_eq!(radarr_request.paths(), vec![(movie.folder_path, false)]);
         } else {
             panic!("Unexpected variant");
         }
@@ -142,7 +149,7 @@ mod tests {
 
             assert_eq!(
                 radarr_request.paths(),
-                vec!["/Movies/Tenet (2020)/Tenet.2020.mkv"]
+                vec![("/Movies/Tenet (2020)/Tenet.2020.mkv".to_string(), false)]
             );
         } else {
             panic!("Unexpected variant");
@@ -162,7 +169,10 @@ mod tests {
 
         if let RadarrRequest::Rename { movie } = radarr_request.clone() {
             assert_eq!(movie.folder_path, "/Movies/Deadpool (2016)");
-            assert_eq!(radarr_request.paths(), vec!["/Movies/Deadpool (2016)"]);
+            assert_eq!(
+                radarr_request.paths(),
+                vec![("/Movies/Deadpool (2016)".to_string(), true)]
+            );
         } else {
             panic!("Unexpected variant");
         }

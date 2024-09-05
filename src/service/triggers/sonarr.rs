@@ -53,13 +53,13 @@ impl TriggerRequest for SonarrRequest {
         serde_json::from_value(json).map_err(|e| anyhow::anyhow!(e))
     }
 
-    fn paths(&self) -> Vec<String> {
+    fn paths(&self) -> Vec<(String, bool)> {
         match self {
             Self::EpisodeFileDelete {
                 episode_file,
                 series,
             } => {
-                vec![join_path(&series.path, &episode_file.relative_path)]
+                vec![(join_path(&series.path, &episode_file.relative_path), false)]
             }
             Self::Rename {
                 series,
@@ -68,18 +68,18 @@ impl TriggerRequest for SonarrRequest {
                 let mut paths = vec![];
 
                 for file in renamed_episode_files {
-                    paths.push(file.previous_path.clone());
-                    paths.push(join_path(&series.path, &file.relative_path));
+                    paths.push((file.previous_path.clone(), false));
+                    paths.push((join_path(&series.path, &file.relative_path), true));
                 }
 
                 paths
             }
-            Self::SeriesDelete { series } => vec![series.path.clone()],
+            Self::SeriesDelete { series } => vec![(series.path.clone(), false)],
             Self::Download {
                 episode_file,
                 series,
             } => {
-                vec![join_path(&series.path, &episode_file.relative_path)]
+                vec![(join_path(&series.path, &episode_file.relative_path), true)]
             }
             Self::Test => vec![],
         }
@@ -124,7 +124,10 @@ mod tests {
             assert_eq!(series.path, "/TV/Westworld");
             assert_eq!(
                 sonarr_request.paths(),
-                vec!["/TV/Westworld/Season 2/Westworld.S02E01.mkv"]
+                vec![(
+                    "/TV/Westworld/Season 2/Westworld.S02E01.mkv".to_string(),
+                    false
+                )]
             );
         } else {
             panic!("Unexpected variant");
@@ -166,12 +169,30 @@ mod tests {
             assert_eq!(
                 sonarr_request.paths(),
                 vec![
-                    "/TV/Westworld/Season 1/Westworld.S01E01.mkv",
-                    "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E01.mkv",
-                    "/TV/Westworld/Season 1/Westworld.S01E02.mkv",
-                    "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E02.mkv",
-                    "/TV/Westworld/Season 2/Westworld.S01E02.mkv",
-                    "/TV/Westworld [imdb:tt0475784]/Season 2/Westworld.S02E01.mkv"
+                    (
+                        "/TV/Westworld/Season 1/Westworld.S01E01.mkv".to_string(),
+                        false
+                    ),
+                    (
+                        "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E01.mkv".to_string(),
+                        true
+                    ),
+                    (
+                        "/TV/Westworld/Season 1/Westworld.S01E02.mkv".to_string(),
+                        false
+                    ),
+                    (
+                        "/TV/Westworld [imdb:tt0475784]/Season 1/Westworld.S01E02.mkv".to_string(),
+                        true
+                    ),
+                    (
+                        "/TV/Westworld/Season 2/Westworld.S01E02.mkv".to_string(),
+                        false
+                    ),
+                    (
+                        "/TV/Westworld [imdb:tt0475784]/Season 2/Westworld.S02E01.mkv".to_string(),
+                        true
+                    )
                 ]
             );
         } else {
@@ -192,7 +213,10 @@ mod tests {
 
         if let SonarrRequest::SeriesDelete { series } = sonarr_request.clone() {
             assert_eq!(series.path, "/TV/Westworld");
-            assert_eq!(sonarr_request.paths(), vec!["/TV/Westworld"]);
+            assert_eq!(
+                sonarr_request.paths(),
+                vec![("/TV/Westworld".to_string(), false)]
+            );
         } else {
             panic!("Unexpected variant");
         }
@@ -221,7 +245,10 @@ mod tests {
             assert_eq!(series.path, "/TV/Westworld");
             assert_eq!(
                 sonarr_request.paths(),
-                vec!["/TV/Westworld/Season 1/Westworld.S01E01.mkv"]
+                vec![(
+                    "/TV/Westworld/Season 1/Westworld.S01E01.mkv".to_string(),
+                    true
+                )]
             );
         } else {
             panic!("Unexpected variant");
