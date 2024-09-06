@@ -2,14 +2,14 @@
 
 diesel::table! {
     scan_events (id) {
-        id -> Integer,
+        id -> Text,
         event_source -> Text,
         event_timestamp -> Timestamp,
         file_path -> Text,
         file_hash -> Nullable<Text>,
         process_status -> Text,
         found_status -> Text,
-        failed_times -> Integer,
+        failed_times -> Int4,
         next_retry_at -> Nullable<Timestamp>,
         targets_hit -> Text,
         found_at -> Nullable<Timestamp>,

@@ -1,3 +1,4 @@
+DROP TABLE scan_events;
 CREATE TABLE IF NOT EXISTS scan_events (
     id TEXT PRIMARY KEY NOT NULL,
 

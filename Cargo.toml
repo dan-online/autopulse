@@ -35,3 +35,4 @@ diesel_migrations = { version = "2.2.0", features = [
     "mysql",
     "sqlite",
 ] }
+uuid = { version = "1.10.0", features = ["v4"] }

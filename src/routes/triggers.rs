@@ -151,7 +151,9 @@ pub async fn trigger_get(
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
-            Ok(HttpResponse::Ok().json(json!({ "status": "ok" })))
+            let scan_event = scan_event.unwrap();
+
+            Ok(HttpResponse::Ok().json(scan_event))
         }
         _ => Ok(HttpResponse::Ok().body("Not implemented")),
     }

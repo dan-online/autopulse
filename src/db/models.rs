@@ -43,7 +43,7 @@ impl Into<String> for ProcessStatus {
 #[derive(Queryable, Selectable, Serialize, Clone, Debug, AsChangeset, Identifiable)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct ScanEvent {
-    pub id: i32,
+    pub id: String,
 
     pub event_source: String,
     pub event_timestamp: NaiveDateTime,
@@ -68,6 +68,7 @@ pub struct ScanEvent {
 #[derive(Insertable)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct NewScanEvent {
+    pub id: String,
     pub event_source: String,
 
     pub file_path: String,
@@ -76,9 +77,15 @@ pub struct NewScanEvent {
     pub found_status: Option<String>,
 }
 
+fn generate_uuid() -> String {
+    let uuid = uuid::Uuid::new_v4();
+    uuid.to_string()
+}
+
 impl Default for NewScanEvent {
     fn default() -> Self {
         Self {
+            id: generate_uuid(),
             event_source: "unknown".to_string(),
             file_path: "unknown".to_string(),
             file_hash: None,
