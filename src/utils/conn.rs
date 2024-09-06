@@ -1,8 +1,8 @@
-use crate::db::models::{NewScanEvent, ScanEvent};
+use crate::db::models::ScanEvent;
 use anyhow::Context;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::SaveChangesDsl;
 use diesel::{Connection, QueryResult};
-use diesel::{RunQueryDsl, SaveChangesDsl, SelectableHelper};
 
 #[derive(diesel::MultiConnection)]
 pub enum AnyConnection {

@@ -17,9 +17,9 @@ pub enum FoundStatus {
     HashMismatch,
 }
 
-impl Into<String> for FoundStatus {
-    fn into(self) -> String {
-        match self {
+impl From<FoundStatus> for String {
+    fn from(val: FoundStatus) -> Self {
+        match val {
             FoundStatus::Found => "found",
             FoundStatus::HashMismatch => "hash_mismatch",
             FoundStatus::NotFound => "not_found",
@@ -28,9 +28,9 @@ impl Into<String> for FoundStatus {
     }
 }
 
-impl Into<String> for ProcessStatus {
-    fn into(self) -> String {
-        match self {
+impl From<ProcessStatus> for String {
+    fn from(val: ProcessStatus) -> Self {
+        match val {
             ProcessStatus::Pending => "pending",
             ProcessStatus::Complete => "complete",
             ProcessStatus::Retry => "retry",

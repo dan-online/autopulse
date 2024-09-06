@@ -4,7 +4,6 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
-use serde_json::json;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},

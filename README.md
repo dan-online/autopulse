@@ -61,8 +61,8 @@ $ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
 
 # maria database
-$ docker run -d --net autopulse --name maria -e MARIADB_USER=autopulse -e MARIADB_PASSWORD=autopulse -e MARIADB_DATABASE=autopulse mariadb
-$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=mariadb://autopulse:autopulse@mariadb/autopulse --name autopulse danonline/autopulse
+$ docker run -d --net autopulse --name maria -e MARIADB_ROOT_PASSWORD=autopulse -e MARIADB_DATABASE=autopulse mariadb
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=mariadb://root:autopulse@mariadb/autopulse --name autopulse danonline/autopulse
 
 # sqlite database
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse danonline/autopulse

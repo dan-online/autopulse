@@ -3,11 +3,8 @@ use std::path::PathBuf;
 use crate::{
     db::{
         models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
-        schema::{
-            self,
-            scan_events::{
-                dsl::scan_events, found_at, found_status, next_retry_at, process_status,
-            },
+        schema::scan_events::{
+            dsl::scan_events, found_at, found_status, next_retry_at, process_status,
         },
     },
     service::webhooks::WebhookManager,
@@ -16,7 +13,7 @@ use crate::{
         settings::Settings,
     },
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::Serialize;
 use tracing::{error, info};
 use webhooks::EventType;
