@@ -22,7 +22,7 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
       - name: Install libraries
-        run: apt install -y libpq-dev libmysqlclient-dev libsqlite3-dev
+        run: sudo apt install -y libpq-dev libmysqlclient-dev libsqlite3-dev
       - name: Cargo Cache
         uses: actions/cache@v4
         with:
