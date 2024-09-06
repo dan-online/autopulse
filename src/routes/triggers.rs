@@ -4,6 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use serde_json::json;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
@@ -60,7 +61,7 @@ pub async fn trigger_post(
                     event_source: trigger.to_string(),
                     file_path: path.clone(),
                     found_status: if !search {
-                        Some(FoundStatus::Found)
+                        Some(FoundStatus::Found.into())
                     } else {
                         None
                     },
@@ -145,14 +146,12 @@ pub async fn trigger_get(
                 return Ok(HttpResponse::InternalServerError().body(e.to_string()));
             }
 
-            let scan_event = scan_event.unwrap();
-
             service
                 .webhooks
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
-            Ok(HttpResponse::Ok().json(scan_event))
+            Ok(HttpResponse::Ok().json(json!({ "status": "ok" })))
         }
         _ => Ok(HttpResponse::Ok().body("Not implemented")),
     }
