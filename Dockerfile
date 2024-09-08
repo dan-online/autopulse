@@ -14,7 +14,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build autopulse
-FROM rust:1.80.1 as builder
+FROM rust:1.81.0 as builder
 
 WORKDIR /usr/src/
 RUN USER=root cargo new --bin autopulse
