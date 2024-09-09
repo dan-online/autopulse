@@ -28,7 +28,7 @@ jobs:
       - name: Pull Request suffix
         run: |
           if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}""
+            echo "PR number: ${{ github.event.number }}"
             echo "pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
           else
             echo "Not a PR branch"
@@ -39,7 +39,7 @@ jobs:
       - name: Build and push (latest)
         uses: docker/build-push-action@v6
         with:
-          push: false
+          push: true
           tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
           file: Dockerfile.alpine
           cache-from: type=gha
