@@ -33,6 +33,7 @@ Following autoscan, we use the following terminology:
   - Sonarr
   - Radarr
   - Lidarr
+  - Readarr
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
@@ -61,10 +62,6 @@ $ docker network create autopulse
 # postgres database
 $ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -e POSTGRES_DB=autopulse postgres
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
-
-# maria database
-$ docker run -d --net autopulse --name maria -e MARIADB_ROOT_PASSWORD=autopulse -e MARIADB_DATABASE=autopulse mariadb
-$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=mariadb://root:autopulse@mariadb/autopulse --name autopulse danonline/autopulse
 
 # sqlite database
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse danonline/autopulse
@@ -133,7 +130,7 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost
 
 - [ ] Add more triggers
   - [x] Lidarr
-  - [ ] Readarr
+  - [x] Readarr
   - [ ] inotify
 - [ ] Hooks
   - [ ] Add/Found/Processed hooks
