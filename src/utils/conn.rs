@@ -28,20 +28,16 @@ impl AnyConnection {
 
     pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         match self {
-            Self::Postgresql(conn) => {
-                diesel::insert_into(crate::db::schema::scan_events::table)
-                    .values(ev)
-                    .returning(ScanEvent::as_returning())
-                    .get_result::<ScanEvent>(conn)
-                    .map_err(Into::into)
-            }
-            Self::Sqlite(conn) => {
-                diesel::insert_into(crate::db::schema::scan_events::table)
-                    .values(ev)
-                    .returning(ScanEvent::as_returning())
-                    .get_result::<ScanEvent>(conn)
-                    .map_err(Into::into)
-            }
+            Self::Postgresql(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
+                .values(ev)
+                .returning(ScanEvent::as_returning())
+                .get_result::<ScanEvent>(conn)
+                .map_err(Into::into),
+            Self::Sqlite(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
+                .values(ev)
+                .returning(ScanEvent::as_returning())
+                .get_result::<ScanEvent>(conn)
+                .map_err(Into::into),
         }
     }
 }
