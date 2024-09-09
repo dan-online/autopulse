@@ -173,7 +173,7 @@ impl PulseRunner {
         for (name, target) in &mut self.settings.targets {
             let evs = evs
                 .iter_mut()
-                .filter(|x| !x.get_targets_hit().contains(&name))
+                .filter(|x| !x.get_targets_hit().contains(name))
                 .collect::<Vec<&mut ScanEvent>>();
 
             let res = target

@@ -75,7 +75,7 @@ impl Jellyfin {
         Ok(libraries)
     }
 
-    fn in_library(&self, libraries: &Vec<Library>, path: &str) -> bool {
+    fn in_library(&self, libraries: &[Library], path: &str) -> bool {
         libraries
             .iter()
             .any(|lib| lib.locations.iter().any(|loc| path.starts_with(loc)))
@@ -123,7 +123,7 @@ impl Jellyfin {
     }
 
     // not as effective as refreshing the item, but good enough
-    async fn scan(&self, ev: &Vec<&ScanEvent>) -> anyhow::Result<()> {
+    async fn scan(&self, ev: &[&ScanEvent]) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
             .join("/Library/Media/Updated")?
