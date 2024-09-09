@@ -95,7 +95,8 @@ impl Jellyfin {
         url.query_pairs_mut()
             .append_pair("LocationTypes", "FileSystem");
         url.query_pairs_mut()
-            .append_pair("MediaTypes", "Video,Audio");
+            // TODO: Use the trigger type to reduce the data needed
+            .append_pair("MediaTypes", "Video,Audio,Book");
         url.query_pairs_mut().append_pair("Filters", "IsNotFolder");
         url.query_pairs_mut()
             .append_pair("EnableTotalRecordCount", "false");

@@ -35,7 +35,10 @@ pub async fn trigger_post(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Sonarr { rewrite } | Trigger::Radarr { rewrite } | Trigger::Lidarr { rewrite } => {
+        Trigger::Sonarr { rewrite }
+        | Trigger::Radarr { rewrite }
+        | Trigger::Lidarr { rewrite }
+        | Trigger::Readarr { rewrite } => {
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
