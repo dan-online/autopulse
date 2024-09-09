@@ -29,10 +29,10 @@ jobs:
         run: |
           if [ -n "${{ github.event.number }}" ]; then
             echo "PR number: ${{ github.event.number }}"
-            echo "pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
-            echo "latest" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
         id: tag
 
