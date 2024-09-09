@@ -7,7 +7,7 @@ use crate::{
     db::models::ScanEvent,
     service::{
         targets::{command::Command, jellyfin::Jellyfin, plex::Plex},
-        triggers::{radarr::RadarrRequest, sonarr::SonarrRequest},
+        triggers::{lidarr::LidarrRequest, radarr::RadarrRequest, sonarr::SonarrRequest},
         webhooks::discord::DiscordWebhook,
     },
 };
@@ -71,6 +71,7 @@ pub enum Trigger {
     Manual { rewrite: Option<Rewrite> },
     Radarr { rewrite: Option<Rewrite> },
     Sonarr { rewrite: Option<Rewrite> },
+    Lidarr { rewrite: Option<Rewrite> },
 }
 
 impl Trigger {
@@ -78,6 +79,7 @@ impl Trigger {
         match &self {
             Self::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
             Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
+            Self::Lidarr { .. } => Ok(LidarrRequest::from_json(body)?.paths()),
             _ => todo!(),
         }
     }
