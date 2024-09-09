@@ -15,7 +15,7 @@ use crate::{
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::Serialize;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use webhooks::EventType;
 
 pub mod targets;
@@ -85,7 +85,7 @@ impl PulseRunner {
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
-            conn.save_changes(ev);
+            conn.save_changes(ev)?;
         }
 
         if !count.is_empty() {
@@ -102,9 +102,6 @@ impl PulseRunner {
     }
 
     pub async fn update_process_status(&mut self) -> anyhow::Result<()> {
-        let mut processed = vec![];
-        let mut failed = vec![];
-
         let mut conn = get_conn(&self.pool);
         let base_query = scan_events
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
@@ -123,44 +120,11 @@ impl PulseRunner {
             base_query.load::<ScanEvent>(&mut conn)?
         };
 
-        for ev in evs.iter_mut() {
-            let res = self.process_event(ev).await;
-
-            if let Ok((succeeded, _)) = &res {
-                let mut hit = ev
-                    .targets_hit
-                    .split(",")
-                    .map(|x| x.to_string())
-                    .collect::<Vec<String>>();
-
-                hit.append(&mut succeeded.clone());
-
-                ev.targets_hit = hit.join(",");
-            }
-
-            if res.is_err() || !res.as_ref().unwrap().1.is_empty() {
-                ev.failed_times += 1;
-
-                if ev.failed_times >= self.settings.opts.max_retries {
-                    ev.process_status = ProcessStatus::Failed.into();
-                    ev.next_retry_at = None;
-                    failed.push(ev.file_path.clone());
-                } else {
-                    let next_retry = chrono::Utc::now().naive_utc()
-                        + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
-
-                    ev.process_status = ProcessStatus::Retry.into();
-                    ev.next_retry_at = Some(next_retry);
-                }
-            } else {
-                ev.process_status = ProcessStatus::Complete.into();
-                ev.processed_at = Some(chrono::Utc::now().naive_utc());
-                processed.push(ev.file_path.clone());
-            }
-
-            ev.updated_at = chrono::Utc::now().naive_utc();
-            conn.save_changes(ev);
+        if evs.is_empty() {
+            return Ok(());
         }
+
+        let (processed, retrying, failed) = self.process_events(&mut evs).await?;
 
         if !processed.is_empty() {
             info!(
@@ -171,6 +135,18 @@ impl PulseRunner {
 
             self.webhooks
                 .send(EventType::Processed, None, &processed)
+                .await;
+        }
+
+        if !retrying.is_empty() {
+            warn!(
+                "retrying {} file{}",
+                retrying.len(),
+                if retrying.len() > 1 { "s" } else { "" }
+            );
+
+            self.webhooks
+                .send(EventType::Retrying, None, &retrying)
                 .await;
         }
 
@@ -187,30 +163,79 @@ impl PulseRunner {
         Ok(())
     }
 
-    async fn process_event(
+    async fn process_events(
         &mut self,
-        ev: &ScanEvent,
-    ) -> anyhow::Result<(Vec<String>, Vec<String>)> {
-        let mut succeeded = vec![];
-        let mut failed = vec![];
+        evs: &mut [ScanEvent],
+    ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
+        let mut succeeded_ids = vec![];
+        let mut failed_ids = vec![];
 
         for (name, target) in &mut self.settings.targets {
-            if !ev.targets_hit.is_empty() && ev.targets_hit.contains(name) {
-                continue;
-            }
+            let evs = evs
+                .iter_mut()
+                .filter(|x| !x.get_targets_hit().contains(name))
+                .collect::<Vec<&mut ScanEvent>>();
 
-            let res = target.process(ev).await;
+            let res = target
+                .process(
+                    // TODO: Somehow clean this up
+                    evs.iter()
+                        .map(|x| &**x)
+                        .collect::<Vec<&ScanEvent>>()
+                        .as_slice(),
+                )
+                .await;
 
             match res {
-                Ok(()) => succeeded.push(name.clone()),
+                Ok(s) => {
+                    for ev in evs {
+                        if s.contains(&ev.id) {
+                            ev.add_target_hit(name);
+                            succeeded_ids.push(ev.id.clone());
+                        } else {
+                            failed_ids.push(ev.id.clone());
+                        }
+                    }
+                }
                 Err(e) => {
-                    failed.push(name.clone());
                     error!("failed to process target '{}': {:?}", name, e);
                 }
             }
         }
 
-        Ok((succeeded, failed))
+        let mut succeeded = vec![];
+        let mut retrying = vec![];
+        let mut failed = vec![];
+
+        let mut conn = get_conn(&self.pool);
+
+        for ev in evs.iter_mut() {
+            ev.updated_at = chrono::Utc::now().naive_utc();
+
+            if failed_ids.contains(&ev.id) {
+                ev.failed_times += 1;
+
+                if ev.failed_times >= self.settings.opts.max_retries {
+                    ev.process_status = ProcessStatus::Failed.into();
+                    ev.next_retry_at = None;
+                    failed.push(conn.save_changes(ev)?.file_path.clone());
+                } else {
+                    let next_retry = chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
+
+                    ev.process_status = ProcessStatus::Retry.into();
+                    ev.next_retry_at = Some(next_retry);
+
+                    retrying.push(conn.save_changes(ev)?.file_path.clone());
+                }
+            } else {
+                ev.process_status = ProcessStatus::Complete.into();
+                ev.processed_at = Some(chrono::Utc::now().naive_utc());
+                succeeded.push(conn.save_changes(ev)?.file_path.clone());
+            }
+        }
+
+        Ok((succeeded, retrying, failed))
     }
 
     fn cleanup(&self) -> anyhow::Result<()> {
@@ -218,18 +243,26 @@ impl PulseRunner {
 
         let time_before_cleanup = chrono::Utc::now().naive_utc() - chrono::Duration::days(10);
 
-        let _ = diesel::delete(
+        let delete_not_found = diesel::delete(
             scan_events
                 .filter(found_status.eq::<String>(FoundStatus::NotFound.into()))
                 .filter(found_at.lt(time_before_cleanup)),
         );
 
-        let _ = diesel::delete(
+        if let Err(e) = delete_not_found.execute(&mut conn) {
+            error!("unable to delete not found events: {:?}", e);
+        }
+
+        let delete_failed = diesel::delete(
             scan_events
                 .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
                 .filter(found_at.lt(time_before_cleanup)),
         )
-        .execute(&mut conn)?;
+        .execute(&mut conn);
+
+        if let Err(e) = delete_failed {
+            error!("unable to delete failed events: {:?}", e);
+        }
 
         Ok(())
     }
@@ -314,7 +347,7 @@ impl PulseService {
 
         tokio::spawn(async move {
             let mut runner = PulseRunner::new(settings, pool, webhooks);
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
                 if let Err(e) = runner.run().await {

@@ -1,6 +1,6 @@
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, error};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Command {
@@ -63,9 +63,17 @@ impl Command {
 }
 
 impl TargetProcess for Command {
-    async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
-        self.run(ev).await?;
+    async fn process(&mut self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
+        let mut succeded = Vec::new();
 
-        Ok(())
+        for ev in evs {
+            if let Err(e) = self.run(ev).await {
+                error!("failed to process '{}': {}", ev.file_path, e);
+            } else {
+                succeded.push(ev.id.clone());
+            }
+        }
+
+        Ok(succeded)
     }
 }

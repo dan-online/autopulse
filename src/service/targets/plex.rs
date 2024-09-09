@@ -1,5 +1,6 @@
 use reqwest::header;
 use serde::Deserialize;
+use tracing::error;
 
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 
@@ -47,7 +48,7 @@ impl Plex {
             .map_err(Into::into)
     }
 
-    async fn libraries(&self) -> anyhow::Result<LibraryResponse> {
+    async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
             .join("/library/sections")?
@@ -56,7 +57,23 @@ impl Plex {
         let res = client.get(&url).send().await?;
         let libraries: LibraryResponse = res.json().await?;
 
-        Ok(libraries)
+        Ok(libraries.media_container.directory)
+    }
+
+    fn in_library(
+        &self,
+        libraries: &Vec<Library>,
+        ev: &ScanEvent,
+    ) -> anyhow::Result<Option<Library>> {
+        for library in libraries {
+            for location in &library.location {
+                if ev.file_path.starts_with(&location.path) {
+                    return Ok(Some(library.clone()));
+                }
+            }
+        }
+
+        Ok(None)
     }
 
     async fn scan(&self, ev: &ScanEvent, library: &Library) -> anyhow::Result<()> {
@@ -78,23 +95,24 @@ impl Plex {
 }
 
 impl TargetProcess for Plex {
-    async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn process<'a>(&mut self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await?;
 
-        // check if the file path is in any of the libraries and return the location
-        let library: &Library = libraries
-            .media_container
-            .directory
-            .iter()
-            .find(|l| {
-                l.location
-                    .iter()
-                    .any(|loc| ev.file_path.starts_with(&loc.path))
-            })
-            .ok_or_else(|| anyhow::anyhow!("file path {} not in any plex library", ev.file_path))?;
+        let mut succeeded = Vec::new();
 
-        self.scan(ev, library).await?;
+        for ev in evs {
+            if let Some(library) = self.in_library(&libraries, ev)? {
+                match self.scan(ev, &library).await {
+                    Ok(_) => succeeded.push(ev.id.clone()),
+                    Err(e) => {
+                        error!("failed to scan file '{}': {}", ev.file_path, e);
+                    }
+                };
+            } else {
+                error!("unable to find library for file: {}", ev.file_path);
+            }
+        }
 
-        Ok(())
+        Ok(succeeded)
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, error};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Jellyfin {
@@ -75,6 +75,12 @@ impl Jellyfin {
         Ok(libraries)
     }
 
+    fn in_library(&self, libraries: &[Library], path: &str) -> bool {
+        libraries
+            .iter()
+            .any(|lib| lib.locations.iter().any(|loc| path.starts_with(loc)))
+    }
+
     async fn get_items(&mut self) -> anyhow::Result<&HashMap<String, Item>> {
         if chrono::Utc::now() - self.last_cache < chrono::Duration::seconds(10) {
             return Ok(&self.items_cache);
@@ -117,20 +123,21 @@ impl Jellyfin {
     }
 
     // not as effective as refreshing the item, but good enough
-    async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn scan(&self, ev: &[&ScanEvent]) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
             .join("/Library/Media/Updated")?
             .to_string();
 
-        let new_update_request = UpdateRequest {
-            path: ev.file_path.clone(),
-            update_type: "Modified".to_string(),
-        };
+        let updates = ev
+            .iter()
+            .map(|ev| UpdateRequest {
+                path: ev.file_path.clone(),
+                update_type: "Modified".to_string(),
+            })
+            .collect();
 
-        let body = ScanPayload {
-            updates: vec![new_update_request],
-        };
+        let body = ScanPayload { updates };
 
         let res = client
             .post(&url)
@@ -166,30 +173,46 @@ impl Jellyfin {
 }
 
 impl TargetProcess for Jellyfin {
-    async fn process(&mut self, ev: &ScanEvent) -> anyhow::Result<()> {
+    async fn process<'a>(&mut self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await?;
 
-        // check if the file path is in any of the library locations
-        libraries
-            .iter()
-            .find(|library| {
-                library
-                    .locations
-                    .iter()
-                    .any(|location| ev.file_path.starts_with(location))
-            })
-            .ok_or_else(|| {
-                anyhow::anyhow!("file path {} not in any jellyfin library", ev.file_path)
-            })?;
+        let mut succeded = Vec::new();
 
-        if let Some(item) = self.find_item(&ev.file_path).await? {
-            debug!("found item: {:?}", item);
-            self.refresh_item(&item).await?;
-        } else {
-            debug!("item not found, scanning instead");
-            self.scan(ev).await?;
+        let mut to_refresh = Vec::new();
+        let mut to_scan = Vec::new();
+
+        for ev in evs {
+            if !self.in_library(&libraries, &ev.file_path) {
+                error!("unable to find library for file: {}", ev.file_path);
+
+                continue;
+            }
+
+            let item = self.find_item(&ev.file_path).await?;
+
+            if let Some(item) = item {
+                to_refresh.push((*ev, item));
+            } else {
+                to_scan.push(*ev);
+            }
         }
 
-        Ok(())
+        for (ev, item) in to_refresh {
+            match self.refresh_item(&item).await {
+                Ok(_) => {
+                    debug!("refreshed item: {}", item.path.unwrap());
+                    succeded.push(ev.id.clone());
+                }
+                Err(e) => {
+                    error!("failed to refresh item: {}", e);
+                }
+            }
+        }
+
+        self.scan(&to_scan).await?;
+
+        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()).collect::<Vec<_>>());
+
+        Ok(succeded)
     }
 }
