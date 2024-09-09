@@ -12,18 +12,14 @@ pub enum AnyConnection {
 }
 
 impl AnyConnection {
-    pub fn save_changes(&mut self, ev: &mut ScanEvent) {
-        match self {
-            Self::Postgresql(conn) => {
-                ev.save_changes::<ScanEvent>(conn).unwrap();
-            }
-            // AnyConnection::Mysql(conn) => {
-            //     ev.save_changes::<ScanEvent>(conn).unwrap();
-            // }
-            Self::Sqlite(conn) => {
-                ev.save_changes::<ScanEvent>(conn).unwrap();
-            }
-        }
+    pub fn save_changes(&mut self, ev: &mut ScanEvent) -> anyhow::Result<ScanEvent> {
+        let ev = match self {
+            Self::Postgresql(conn) => ev.save_changes::<ScanEvent>(conn),
+            // AnyConnection::Mysql(conn) => ev.save_changes::<ScanEvent>(conn),
+            Self::Sqlite(conn) => ev.save_changes::<ScanEvent>(conn),
+        }?;
+
+        Ok(ev)
     }
 
     pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {

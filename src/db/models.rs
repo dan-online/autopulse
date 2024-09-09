@@ -65,6 +65,20 @@ pub struct ScanEvent {
     pub updated_at: NaiveDateTime,
 }
 
+impl ScanEvent {
+    pub fn get_targets_hit(&self) -> Vec<String> {
+        self.targets_hit.split(',').map(|s| s.to_string()).collect()
+    }
+
+    pub fn add_target_hit(&mut self, target: &str) {
+        let mut targets = self.get_targets_hit();
+        targets.push(target.to_string());
+        targets.sort();
+        targets.dedup();
+        self.targets_hit = targets.join(",");
+    }
+}
+
 #[derive(Insertable)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct NewScanEvent {
