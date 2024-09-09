@@ -12,7 +12,7 @@ on:
 
 jobs:
   merge_job:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Remove tag
         run: |
