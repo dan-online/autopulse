@@ -34,9 +34,11 @@ pub mod service;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
-
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
+
+    tracing_subscriber::fmt()
+        .with_max_level(Level::from(settings.app.log_level))
+        .init();
 
     let hostname = settings.app.hostname.clone();
     let port = settings.app.port;
