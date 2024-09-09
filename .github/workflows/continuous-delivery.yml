@@ -24,11 +24,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Pull Request suffix
+        run: |
+          if [ -n "${{ github.event.number }}" ]; then
+            echo "PR number: ${{ github.event.number }}""
+            echo "pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "Not a PR branch"
+            echo "latest" >> $GITHUB_OUTPUT
+          fi
+        id: tag
+
       - name: Build and push (latest)
         uses: docker/build-push-action@v6
         with:
-          push: true
-          tags: danonline/autopulse:latest
+          push: false
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
