@@ -21,4 +21,4 @@ jobs:
           else
             pr_number="${{ github.event.number }}"
           fi
-          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:backend-pr-${pr_number} || true
+          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number} || true
