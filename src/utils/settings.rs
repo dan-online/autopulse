@@ -80,7 +80,7 @@ impl Trigger {
             Self::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
             Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr { .. } => Ok(LidarrRequest::from_json(body)?.paths()),
-            _ => todo!(),
+            Self::Manual { .. } => Err(anyhow::anyhow!("Manual trigger does not have paths")),
         }
     }
 }
