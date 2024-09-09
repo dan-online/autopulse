@@ -314,7 +314,7 @@ impl PulseService {
 
         tokio::spawn(async move {
             let mut runner = PulseRunner::new(settings, pool, webhooks);
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
             loop {
                 if let Err(e) = runner.run().await {
