@@ -29,8 +29,10 @@ autopulse is a simple project, designed after the deprecation of [autoscan](http
 Following autoscan, we use the following terminology:
 - **Trigger**: A trigger is a specification for an endpoint that will be called when a file is ready to be processed
   - Manual (default: /triggers/manual)
+    - Fileflows ([sub-flow](https://github.com/dan-online/autopulse/issues/5#issuecomment-2333917695))
   - Sonarr
   - Radarr
+  - Lidarr
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
@@ -130,8 +132,9 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost
 ## To-do
 
 - [ ] Add more triggers
-  - [ ] Lidarr
+  - [x] Lidarr
   - [ ] Readarr
+  - [ ] inotify
 - [ ] Add more targets
   - [ ] Emby
 - [ ] Add more webhooks
