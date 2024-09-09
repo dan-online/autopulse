@@ -13,8 +13,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
-# add mysqlclient, postgres and sqlite
-RUN apt update -y && apt install -y libmysqlclient-dev libpq-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
+RUN apt update -y && apt install -y --no-install-recommends build-essential libmysqlclient-dev libpq-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 
