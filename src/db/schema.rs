@@ -1,34 +1,20 @@
 // @generated automatically by Diesel CLI.
 
-pub mod sql_types {
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "foundstatus"))]
-    pub struct Foundstatus;
-
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "processstatus"))]
-    pub struct Processstatus;
-}
-
 diesel::table! {
-    use diesel::sql_types::{Array, Int4, Nullable, Text, Timestamptz};
-    use super::sql_types::Processstatus;
-    use super::sql_types::Foundstatus;
-
     scan_events (id) {
-        id -> Int4,
+        id -> Text,
         event_source -> Text,
-        event_timestamp -> Timestamptz,
+        event_timestamp -> Timestamp,
         file_path -> Text,
         file_hash -> Nullable<Text>,
-        process_status -> Processstatus,
-        found_status -> Foundstatus,
+        process_status -> Text,
+        found_status -> Text,
         failed_times -> Int4,
-        next_retry_at -> Nullable<Timestamptz>,
-        targets_hit -> Array<Text>,
-        found_at -> Nullable<Timestamptz>,
-        processed_at -> Nullable<Timestamptz>,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
+        next_retry_at -> Nullable<Timestamp>,
+        targets_hit -> Text,
+        found_at -> Nullable<Timestamp>,
+        processed_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }

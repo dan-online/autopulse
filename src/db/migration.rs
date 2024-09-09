@@ -1,9 +1,11 @@
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
-type DB = diesel::pg::Pg;
+use crate::utils::conn::AnyConnection;
 
-pub fn run_db_migrations(conn: &mut impl MigrationHarness<DB>) {
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
+
+pub fn run_db_migrations(conn: &mut PooledConnection<ConnectionManager<AnyConnection>>) {
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Could not run migrations");
 }

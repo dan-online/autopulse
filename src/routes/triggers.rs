@@ -60,7 +60,7 @@ pub async fn trigger_post(
                     event_source: trigger.to_string(),
                     file_path: path.clone(),
                     found_status: if !search {
-                        Some(FoundStatus::Found)
+                        Some(FoundStatus::Found.into())
                     } else {
                         None
                     },
@@ -145,12 +145,12 @@ pub async fn trigger_get(
                 return Ok(HttpResponse::InternalServerError().body(e.to_string()));
             }
 
-            let scan_event = scan_event.unwrap();
-
             service
                 .webhooks
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
+
+            let scan_event = scan_event.unwrap();
 
             Ok(HttpResponse::Ok().json(scan_event))
         }

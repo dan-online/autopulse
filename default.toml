@@ -2,6 +2,7 @@
 hostname = "0.0.0.0"
 port = 2875
 database_url = "postgres://autopulse:autopulse@localhost:5432/autopulse"
+log_level = "info"
 
 [auth]
 username = "admin"

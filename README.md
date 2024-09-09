@@ -57,10 +57,17 @@ The easiest way to get started with autopulse is to use the provided Docker imag
 $ docker network create autopulse
 
 # postgres database
-$ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -e POSTGRES_DB=autopulse postgres:alpine
-
-# autopulse
+$ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -e POSTGRES_DB=autopulse postgres
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
+
+# maria database
+$ docker run -d --net autopulse --name maria -e MARIADB_ROOT_PASSWORD=autopulse -e MARIADB_DATABASE=autopulse mariadb
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=mariadb://root:autopulse@mariadb/autopulse --name autopulse danonline/autopulse
+
+# sqlite database
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse danonline/autopulse
+# or in-memory
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory: --name autopulse danonline/autopulse
 ```
 
 ### Configuration
@@ -132,6 +139,9 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost
 - [ ] Add more options
   - [ ] Cleanup duration (currently 10 days)
   - [ ] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
+- [ ] Databases
+  - [x] SQLite
+  - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
 
 
 ## License

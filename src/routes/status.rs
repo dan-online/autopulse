@@ -21,8 +21,6 @@ pub async fn status(
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    let id = id.parse::<i32>().unwrap();
-
     let scan_ev = service.get_event(&id);
 
     Ok(HttpResponse::Ok().json(scan_ev))

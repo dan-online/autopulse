@@ -2,48 +2,61 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(diesel_derive_enum::DbEnum, Debug, Clone, Copy, Serialize)]
-#[ExistingTypePath = "crate::db::schema::sql_types::Processstatus"]
+#[derive(Serialize)]
 pub enum ProcessStatus {
-    #[serde(rename = "pending")]
     Pending,
-    #[serde(rename = "complete")]
     Complete,
-    #[serde(rename = "retry")]
     Retry,
-    #[serde(rename = "failed")]
     Failed,
 }
 
-#[derive(diesel_derive_enum::DbEnum, Debug, Clone, Copy, Serialize)]
-#[ExistingTypePath = "crate::db::schema::sql_types::Foundstatus"]
+#[derive(Serialize)]
 pub enum FoundStatus {
-    #[serde(rename = "found")]
     Found,
-    #[serde(rename = "not_found")]
     NotFound,
-    #[serde(rename = "hash_mismatch")]
     HashMismatch,
+}
+
+impl From<FoundStatus> for String {
+    fn from(val: FoundStatus) -> Self {
+        match val {
+            FoundStatus::Found => "found",
+            FoundStatus::HashMismatch => "hash_mismatch",
+            FoundStatus::NotFound => "not_found",
+        }
+        .to_string()
+    }
+}
+
+impl From<ProcessStatus> for String {
+    fn from(val: ProcessStatus) -> Self {
+        match val {
+            ProcessStatus::Pending => "pending",
+            ProcessStatus::Complete => "complete",
+            ProcessStatus::Retry => "retry",
+            ProcessStatus::Failed => "failed",
+        }
+        .to_string()
+    }
 }
 
 #[derive(Queryable, Selectable, Serialize, Clone, Debug, AsChangeset, Identifiable)]
 #[diesel(table_name = crate::db::schema::scan_events)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ScanEvent {
-    pub id: i32,
+    pub id: String,
 
     pub event_source: String,
     pub event_timestamp: NaiveDateTime,
 
     pub file_path: String,
     pub file_hash: Option<String>,
-    pub process_status: ProcessStatus,
-    pub found_status: FoundStatus,
+    pub process_status: String,
+    pub found_status: String,
 
     pub failed_times: i32,
     pub next_retry_at: Option<chrono::NaiveDateTime>,
 
-    pub targets_hit: Vec<String>,
+    pub targets_hit: String,
 
     pub found_at: Option<chrono::NaiveDateTime>,
     pub processed_at: Option<chrono::NaiveDateTime>,
@@ -55,17 +68,24 @@ pub struct ScanEvent {
 #[derive(Insertable)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct NewScanEvent {
+    pub id: String,
     pub event_source: String,
 
     pub file_path: String,
     pub file_hash: Option<String>,
 
-    pub found_status: Option<FoundStatus>,
+    pub found_status: Option<String>,
+}
+
+fn generate_uuid() -> String {
+    let uuid = uuid::Uuid::new_v4();
+    uuid.to_string()
 }
 
 impl Default for NewScanEvent {
     fn default() -> Self {
         Self {
+            id: generate_uuid(),
             event_source: "unknown".to_string(),
             file_path: "unknown".to_string(),
             file_hash: None,

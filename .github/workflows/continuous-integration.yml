@@ -9,6 +9,26 @@ on:
       - main
 
 jobs:
+  build_docker:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   test:
     name: Build and Check
     runs-on: ubuntu-24.04
@@ -21,6 +41,8 @@ jobs:
           profile: minimal
           toolchain: stable
           components: rustfmt, clippy
+      - name: Install libraries
+        run: sudo apt install -y libpq-dev libsqlite3-dev # libmysqlclient-dev
       - name: Cargo Cache
         uses: actions/cache@v4
         with:
@@ -36,6 +58,6 @@ jobs:
       - name: Format Check
         run: cargo fmt -- --check
       - name: Clippy Check
-        run: cargo clippy # -- -D warnings
+        run: cargo clippy --release # -- -D warnings
       - name: Test
-        run: cargo test
+        run: cargo test --release

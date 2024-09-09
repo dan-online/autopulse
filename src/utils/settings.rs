@@ -17,6 +17,7 @@ pub struct App {
     pub hostname: String,
     pub port: u16,
     pub database_url: String,
+    pub log_level: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]
