@@ -1,3 +1,4 @@
+pub mod inotify;
 pub mod lidarr;
 pub mod manual;
 pub mod radarr;

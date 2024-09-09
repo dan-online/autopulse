@@ -96,8 +96,8 @@ pub async fn trigger_post(
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
-        Trigger::Manual { .. } => {
-            Ok(HttpResponse::BadRequest().body("Manual triggers must use GET requests"))
+        Trigger::Manual { .. } | Trigger::Inotify(_) => {
+            Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
     }
 }

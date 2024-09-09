@@ -1,3 +1,7 @@
+use std::process::exit;
+use std::sync::Arc;
+
+// use actix_web::rt::{signal, spawn};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
@@ -7,6 +11,7 @@ use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
+use tokio::signal;
 use tracing::info;
 use tracing::Level;
 use utils::conn::get_pool;
@@ -32,7 +37,7 @@ pub mod db {
 }
 pub mod service;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
@@ -56,9 +61,15 @@ async fn main() -> anyhow::Result<()> {
 
     run_db_migrations(&mut pool.get().expect("Failed to get connection"));
 
-    let service = PulseService::new(settings.clone(), pool.clone());
+    let service = Arc::new(PulseService::new(settings.clone(), pool.clone()));
 
-    service.start();
+    let service_task = service.start();
+
+    let service_clone = service.clone();
+
+    let watch_task = tokio::spawn(async move {
+        service_clone.watch_inotify().await;
+    });
 
     HttpServer::new(move || {
         App::new()
@@ -74,9 +85,18 @@ async fn main() -> anyhow::Result<()> {
             .app_data(Data::new(service.clone()))
     })
     .bind((hostname, port))?
+    .disable_signals()
     .run()
     .await
     .with_context(|| "Failed to start server")?;
 
-    Ok(())
+    // TODO: the task doesn't actually shutdown, most likely due to the inotify recursive spawns
+    // Hence the force shutdown
+
+    signal::ctrl_c().await.unwrap();
+
+    service_task.abort();
+    watch_task.abort();
+
+    exit(0);
 }

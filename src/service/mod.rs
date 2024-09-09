@@ -10,9 +10,10 @@ use crate::{
     service::webhooks::WebhookManager,
     utils::{
         conn::{get_conn, DbPool},
-        settings::Settings,
+        settings::{Settings, Trigger},
     },
 };
+use actix_web::rt::spawn;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::Serialize;
 use tracing::{error, info, warn};
@@ -322,15 +323,6 @@ impl PulseService {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        // diesel::insert_into(crate::db::schema::scan_events::table)
-        //     .values(ev)
-        //     .execute(&mut conn)?;
-
-        // scan_events
-        //     .find(&ev.id)
-        //     .get_result(&mut conn)
-        //     .map_err(Into::into)
-
         conn.insert_and_return(ev)
     }
 
@@ -340,7 +332,7 @@ impl PulseService {
         scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
     }
 
-    pub fn start(&self) {
+    pub fn start(&self) -> tokio::task::JoinHandle<()> {
         let settings = self.settings.clone();
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();
@@ -356,6 +348,44 @@ impl PulseService {
 
                 timer.tick().await;
             }
-        });
+        })
+    }
+
+    pub async fn watch_inotify(&self) {
+        let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
+
+        for (name, trigger) in self.settings.clone().triggers {
+            if let Trigger::Inotify(service) = trigger {
+                let cloned_name = name.clone();
+                let global_tx = global_tx.clone();
+
+                let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+                tokio::spawn(async move {
+                    if let Err(e) = service.watcher(tx) {
+                        error!("unable to start inotify service '{}': {:?}", cloned_name, e);
+                    }
+                });
+
+                tokio::spawn(async move {
+                    while let Some(file_path) = rx.recv().await {
+                        if let Err(e) = global_tx.send((name.clone(), file_path)) {
+                            error!("unable to send inotify event: {:?}", e);
+                        }
+                    }
+                });
+            }
+        }
+
+        while let Some((name, file_path)) = global_rx.recv().await {
+            let new_scan_event = NewScanEvent {
+                event_source: name.clone(),
+                file_path,
+                ..Default::default()
+            };
+
+            if let Err(e) = self.add_event(&new_scan_event) {
+                error!("unable to add inotify event: {:?}", e);
+            }
+        }
     }
 }
