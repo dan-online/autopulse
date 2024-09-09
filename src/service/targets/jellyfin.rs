@@ -86,6 +86,13 @@ impl Jellyfin {
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
         url.query_pairs_mut().append_pair("EnableImages", "false");
+        url.query_pairs_mut()
+            .append_pair("LocationTypes", "FileSystem");
+        url.query_pairs_mut()
+            .append_pair("MediaTypes", "Video,Audio");
+        url.query_pairs_mut().append_pair("Filters", "IsNotFolder");
+        url.query_pairs_mut()
+            .append_pair("EnableTotalRecordCount", "false");
 
         let res = client.get(url.to_string()).send().await?;
 
