@@ -1,51 +1,49 @@
-use crate::db::models::ScanEvent;
+use crate::db::models::{NewScanEvent, ScanEvent};
 use anyhow::Context;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::SaveChangesDsl;
-use diesel::{Connection, QueryResult};
+use diesel::{Connection, QueryResult, RunQueryDsl};
+use diesel::{SaveChangesDsl, SelectableHelper};
 
 #[derive(diesel::MultiConnection)]
 pub enum AnyConnection {
     Postgresql(diesel::PgConnection),
-    Mysql(diesel::MysqlConnection),
+    // Mysql(diesel::MysqlConnection),
     Sqlite(diesel::SqliteConnection),
 }
 
 impl AnyConnection {
     pub fn save_changes(&mut self, ev: &mut ScanEvent) {
         match self {
-            AnyConnection::Postgresql(conn) => {
+            Self::Postgresql(conn) => {
                 ev.save_changes::<ScanEvent>(conn).unwrap();
             }
-            AnyConnection::Mysql(conn) => {
-                // MySQL doesn't support returning :()
-                ev.save_changes::<ScanEvent>(conn).unwrap();
-            }
-            AnyConnection::Sqlite(conn) => {
+            // AnyConnection::Mysql(conn) => {
+            //     ev.save_changes::<ScanEvent>(conn).unwrap();
+            // }
+            Self::Sqlite(conn) => {
                 ev.save_changes::<ScanEvent>(conn).unwrap();
             }
         }
     }
 
-    // pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<()> {
-    //     match self {
-    //         AnyConnection::Postgresql(conn) => {
-    //             diesel::insert_into(crate::db::schema::scan_events::table)
-    //                 .values(ev)
-    //                 .returning(ScanEvent::as_returning())
-    //                 .get_result::<ScanEvent>(conn)
-    //                 .map_err(Into::into)
-    //         }
-    //         AnyConnection::Sqlite(conn) => {
-    //             diesel::insert_into(crate::db::schema::scan_events::table)
-    //                 .values(ev)
-    //                 .returning(ScanEvent::as_returning())
-    //                 .get_result::<ScanEvent>(conn)
-    //                 .map_err(Into::into)
-    //         }
-
-    //     }
-    // }
+    pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
+        match self {
+            Self::Postgresql(conn) => {
+                diesel::insert_into(crate::db::schema::scan_events::table)
+                    .values(ev)
+                    .returning(ScanEvent::as_returning())
+                    .get_result::<ScanEvent>(conn)
+                    .map_err(Into::into)
+            }
+            Self::Sqlite(conn) => {
+                diesel::insert_into(crate::db::schema::scan_events::table)
+                    .values(ev)
+                    .returning(ScanEvent::as_returning())
+                    .get_result::<ScanEvent>(conn)
+                    .map_err(Into::into)
+            }
+        }
+    }
 }
 
 pub type DbPool = Pool<ConnectionManager<AnyConnection>>;

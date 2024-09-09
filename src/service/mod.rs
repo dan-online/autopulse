@@ -289,14 +289,16 @@ impl PulseService {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        diesel::insert_into(crate::db::schema::scan_events::table)
-            .values(ev)
-            .execute(&mut conn)?;
+        // diesel::insert_into(crate::db::schema::scan_events::table)
+        //     .values(ev)
+        //     .execute(&mut conn)?;
 
-        scan_events
-            .find(&ev.id)
-            .get_result(&mut conn)
-            .map_err(Into::into)
+        // scan_events
+        //     .find(&ev.id)
+        //     .get_result(&mut conn)
+        //     .map_err(Into::into)
+
+        conn.insert_and_return(ev)
     }
 
     pub fn get_event(&self, id: &String) -> Option<ScanEvent> {

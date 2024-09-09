@@ -13,9 +13,21 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
-RUN apt update -y && apt install -y --no-install-recommends musl-tools libmysqlclient-dev libpq-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
+# # Set up environment variables for the build
+# ENV MYSQL_VERSION=8.0.30
 
-ENV RUSTFLAGS="-C linker=musl-gcc"
+# RUN apt update -y && apt install -y libncurses5-dev
+# # Build libmysqlclient
+# RUN curl -sSL https://downloads.mysql.com/archives/get/p/23/file/mysql-${MYSQL_VERSION}.tar.gz | tar xz && \
+#     cd mysql-$MYSQL_VERSION && \
+#     export CC="musl-gcc -fPIE -pie" && \
+#     mkdir bld && \
+#     cd bld && \
+#     cmake .. -DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost -DWITHOUT_SERVER:BOOL=ON -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INCLUDE_PATH=$PREFIX/include -DCMAKE_CXX_INCLUDE_PATH=$PREFIX/include \
+#     make -j$(nproc) && \
+#     make install && \
+#     cd ../.. && \
+#     rm -rf mysql-$MYSQL_VERSION
 
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 

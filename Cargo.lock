@@ -634,12 +634,9 @@ dependencies = [
  "diesel_derives",
  "itoa",
  "libsqlite3-sys",
- "mysqlclient-sys",
- "percent-encoding",
  "pq-sys",
  "r2d2",
  "time",
- "url",
 ]
 
 [[package]]
@@ -1290,16 +1287,6 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "mysqlclient-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478e2040dbc35c73927b77a2be91a496de19deab376a6982ed61e89592434619"
-dependencies = [
- "pkg-config",
- "vcpkg",
 ]
 
 [[package]]
