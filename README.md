@@ -135,6 +135,10 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost
   - [x] Lidarr
   - [ ] Readarr
   - [ ] inotify
+- [ ] Hooks
+  - [ ] Add/Found/Processed hooks
+  - [ ] Move Webhooks to hook
+  - [ ] Command hook
 - [ ] Add more targets
   - [ ] Emby
 - [ ] Add more webhooks
