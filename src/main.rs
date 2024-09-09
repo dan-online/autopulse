@@ -37,7 +37,13 @@ async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
     tracing_subscriber::fmt()
-        .with_max_level(Level::from(settings.app.log_level))
+        .with_max_level(match settings.app.log_level {
+            ref level if level == "debug" => Level::DEBUG,
+            ref level if level == "info" => Level::INFO,
+            ref level if level == "warn" => Level::WARN,
+            ref level if level == "error" => Level::ERROR,
+            _ => Level::INFO,
+        })
         .init();
 
     let hostname = settings.app.hostname.clone();
