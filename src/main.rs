@@ -17,13 +17,7 @@ pub mod routes {
     pub mod status;
     pub mod triggers;
 }
-pub mod utils {
-    pub mod check_auth;
-    pub mod checksum;
-    pub mod conn;
-    pub mod join_path;
-    pub mod settings;
-}
+pub mod utils;
 pub mod db {
     pub mod migration;
     pub mod models;

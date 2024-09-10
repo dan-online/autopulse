@@ -1,4 +1,4 @@
-use crate::utils::settings::Rewrite;
+use crate::utils::{rewrite::rewrite_path, settings::Rewrite};
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
@@ -29,10 +29,7 @@ impl NotifyService {
         let mut path = path.unwrap().to_string_lossy().to_string();
 
         if let Some(rewrite) = &self.rewrite {
-            let from = rewrite.from.clone();
-            let to = rewrite.to.clone();
-
-            path = path.replace(&from, &to);
+            path = rewrite_path(path, rewrite);
         }
 
         tx.send(path).map_err(|e| anyhow::anyhow!(e))

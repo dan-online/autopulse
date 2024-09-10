@@ -11,6 +11,7 @@ use crate::{
     service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
     utils::{
         check_auth::check_auth,
+        rewrite::rewrite_path,
         settings::{Settings, Trigger},
     },
 };
@@ -54,10 +55,7 @@ pub async fn trigger_post(
                 let (mut path, search) = path.clone();
 
                 if let Some(rewrite) = rewrite {
-                    let from = rewrite.from.clone();
-                    let to = rewrite.to.clone();
-
-                    path = path.replace(&from, &to);
+                    path = rewrite_path(path, rewrite);
                 }
 
                 let new_scan_event = NewScanEvent {
@@ -137,10 +135,7 @@ pub async fn trigger_get(
             let mut file_path = query.path.clone();
 
             if let Some(rewrite) = rewrite {
-                let from = rewrite.from.clone();
-                let to = rewrite.to.clone();
-
-                file_path = file_path.replace(&from, &to);
+                file_path = rewrite_path(file_path, rewrite);
             }
 
             let new_scan_event = NewScanEvent {
