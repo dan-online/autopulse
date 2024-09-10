@@ -96,7 +96,7 @@ pub struct NewScanEvent {
     pub file_path: String,
     pub file_hash: Option<String>,
 
-    pub found_status: Option<String>,
+    pub found_status: String,
 }
 
 fn generate_uuid() -> String {
@@ -111,7 +111,7 @@ impl Default for NewScanEvent {
             event_source: "unknown".to_string(),
             file_path: "unknown".to_string(),
             file_hash: None,
-            found_status: None,
+            found_status: FoundStatus::NotFound.into(),
         }
     }
 }

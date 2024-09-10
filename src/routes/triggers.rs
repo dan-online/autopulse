@@ -62,9 +62,9 @@ pub async fn trigger_post(
                     event_source: trigger.to_string(),
                     file_path: path.clone(),
                     found_status: if !search {
-                        Some(FoundStatus::Found.into())
+                        FoundStatus::Found.into()
                     } else {
-                        None
+                        FoundStatus::NotFound.into()
                     },
                     ..Default::default()
                 };
