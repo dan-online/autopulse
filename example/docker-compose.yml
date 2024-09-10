@@ -1,12 +1,11 @@
-version: '3'
-
 services:
   autopulse:
     image: danonline/autopulse
     container_name: autopulse
     restart: always
     depends_on:
-      - postgres
+      postgres:
+         condition: service_healthy
     ports:
       - 2875:2875
     networks:
@@ -20,14 +19,19 @@ services:
     image: postgres:alpine
     container_name: autopulse-postgres
     restart: always
-    ports:
-      - 5432:5432
     networks:
       - db
     environment:
       POSTGRES_USER: autopulse
       POSTGRES_PASSWORD: autopulse
       POSTGRES_DB: autopulse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./db:/var/lib/postgresql/data
   
 networks:
   db:
