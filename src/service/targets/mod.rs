@@ -1,3 +1,3 @@
 pub mod command;
-pub mod jellyfin;
+pub mod emby;
 pub mod plex;

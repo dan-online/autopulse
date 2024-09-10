@@ -180,8 +180,8 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
   - [ ] Add/Found/Processed hooks
   - [ ] Move Webhooks to hook
   - [ ] Command hook
-- [ ] Add more targets
-  - [ ] Emby
+- [x] Add more targets
+  - [x] Emby
 - [ ] Add more webhooks
   - [ ] Generic JSON
 - [ ] Add more options

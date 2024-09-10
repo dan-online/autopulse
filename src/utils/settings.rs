@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{
     db::models::ScanEvent,
     service::{
-        targets::{command::Command, jellyfin::Jellyfin, plex::Plex},
+        targets::{command::Command, emby::Emby, plex::Plex},
         triggers::{
             lidarr::LidarrRequest, notify::NotifyService, radarr::RadarrRequest,
             readarr::ReadarrRequest, sonarr::SonarrRequest,
@@ -119,7 +119,8 @@ pub trait TriggerRequest {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {
     Plex(Plex),
-    Jellyfin(Jellyfin),
+    Jellyfin(Emby),
+    Emby(Emby),
     Command(Command),
 }
 
@@ -128,6 +129,7 @@ impl Target {
         match self {
             Self::Plex(p) => p.process(evs).await,
             Self::Jellyfin(j) => j.process(evs).await,
+            Self::Emby(e) => e.process(evs).await,
             Self::Command(c) => c.process(evs).await,
         }
     }

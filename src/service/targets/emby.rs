@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Jellyfin {
+pub struct Emby {
     pub url: String,
     pub token: String,
     #[serde(skip)]
@@ -49,7 +49,7 @@ struct ItemsResponse {
     items: Vec<Item>,
 }
 
-impl Jellyfin {
+impl Emby {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
@@ -173,7 +173,7 @@ impl Jellyfin {
     }
 }
 
-impl TargetProcess for Jellyfin {
+impl TargetProcess for Emby {
     async fn process<'a>(&mut self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await?;
 

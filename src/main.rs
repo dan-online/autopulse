@@ -33,7 +33,6 @@ async fn main() -> anyhow::Result<()> {
         "autopulse={},actix_web=info,actix_server=info",
         settings.app.log_level
     );
-    println!("Filter: {}", filter);
 
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
