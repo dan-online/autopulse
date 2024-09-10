@@ -152,13 +152,23 @@ targets:
     raw: "echo $FILE_PATH >> list.txt"
 ```
 
+#### Path Checking
+
+By enabling path checking either by setting `check_path` to `true` in the config file or by setting the `AUTOPULSE__OPTS__CHECK_PATH` environment variable, autopulse will check if the path exists before updating targets.
+
+```yaml
+opts:
+  check_path: true
+```
+
 #### Manual
 
 By default a `manual` endpoint is provided which can be used to manually trigger a scan. This can be useful for testing or for when you want to trigger a scan without waiting for a file to be ready.
 
 ```bash
-$ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost:8080/manual?path=/path/to/file&hash=1234567890
+$ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890'
 ```
+
 
 ## To-do
 
