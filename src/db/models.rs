@@ -79,7 +79,7 @@ impl ScanEvent {
     }
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct NewScanEvent {
     pub id: String,

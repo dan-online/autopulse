@@ -1,4 +1,3 @@
-use std::process::exit;
 use std::sync::Arc;
 
 // use actix_web::rt::{signal, spawn};
@@ -11,7 +10,6 @@ use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
-use tokio::signal;
 use tracing::info;
 use tracing::Level;
 use utils::conn::get_pool;
@@ -67,8 +65,8 @@ async fn main() -> anyhow::Result<()> {
 
     let service_clone = service.clone();
 
-    let watch_task = tokio::spawn(async move {
-        service_clone.watch_inotify().await;
+    let notify_task = tokio::spawn(async move {
+        service_clone.start_notify().await;
     });
 
     HttpServer::new(move || {
@@ -85,18 +83,14 @@ async fn main() -> anyhow::Result<()> {
             .app_data(Data::new(service.clone()))
     })
     .bind((hostname, port))?
-    .disable_signals()
     .run()
     .await
     .with_context(|| "Failed to start server")?;
 
-    // TODO: the task doesn't actually shutdown, most likely due to the inotify recursive spawns
-    // Hence the force shutdown
-
-    signal::ctrl_c().await.unwrap();
+    info!("Shutting down...");
 
     service_task.abort();
-    watch_task.abort();
+    notify_task.abort();
 
-    exit(0);
+    Ok(())
 }

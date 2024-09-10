@@ -35,5 +35,5 @@ diesel_migrations = { version = "2.2.0", features = [
     "sqlite",
 ] }
 uuid = { version = "1.10.0", features = ["v4"] }
-inotify = "0.11.0"
 walkdir = "2.5.0"
+notify = "6.1.1"

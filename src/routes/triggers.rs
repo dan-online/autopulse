@@ -96,7 +96,7 @@ pub async fn trigger_post(
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
-        Trigger::Manual { .. } | Trigger::Inotify(_) => {
+        Trigger::Manual { .. } | Trigger::Notify(_) => {
             Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
     }

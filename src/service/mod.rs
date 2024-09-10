@@ -351,25 +351,26 @@ impl PulseService {
         })
     }
 
-    pub async fn watch_inotify(&self) {
+    pub async fn start_notify(&self) {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         for (name, trigger) in self.settings.clone().triggers {
-            if let Trigger::Inotify(service) = trigger {
+            if let Trigger::Notify(service) = trigger {
                 let cloned_name = name.clone();
                 let global_tx = global_tx.clone();
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
                 tokio::spawn(async move {
-                    if let Err(e) = service.watcher(tx) {
-                        error!("unable to start inotify service '{}': {:?}", cloned_name, e);
+                    if let Err(e) = service.watcher(tx).await {
+                        error!("unable to start notify service '{}': {:?}", cloned_name, e);
                     }
                 });
 
                 tokio::spawn(async move {
                     while let Some(file_path) = rx.recv().await {
                         if let Err(e) = global_tx.send((name.clone(), file_path)) {
-                            error!("unable to send inotify event: {:?}", e);
+                            error!("unable to send notify event: {:?}", e);
                         }
                     }
                 });
@@ -383,8 +384,10 @@ impl PulseService {
                 ..Default::default()
             };
 
+            println!("new_scan_event: {:?}", new_scan_event);
+
             if let Err(e) = self.add_event(&new_scan_event) {
-                error!("unable to add inotify event: {:?}", e);
+                error!("unable to add notify event: {:?}", e);
             }
         }
     }
