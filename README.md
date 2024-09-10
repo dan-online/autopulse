@@ -28,7 +28,7 @@ autopulse is a simple project, designed after the deprecation of [autoscan](http
 
 Following autoscan, we use the following terminology:
 - **Trigger**: A trigger is a specification for an endpoint that will be called when a file is ready to be processed
-  - Manual (default: /triggers/manual)
+  - [Manual](#manual) (default: /triggers/manual)
     - Fileflows ([sub-flow](https://github.com/dan-online/autopulse/issues/5#issuecomment-2333917695))
   - Sonarr
   - Radarr
@@ -41,13 +41,14 @@ Following autoscan, we use the following terminology:
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
+  - Emby
   - Command
 
 ### Features
 
 - **Rewrites**: rewrites the path provided by the trigger to the path expected by the target
 - **Integration**: integrates with Sonarr, Radarr, Plex, Jellyfin, and more in the future
-- **Self-Scans**: checks the file exists before updating the target and optionally waits for the file to match a provided hash
+- **Checks**: checks the file exists before updating the target and optionally waits for the file to match a provided hash
 - **Reliability**: uses a database to store the state of the scan requests
 - **Webhooks**: allow for notifications to be sent when a file is ready to be processed with webhooks such as Discord
 
@@ -187,7 +188,7 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
 - [ ] Add more options
   - [ ] Cleanup duration (currently 10 days)
   - [ ] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
-- [ ] Databases
+- [x] Databases
   - [x] SQLite
   - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
 
