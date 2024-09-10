@@ -9,7 +9,7 @@ username = "admin"
 password = "password"
 
 [opts]
-check_path = true
+check_path = false
 max_retries = 5
 
 [triggers.manual]
