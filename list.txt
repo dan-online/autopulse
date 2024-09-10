@@ -1,2 +1,0 @@
-/home/dan/Desktop/Code/autopulse/src/main.rs
-/home/dan/Desktop/Code/autopulse/src/main.rs
