@@ -13,7 +13,7 @@ pub struct NotifyService {
     pub paths: Vec<String>,
     pub rewrite: Option<Rewrite>,
     pub recursive: Option<bool>,
-    pub exclude: Option<Vec<String>>,
+    // pub exclude: Option<Vec<String>>,
 }
 
 impl NotifyService {
@@ -59,7 +59,14 @@ impl NotifyService {
         let (mut watcher, mut rx) = self.async_watcher()?;
 
         for path in &self.paths {
-            watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
+            watcher.watch(
+                path.as_ref(),
+                if self.recursive.unwrap_or(true) {
+                    RecursiveMode::Recursive
+                } else {
+                    RecursiveMode::NonRecursive
+                },
+            )?;
         }
 
         while let Some(res) = rx.recv().await {
