@@ -6,7 +6,7 @@ use actix_web::{
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use crate::{
-    service::PulseService,
+    service::service::PulseService,
     utils::{check_auth::check_auth, settings::Settings},
 };
 

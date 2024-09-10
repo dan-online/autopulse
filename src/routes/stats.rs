@@ -4,7 +4,7 @@ use actix_web::{get, web::Data, HttpResponse, Responder, Result};
 use serde::Serialize;
 use tracing::error;
 
-use crate::service::{PulseService, Stats};
+use crate::service::{service::PulseService, service::Stats};
 
 #[derive(Serialize)]
 struct StatsResponse {

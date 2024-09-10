@@ -8,7 +8,7 @@ use tracing::debug;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
-    service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
+    service::{service::PulseService, triggers::manual::ManualQueryParams, webhooks::EventType},
     utils::{
         check_auth::check_auth,
         rewrite::rewrite_path,

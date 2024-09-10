@@ -6,7 +6,7 @@ use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
-use service::PulseService;
+use service::service::PulseService;
 use tracing::info;
 use utils::conn::get_pool;
 use utils::settings::Settings;
