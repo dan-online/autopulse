@@ -146,6 +146,10 @@ targets:
     type: "jellyfin"
     url: "http://jellyfin:8096"
     token: "<your_token>"
+
+  my_command:
+    type: "command"
+    raw: "echo $FILE_PATH >> list.txt"
 ```
 
 #### Manual

@@ -66,7 +66,7 @@ mod tests {
 
         let lidarr_request = LidarrRequest::from_json(json).unwrap();
 
-        if let LidarrRequest::Download { .. } = lidarr_request.clone() {
+        if let LidarrRequest::Download { .. } = lidarr_request {
             assert_eq!(
                 lidarr_request.paths(),
                 vec![

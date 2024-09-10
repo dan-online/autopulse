@@ -4,6 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use tracing::debug;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
@@ -90,6 +91,13 @@ pub async fn trigger_post(
                 )
                 .await;
 
+            debug!(
+                "added {} file{} from {} trigger",
+                scan_events.len(),
+                if scan_events.len() > 1 { "s" } else { "" },
+                trigger
+            );
+
             if scan_events.len() != paths.len() {
                 return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
             }
@@ -152,6 +160,8 @@ pub async fn trigger_get(
                 .webhooks
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
+
+            debug!("added 1 file from {} trigger", trigger);
 
             let scan_event = scan_event.unwrap();
 

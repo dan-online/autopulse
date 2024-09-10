@@ -13,7 +13,6 @@ use crate::{
         settings::{Settings, Trigger},
     },
 };
-use actix_web::rt::spawn;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::Serialize;
 use tracing::{error, info, warn};
@@ -59,7 +58,8 @@ impl PulseRunner {
             return Ok(());
         }
 
-        let mut count = vec![];
+        let mut found_files = vec![];
+        let mut mismatched_files = vec![];
 
         let mut conn = get_conn(&self.pool);
         let mut evs = scan_events
@@ -72,16 +72,22 @@ impl PulseRunner {
             if file_path.exists() {
                 let file_hash = crate::utils::checksum::sha256checksum(&file_path);
 
-                ev.found_status = FoundStatus::Found.into();
-
                 if let Some(hash) = ev.file_hash.clone() {
                     if hash != file_hash {
+                        if ev.found_status != FoundStatus::HashMismatch.to_string() {
+                            mismatched_files.push(ev.file_path.clone());
+                        }
+
                         ev.found_status = FoundStatus::HashMismatch.into();
                         ev.found_at = Some(chrono::Utc::now().naive_utc());
+                    } else {
+                        ev.found_status = FoundStatus::Found.into();
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    count.push(ev.file_path.clone());
+                    found_files.push(ev.file_path.clone());
+
+                    ev.found_status = FoundStatus::Found.into();
                 }
             }
 
@@ -89,14 +95,28 @@ impl PulseRunner {
             conn.save_changes(ev)?;
         }
 
-        if !count.is_empty() {
+        if !found_files.is_empty() {
             info!(
                 "found {} new file{}",
-                count.len(),
-                if count.len() > 1 { "s" } else { "" }
+                found_files.len(),
+                if found_files.len() > 1 { "s" } else { "" }
             );
 
-            self.webhooks.send(EventType::Found, None, &count).await;
+            self.webhooks
+                .send(EventType::Found, None, &found_files)
+                .await;
+        }
+
+        if !mismatched_files.is_empty() {
+            warn!(
+                "found {} mismatched file{}",
+                mismatched_files.len(),
+                if mismatched_files.len() > 1 { "s" } else { "" }
+            );
+
+            self.webhooks
+                .send(EventType::HashMismatch, None, &mismatched_files)
+                .await;
         }
 
         Ok(())
@@ -168,7 +188,6 @@ impl PulseRunner {
         &mut self,
         evs: &mut [ScanEvent],
     ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
-        let mut succeeded_ids = vec![];
         let mut failed_ids = vec![];
 
         for (name, target) in &mut self.settings.targets {
@@ -192,7 +211,6 @@ impl PulseRunner {
                     for ev in evs {
                         if s.contains(&ev.id) {
                             ev.add_target_hit(name);
-                            succeeded_ids.push(ev.id.clone());
                         } else {
                             failed_ids.push(ev.id.clone());
                         }
@@ -383,8 +401,6 @@ impl PulseService {
                 file_path,
                 ..Default::default()
             };
-
-            println!("new_scan_event: {:?}", new_scan_event);
 
             if let Err(e) = self.add_event(&new_scan_event) {
                 error!("unable to add notify event: {:?}", e);

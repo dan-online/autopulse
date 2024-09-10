@@ -212,7 +212,7 @@ impl TargetProcess for Jellyfin {
 
         self.scan(&to_scan).await?;
 
-        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()).collect::<Vec<_>>());
+        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
 
         Ok(succeded)
     }

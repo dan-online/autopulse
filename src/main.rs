@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-// use actix_web::rt::{signal, spawn};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
@@ -11,7 +8,6 @@ use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::PulseService;
 use tracing::info;
-use tracing::Level;
 use utils::conn::get_pool;
 use utils::settings::Settings;
 
@@ -39,15 +35,13 @@ pub mod service;
 async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
-    tracing_subscriber::fmt()
-        .with_max_level(match settings.app.log_level {
-            ref level if level == "debug" => Level::DEBUG,
-            ref level if level == "info" => Level::INFO,
-            ref level if level == "warn" => Level::WARN,
-            ref level if level == "error" => Level::ERROR,
-            _ => Level::INFO,
-        })
-        .init();
+    let filter = format!(
+        "autopulse={},actix_web=info,actix_server=info",
+        settings.app.log_level
+    );
+    println!("Filter: {}", filter);
+
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     let hostname = settings.app.hostname.clone();
     let port = settings.app.port;
@@ -59,10 +53,11 @@ async fn main() -> anyhow::Result<()> {
 
     run_db_migrations(&mut pool.get().expect("Failed to get connection"));
 
-    let service = Arc::new(PulseService::new(settings.clone(), pool.clone()));
+    let service = PulseService::new(settings.clone(), pool.clone());
 
     let service_task = service.start();
 
+    // Not a fan but the performance hit is negligible
     let service_clone = service.clone();
 
     let notify_task = tokio::spawn(async move {
