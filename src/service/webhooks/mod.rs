@@ -18,6 +18,7 @@ pub enum EventType {
     New,
     Found,
     Error,
+    HashMismatch,
     Retrying,
     Processed,
 }
@@ -25,11 +26,12 @@ pub enum EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let event = match self {
-            Self::New => "New",
-            Self::Retrying => "Retrying",
-            Self::Found => "Found",
-            Self::Error => "Error",
-            Self::Processed => "Processed",
+            Self::New => "NEW",
+            Self::Retrying => "RETRY",
+            Self::Found => "FOUND",
+            Self::Error => "ERROR",
+            Self::Processed => "PROCESSED",
+            Self::HashMismatch => "HASH MISMATCH",
         };
 
         write!(f, "{event}")
@@ -44,6 +46,7 @@ impl EventType {
             Self::Retrying => "retrying",
             Self::Error => "failed",
             Self::Processed => "processed",
+            Self::HashMismatch => "mismatched",
         }
         .to_string()
     }

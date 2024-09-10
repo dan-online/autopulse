@@ -4,12 +4,14 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use tracing::debug;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
     service::{triggers::manual::ManualQueryParams, webhooks::EventType, PulseService},
     utils::{
         check_auth::check_auth,
+        rewrite::rewrite_path,
         settings::{Settings, Trigger},
     },
 };
@@ -53,10 +55,7 @@ pub async fn trigger_post(
                 let (mut path, search) = path.clone();
 
                 if let Some(rewrite) = rewrite {
-                    let from = rewrite.from.clone();
-                    let to = rewrite.to.clone();
-
-                    path = path.replace(&from, &to);
+                    path = rewrite_path(path, rewrite);
                 }
 
                 let new_scan_event = NewScanEvent {
@@ -90,14 +89,21 @@ pub async fn trigger_post(
                 )
                 .await;
 
+            debug!(
+                "added {} file{} from {} trigger",
+                scan_events.len(),
+                if scan_events.len() > 1 { "s" } else { "" },
+                trigger
+            );
+
             if scan_events.len() != paths.len() {
                 return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
             }
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
-        Trigger::Manual { .. } => {
-            Ok(HttpResponse::BadRequest().body("Manual triggers must use GET requests"))
+        Trigger::Manual { .. } | Trigger::Notify(_) => {
+            Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
     }
 }
@@ -129,10 +135,7 @@ pub async fn trigger_get(
             let mut file_path = query.path.clone();
 
             if let Some(rewrite) = rewrite {
-                let from = rewrite.from.clone();
-                let to = rewrite.to.clone();
-
-                file_path = file_path.replace(&from, &to);
+                file_path = rewrite_path(file_path, rewrite);
             }
 
             let new_scan_event = NewScanEvent {
@@ -152,6 +155,8 @@ pub async fn trigger_get(
                 .webhooks
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
+
+            debug!("added 1 file from {} trigger", trigger);
 
             let scan_event = scan_event.unwrap();
 

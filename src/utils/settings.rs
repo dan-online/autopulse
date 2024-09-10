@@ -8,8 +8,8 @@ use crate::{
     service::{
         targets::{command::Command, jellyfin::Jellyfin, plex::Plex},
         triggers::{
-            lidarr::LidarrRequest, radarr::RadarrRequest, readarr::ReadarrRequest,
-            sonarr::SonarrRequest,
+            lidarr::LidarrRequest, notify::NotifyService, radarr::RadarrRequest,
+            readarr::ReadarrRequest, sonarr::SonarrRequest,
         },
         webhooks::discord::DiscordWebhook,
     },
@@ -76,6 +76,7 @@ pub enum Trigger {
     Sonarr { rewrite: Option<Rewrite> },
     Lidarr { rewrite: Option<Rewrite> },
     Readarr { rewrite: Option<Rewrite> },
+    Notify(NotifyService),
 }
 
 impl Trigger {
@@ -85,7 +86,9 @@ impl Trigger {
             Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr { .. } => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr { .. } => Ok(ReadarrRequest::from_json(body)?.paths()),
-            Self::Manual { .. } => Err(anyhow::anyhow!("Manual trigger does not have paths")),
+            Self::Manual { .. } | Self::Notify(_) => {
+                Err(anyhow::anyhow!("Manual trigger does not have paths"))
+            }
         }
     }
 }

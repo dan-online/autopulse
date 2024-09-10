@@ -21,7 +21,11 @@ diesel = { version = "2.2.4", features = [
 ] }
 actix-web-httpauth = "0.8.2"
 chrono = { version = "0.4.38", features = ["serde"] }
-tokio = { version = "1.40.0", features = ["process"] }
+tokio = { version = "1.40.0", features = [
+    "process",
+    "macros",
+    "rt-multi-thread",
+] }
 sha2 = "0.10.8"
 reqwest = { version = "0.12.7", features = ["json"] }
 url = "2.5.2"
@@ -31,3 +35,4 @@ diesel_migrations = { version = "2.2.0", features = [
     "sqlite",
 ] }
 uuid = { version = "1.10.0", features = ["v4"] }
+notify = "6.1.1"

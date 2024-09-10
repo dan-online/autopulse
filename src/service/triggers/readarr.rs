@@ -63,7 +63,7 @@ mod tests {
 
         let readarr_request = ReadarrRequest::from_json(json).unwrap();
 
-        if let ReadarrRequest::Download { .. } = readarr_request.clone() {
+        if let ReadarrRequest::Download { .. } = readarr_request {
             assert_eq!(
                 readarr_request.paths(),
                 vec![

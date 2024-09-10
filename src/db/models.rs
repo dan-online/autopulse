@@ -1,6 +1,7 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
+use std::fmt::Display;
 
 #[derive(Serialize)]
 pub enum ProcessStatus {
@@ -17,14 +18,21 @@ pub enum FoundStatus {
     HashMismatch,
 }
 
+impl Display for FoundStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let status = match self {
+            Self::Found => "found",
+            Self::NotFound => "not_found",
+            Self::HashMismatch => "hash_mismatch",
+        };
+
+        write!(f, "{status}")
+    }
+}
+
 impl From<FoundStatus> for String {
     fn from(val: FoundStatus) -> Self {
-        match val {
-            FoundStatus::Found => "found",
-            FoundStatus::HashMismatch => "hash_mismatch",
-            FoundStatus::NotFound => "not_found",
-        }
-        .to_string()
+        val.to_string()
     }
 }
 

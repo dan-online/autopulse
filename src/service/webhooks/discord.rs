@@ -43,7 +43,7 @@ impl DiscordWebhook {
             EventType::Found => 52084,      // green
             EventType::Error => 16_711_680, // red
             EventType::Processed => 39129,  // blue
-            EventType::Retrying => 16_776_960,
+            EventType::Retrying | EventType::HashMismatch => 16_776_960,
         };
 
         let title = trigger.map_or_else(

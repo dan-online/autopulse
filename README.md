@@ -34,6 +34,10 @@ Following autoscan, we use the following terminology:
   - Radarr
   - Lidarr
   - Readarr
+  - Notify
+    - Linux: `inotify`
+    - MacOS: `FSEvents`
+    - Windows: `ReadDirectoryChangesW`
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
@@ -95,27 +99,57 @@ auth:
 
 ```yaml
 triggers:
-  sonarr:
+  my_sonarr:
     type: "sonarr"
     rewrite:
       from: "/downloads"
+      to: "/tvshows"
+
+  my_radarr:
+    type: "radarr"
+    rewrite:
+      from: "/downloads"
+      to: "/movies"
+
+  my_lidarr:
+    type: "lidarr"
+    rewrite:
+      from: "/downloads"
+      to: "/music"
+  
+  my_readarr:
+    type: "readarr"
+    rewrite:
+      from: "/downloads"
+      to: "/books"
+  
+  my_notify:
+    type: "notify"
+    paths:
+      - "/watch"
+    rewrite:
+      from: "/watch"
       to: "/media"
 
 webhooks:
-  discord:
+  my_discord:
     type: "discord"
     url: "https://discord.com/api/webhooks/1234567890/abcdefg"
 
 targets:
-  my_cool_plex:
+  my_plex:
     type: "plex"
     url: "http://plex:32400"
     token: "<your_token>"
 
-  my_awesome_jellyfin:
+  my_jellyfin:
     type: "jellyfin"
     url: "http://jellyfin:8096"
     token: "<your_token>"
+
+  my_command:
+    type: "command"
+    raw: "echo $FILE_PATH >> list.txt"
 ```
 
 #### Manual
@@ -128,10 +162,10 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login> -X POST http://localhost
 
 ## To-do
 
-- [ ] Add more triggers
+- [x] Add more triggers
   - [x] Lidarr
   - [x] Readarr
-  - [ ] inotify
+  - [x] inotify
 - [ ] Hooks
   - [ ] Add/Found/Processed hooks
   - [ ] Move Webhooks to hook

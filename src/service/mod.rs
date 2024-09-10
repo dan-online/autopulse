@@ -10,7 +10,7 @@ use crate::{
     service::webhooks::WebhookManager,
     utils::{
         conn::{get_conn, DbPool},
-        settings::Settings,
+        settings::{Settings, Trigger},
     },
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -58,7 +58,8 @@ impl PulseRunner {
             return Ok(());
         }
 
-        let mut count = vec![];
+        let mut found_files = vec![];
+        let mut mismatched_files = vec![];
 
         let mut conn = get_conn(&self.pool);
         let mut evs = scan_events
@@ -71,16 +72,22 @@ impl PulseRunner {
             if file_path.exists() {
                 let file_hash = crate::utils::checksum::sha256checksum(&file_path);
 
-                ev.found_status = FoundStatus::Found.into();
-
                 if let Some(hash) = ev.file_hash.clone() {
                     if hash != file_hash {
+                        if ev.found_status != FoundStatus::HashMismatch.to_string() {
+                            mismatched_files.push(ev.file_path.clone());
+                        }
+
                         ev.found_status = FoundStatus::HashMismatch.into();
                         ev.found_at = Some(chrono::Utc::now().naive_utc());
+                    } else {
+                        ev.found_status = FoundStatus::Found.into();
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    count.push(ev.file_path.clone());
+                    found_files.push(ev.file_path.clone());
+
+                    ev.found_status = FoundStatus::Found.into();
                 }
             }
 
@@ -88,14 +95,28 @@ impl PulseRunner {
             conn.save_changes(ev)?;
         }
 
-        if !count.is_empty() {
+        if !found_files.is_empty() {
             info!(
                 "found {} new file{}",
-                count.len(),
-                if count.len() > 1 { "s" } else { "" }
+                found_files.len(),
+                if found_files.len() > 1 { "s" } else { "" }
             );
 
-            self.webhooks.send(EventType::Found, None, &count).await;
+            self.webhooks
+                .send(EventType::Found, None, &found_files)
+                .await;
+        }
+
+        if !mismatched_files.is_empty() {
+            warn!(
+                "found {} mismatched file{}",
+                mismatched_files.len(),
+                if mismatched_files.len() > 1 { "s" } else { "" }
+            );
+
+            self.webhooks
+                .send(EventType::HashMismatch, None, &mismatched_files)
+                .await;
         }
 
         Ok(())
@@ -167,7 +188,6 @@ impl PulseRunner {
         &mut self,
         evs: &mut [ScanEvent],
     ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
-        let mut succeeded_ids = vec![];
         let mut failed_ids = vec![];
 
         for (name, target) in &mut self.settings.targets {
@@ -191,7 +211,6 @@ impl PulseRunner {
                     for ev in evs {
                         if s.contains(&ev.id) {
                             ev.add_target_hit(name);
-                            succeeded_ids.push(ev.id.clone());
                         } else {
                             failed_ids.push(ev.id.clone());
                         }
@@ -322,15 +341,6 @@ impl PulseService {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        // diesel::insert_into(crate::db::schema::scan_events::table)
-        //     .values(ev)
-        //     .execute(&mut conn)?;
-
-        // scan_events
-        //     .find(&ev.id)
-        //     .get_result(&mut conn)
-        //     .map_err(Into::into)
-
         conn.insert_and_return(ev)
     }
 
@@ -340,7 +350,7 @@ impl PulseService {
         scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
     }
 
-    pub fn start(&self) {
+    pub fn start(&self) -> tokio::task::JoinHandle<()> {
         let settings = self.settings.clone();
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();
@@ -356,6 +366,45 @@ impl PulseService {
 
                 timer.tick().await;
             }
-        });
+        })
+    }
+
+    pub async fn start_notify(&self) {
+        let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
+
+        for (name, trigger) in self.settings.clone().triggers {
+            if let Trigger::Notify(service) = trigger {
+                let cloned_name = name.clone();
+                let global_tx = global_tx.clone();
+
+                let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+                tokio::spawn(async move {
+                    if let Err(e) = service.watcher(tx).await {
+                        error!("unable to start notify service '{}': {:?}", cloned_name, e);
+                    }
+                });
+
+                tokio::spawn(async move {
+                    while let Some(file_path) = rx.recv().await {
+                        if let Err(e) = global_tx.send((name.clone(), file_path)) {
+                            error!("unable to send notify event: {:?}", e);
+                        }
+                    }
+                });
+            }
+        }
+
+        while let Some((name, file_path)) = global_rx.recv().await {
+            let new_scan_event = NewScanEvent {
+                event_source: name.clone(),
+                file_path,
+                ..Default::default()
+            };
+
+            if let Err(e) = self.add_event(&new_scan_event) {
+                error!("unable to add notify event: {:?}", e);
+            }
+        }
     }
 }
