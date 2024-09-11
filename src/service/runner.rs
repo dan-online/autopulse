@@ -3,7 +3,7 @@ use crate::{
     db::{
         models::{FoundStatus, ProcessStatus, ScanEvent},
         schema::scan_events::{
-            dsl::scan_events, found_at, found_status, next_retry_at, process_status,
+            dsl::scan_events, event_source, found_at, found_status, next_retry_at, process_status,
         },
     },
     service::webhooks::WebhookManager,
@@ -13,17 +13,22 @@ use crate::{
     },
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 pub(super) struct PulseRunner {
     webhooks: WebhookManager,
-    settings: Settings,
+    settings: Arc<RwLock<Settings>>,
     pool: DbPool,
 }
 
 impl PulseRunner {
-    pub const fn new(settings: Settings, pool: DbPool, webhooks: WebhookManager) -> Self {
+    pub const fn new(
+        settings: Arc<RwLock<Settings>>,
+        pool: DbPool,
+        webhooks: WebhookManager,
+    ) -> Self {
         Self {
             webhooks,
             settings,
@@ -32,9 +37,13 @@ impl PulseRunner {
     }
 
     async fn update_found_status(&self) -> anyhow::Result<()> {
-        if !self.settings.opts.check_path {
+        let read_settings = self.settings.read().await;
+
+        if !read_settings.opts.check_path {
             return Ok(());
         }
+
+        drop(read_settings);
 
         let mut found_files = vec![];
         let mut mismatched_files = vec![];
@@ -100,8 +109,13 @@ impl PulseRunner {
         Ok(())
     }
 
-    pub async fn update_process_status(&mut self) -> anyhow::Result<()> {
+    pub async fn update_process_status(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
+
+        let read_settings = self.settings.read().await;
+
+        let tickable = read_settings.get_tickable_triggers();
+
         let base_query = scan_events
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
             .filter(process_status.ne::<String>(ProcessStatus::Failed.into()))
@@ -109,9 +123,11 @@ impl PulseRunner {
                 next_retry_at
                     .is_null()
                     .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
-            );
+            )
+            // filter by trigger in tickable
+            .filter(event_source.eq_any(tickable));
 
-        let mut evs = if self.settings.opts.check_path {
+        let mut evs = if read_settings.opts.check_path {
             base_query
                 .filter(found_status.eq::<String>(FoundStatus::Found.into()))
                 .load::<ScanEvent>(&mut conn)?
@@ -122,6 +138,8 @@ impl PulseRunner {
         if evs.is_empty() {
             return Ok(());
         }
+
+        drop(read_settings);
 
         let (processed, retrying, failed) = self.process_events(&mut evs).await?;
 
@@ -163,12 +181,13 @@ impl PulseRunner {
     }
 
     async fn process_events(
-        &mut self,
+        &self,
         evs: &mut [ScanEvent],
     ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
         let mut failed_ids = vec![];
+        let mut rw_settings = self.settings.write().await;
 
-        for (name, target) in &mut self.settings.targets {
+        for (name, target) in rw_settings.targets.iter_mut() {
             let evs = evs
                 .iter_mut()
                 .filter(|x| !x.get_targets_hit().contains(name))
@@ -212,7 +231,7 @@ impl PulseRunner {
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
 
-                if ev.failed_times >= self.settings.opts.max_retries {
+                if ev.failed_times >= rw_settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
                     failed.push(conn.save_changes(ev)?.file_path.clone());
@@ -264,7 +283,7 @@ impl PulseRunner {
         Ok(())
     }
 
-    pub async fn run(&mut self) -> anyhow::Result<()> {
+    pub async fn run(&self) -> anyhow::Result<()> {
         self.update_found_status().await?;
         self.update_process_status().await?;
         self.cleanup()?;

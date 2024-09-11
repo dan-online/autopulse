@@ -15,6 +15,8 @@ use crate::{
     },
 };
 
+use super::timer::Timer;
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct App {
     pub hostname: String,
@@ -60,6 +62,14 @@ impl Settings {
             .try_deserialize::<Self>()
             .map_err(|e| anyhow::anyhow!(e))
     }
+
+    pub fn get_tickable_triggers(&self) -> Vec<String> {
+        self.triggers
+            .iter()
+            .filter(|(_, x)| x.can_tick())
+            .map(|(k, _)| k.clone())
+            .collect::<Vec<String>>()
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -71,11 +81,31 @@ pub struct Rewrite {
 #[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
-    Manual { rewrite: Option<Rewrite> },
-    Radarr { rewrite: Option<Rewrite> },
-    Sonarr { rewrite: Option<Rewrite> },
-    Lidarr { rewrite: Option<Rewrite> },
-    Readarr { rewrite: Option<Rewrite> },
+    Manual {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Radarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Sonarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Lidarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Readarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
     Notify(NotifyService),
 }
 
@@ -89,6 +119,28 @@ impl Trigger {
             Self::Manual { .. } | Self::Notify(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
+        }
+    }
+
+    pub fn can_tick(&self) -> bool {
+        match &self {
+            Self::Manual { timer, .. } => timer.can_tick(),
+            Self::Radarr { timer, .. } => timer.can_tick(),
+            Self::Sonarr { timer, .. } => timer.can_tick(),
+            Self::Lidarr { timer, .. } => timer.can_tick(),
+            Self::Readarr { timer, .. } => timer.can_tick(),
+            Self::Notify(service) => service.timer.can_tick(),
+        }
+    }
+
+    pub fn tick(&self) {
+        match &self {
+            Self::Manual { timer, .. } => timer.tick(),
+            Self::Radarr { timer, .. } => timer.tick(),
+            Self::Sonarr { timer, .. } => timer.tick(),
+            Self::Lidarr { timer, .. } => timer.tick(),
+            Self::Readarr { timer, .. } => timer.tick(),
+            Self::Notify(service) => service.timer.tick(),
         }
     }
 }

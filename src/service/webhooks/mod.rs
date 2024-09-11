@@ -9,11 +9,6 @@ use crate::utils::settings::{Settings, Webhook};
 pub mod discord;
 
 #[derive(Clone)]
-pub struct WebhookManager {
-    settings: Settings,
-}
-
-#[derive(Clone)]
 pub enum EventType {
     New,
     Found,
@@ -50,6 +45,11 @@ impl EventType {
         }
         .to_string()
     }
+}
+
+#[derive(Clone)]
+pub struct WebhookManager {
+    settings: Settings,
 }
 
 impl WebhookManager {

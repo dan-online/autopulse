@@ -6,7 +6,7 @@ use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
-use service::service::PulseService;
+use service::manager::PulseManager;
 use tracing::info;
 use utils::conn::get_pool;
 use utils::settings::Settings;
@@ -46,12 +46,12 @@ async fn main() -> anyhow::Result<()> {
 
     run_db_migrations(&mut pool.get().expect("Failed to get connection"));
 
-    let service = PulseService::new(settings.clone(), pool.clone());
+    let manager = PulseManager::new(settings.clone(), pool.clone());
 
-    let service_task = service.start();
+    let service_task = manager.start();
 
     // Not a fan but the performance hit is negligible
-    let service_clone = service.clone();
+    let service_clone = manager.clone();
 
     let notify_task = tokio::spawn(async move {
         service_clone.start_notify().await;
@@ -66,9 +66,7 @@ async fn main() -> anyhow::Result<()> {
             .service(status)
             .service(stats)
             .app_data(basic::Config::default().realm("Restricted area"))
-            .app_data(Data::new(settings.clone()))
-            .app_data(Data::new(pool.clone()))
-            .app_data(Data::new(service.clone()))
+            .app_data(Data::new(manager.clone()))
     })
     .bind((hostname, port))?
     .run()

@@ -4,7 +4,7 @@ use actix_web::{get, web::Data, HttpResponse, Responder, Result};
 use serde::Serialize;
 use tracing::error;
 
-use crate::service::{service::PulseService, service::Stats};
+use crate::service::{manager::PulseManager, manager::Stats};
 
 #[derive(Serialize)]
 struct StatsResponse {
@@ -13,9 +13,9 @@ struct StatsResponse {
 }
 
 #[get("/stats")]
-pub async fn stats(service: Data<PulseService>) -> Result<impl Responder> {
+pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let start = Instant::now();
-    let stats = service.get_stats();
+    let stats = manager.get_stats();
     let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
 
     if let Err(e) = stats {
