@@ -1,8 +1,12 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{fmt::Display, io::Cursor};
 
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use struson::{
+    json_path,
+    reader::{JsonReader, JsonStreamReader},
+};
 use tracing::{debug, error};
 
 #[derive(Clone, Debug, Deserialize)]
@@ -12,10 +16,6 @@ pub struct Emby {
 
     #[serde(default)]
     pub metadata_refresh_mode: EmbyMetadataRefreshMode,
-    // #[serde(skip)]
-    // items_cache: HashMap<String, Item>,
-    // #[serde(skip)]
-    // last_cache: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -76,11 +76,11 @@ struct Item {
     path: Option<String>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct ItemsResponse {
-    items: Vec<Item>,
-}
+// #[derive(Deserialize, Clone, Debug)]
+// #[serde(rename_all = "PascalCase")]
+// struct ItemsResponse {
+//     items: Vec<Item>,
+// }
 
 impl Emby {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
@@ -115,7 +115,7 @@ impl Emby {
             .cloned()
     }
 
-    async fn get_items(&mut self, library: &Library) -> anyhow::Result<HashMap<String, Item>> {
+    async fn get_item(&mut self, library: &Library, path: &String) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
@@ -141,24 +141,22 @@ impl Emby {
 
         let res = client.get(url.to_string()).send().await?;
 
-        let res = res.json::<ItemsResponse>().await?;
+        let bytes = res.bytes().await?;
 
-        let items = res
-            .items
-            .iter()
-            .filter_map(|item| item.path.clone().map(|path| (path, item.clone())))
-            .collect::<HashMap<String, Item>>();
+        let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
 
-        debug!("found {} items in {} library", items.len(), library.name);
+        json_reader.seek_to(&json_path!["Items"])?;
+        json_reader.begin_array()?;
 
-        Ok(items)
-    }
+        while json_reader.has_next()? {
+            let item: Item = json_reader.deserialize_next()?;
 
-    // sadly this is quite memory intensive, maybe a stream option is possible
-    async fn find_item(&mut self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
-        let items = self.get_items(&library).await?;
+            if item.path == Some(path.clone()) {
+                return Ok(Some(item));
+            }
+        }
 
-        Ok(items.get(path).cloned())
+        Ok(None)
     }
 
     // not as effective as refreshing the item, but good enough
@@ -224,7 +222,7 @@ impl TargetProcess for Emby {
 
         for ev in evs {
             if let Some(library) = self.get_library(&libraries, &ev.file_path) {
-                let item = self.find_item(&library, &ev.file_path).await?;
+                let item = self.get_item(&library, &ev.file_path).await?;
 
                 if let Some(item) = item {
                     to_refresh.push((*ev, item));
