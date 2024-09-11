@@ -61,7 +61,7 @@ impl Settings {
             .build()?;
 
         settings
-            .try_deserialize::<Settings>()
+            .try_deserialize::<Self>()
             .map_err(|e| anyhow::anyhow!(e))
     }
 

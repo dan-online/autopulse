@@ -58,7 +58,7 @@ impl PulseRunner {
 
             if file_path.exists() {
                 if let Some(hash) = ev.file_hash.clone() {
-                    let file_hash = crate::utils::checksum::sha256checksum(&file_path);
+                    let file_hash = crate::utils::checksum::sha256checksum(&file_path)?;
 
                     if hash != file_hash {
                         if ev.found_status != FoundStatus::HashMismatch.to_string() {
@@ -69,6 +69,7 @@ impl PulseRunner {
                         ev.found_at = Some(chrono::Utc::now().naive_utc());
                     } else {
                         ev.found_status = FoundStatus::Found.into();
+                        found_files.push(ev.file_path.clone());
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
