@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
@@ -9,10 +9,42 @@ use tracing::{debug, error};
 pub struct Emby {
     pub url: String,
     pub token: String,
+
+    #[serde(default)]
+    pub metadata_refresh_mode: EmbyMetadataRefreshMode,
+
     #[serde(skip)]
     items_cache: HashMap<String, Item>,
     #[serde(skip)]
     last_cache: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EmbyMetadataRefreshMode {
+    None,
+    ValidationOnly,
+    Default,
+    FullRefresh,
+}
+
+impl Display for EmbyMetadataRefreshMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mode = match self {
+            Self::None => "None",
+            Self::ValidationOnly => "ValidationOnly",
+            Self::Default => "Default",
+            Self::FullRefresh => "FullRefresh",
+        };
+
+        write!(f, "{}", mode)
+    }
+}
+
+impl Default for EmbyMetadataRefreshMode {
+    fn default() -> Self {
+        Self::FullRefresh
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -159,8 +191,10 @@ impl Emby {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join(&format!("/Items/{}/Refresh", item.id))?;
 
-        url.query_pairs_mut()
-            .append_pair("metadataRefreshMode", "FullRefresh");
+        url.query_pairs_mut().append_pair(
+            "metadataRefreshMode",
+            &self.metadata_refresh_mode.to_string(),
+        );
 
         let res = client.post(url.to_string()).send().await?;
 
