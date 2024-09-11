@@ -17,7 +17,7 @@ use crate::{
 
 use super::timer::Timer;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct App {
     pub hostname: String,
     pub port: u16,
@@ -25,13 +25,13 @@ pub struct App {
     pub log_level: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Auth {
     pub username: String,
     pub password: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Opts {
     pub check_path: bool,
     pub max_retries: i32,
@@ -39,10 +39,11 @@ pub struct Opts {
     pub cleanup_days: u64,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub app: App,
     pub auth: Auth,
+
     pub opts: Opts,
 
     pub triggers: HashMap<String, Trigger>,
@@ -57,30 +58,29 @@ impl Settings {
             .add_source(File::with_name("default.toml"))
             .add_source(config::File::with_name("config").required(false))
             .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"))
-            .build()
-            .unwrap();
+            .build()?;
 
         settings
-            .try_deserialize::<Self>()
+            .try_deserialize::<Settings>()
             .map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn get_tickable_triggers(&self) -> Vec<String> {
         self.triggers
             .iter()
-            .filter(|(_, x)| x.can_tick())
+            .filter(|(_, x)| x.can_tick(self.opts.default_timer_wait))
             .map(|(k, _)| k.clone())
             .collect::<Vec<String>>()
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Rewrite {
     pub from: String,
     pub to: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
     Manual {
@@ -124,14 +124,14 @@ impl Trigger {
         }
     }
 
-    pub fn can_tick(&self) -> bool {
+    pub fn can_tick(&self, default: u64) -> bool {
         match &self {
-            Self::Manual { timer, .. } => timer.can_tick(),
-            Self::Radarr { timer, .. } => timer.can_tick(),
-            Self::Sonarr { timer, .. } => timer.can_tick(),
-            Self::Lidarr { timer, .. } => timer.can_tick(),
-            Self::Readarr { timer, .. } => timer.can_tick(),
-            Self::Notify(service) => service.timer.can_tick(),
+            Self::Manual { timer, .. }
+            | Self::Radarr { timer, .. }
+            | Self::Sonarr { timer, .. }
+            | Self::Lidarr { timer, .. }
+            | Self::Readarr { timer, .. } => timer.can_tick(default),
+            Self::Notify(service) => service.timer.can_tick(default),
         }
     }
 
@@ -147,7 +147,7 @@ impl Trigger {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Webhook {
     Discord(DiscordWebhook),
@@ -169,7 +169,7 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {
     Plex(Plex),

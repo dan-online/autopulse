@@ -2,7 +2,7 @@ use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use serde::Deserialize;
 use tracing::{debug, error};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Command {
     path: Option<String>,
     timeout: Option<u64>,

@@ -5,15 +5,10 @@ use std::{
 
 use serde::Deserialize;
 
-use super::settings::Settings;
-
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Timer {
     #[serde(skip)]
     last_tick: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
-
-    #[serde(skip)]
-    default: u64,
 
     wait: Option<u64>,
 }
@@ -29,7 +24,6 @@ impl Timer {
         Self {
             last_tick: Arc::new(Mutex::new(chrono::Utc::now())),
             wait: None,
-            default: Settings::get_settings().unwrap().opts.default_timer_wait,
         }
     }
 
@@ -38,8 +32,8 @@ impl Timer {
         *last_tick = chrono::Utc::now();
     }
 
-    pub fn can_tick(&self) -> bool {
-        let buffer_time = Duration::from_secs(self.wait.unwrap_or(self.default));
+    pub fn can_tick(&self, default: u64) -> bool {
+        let buffer_time = Duration::from_secs(self.wait.unwrap_or(default));
 
         *self.last_tick.lock().unwrap() + buffer_time < chrono::Utc::now()
     }

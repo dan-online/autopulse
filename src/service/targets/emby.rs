@@ -9,7 +9,7 @@ use struson::{
 };
 use tracing::{debug, error};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Emby {
     pub url: String,
     pub token: String,
@@ -18,7 +18,7 @@ pub struct Emby {
     pub metadata_refresh_mode: EmbyMetadataRefreshMode,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EmbyMetadataRefreshMode {
     None,
@@ -46,7 +46,7 @@ impl Default for EmbyMetadataRefreshMode {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct Library {
     #[allow(dead_code)]
@@ -56,20 +56,20 @@ struct Library {
     collection_type: Option<String>,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct UpdateRequest {
     path: String,
     update_type: String,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct ScanPayload {
     updates: Vec<UpdateRequest>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct Item {
     id: String,

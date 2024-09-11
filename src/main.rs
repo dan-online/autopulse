@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
 
     run_db_migrations(&mut pool.get().expect("Failed to get connection"));
 
-    let manager = PulseManager::new(settings.clone(), pool.clone());
+    let manager = PulseManager::new(settings, pool.clone());
 
     let service_task = manager.start();
 

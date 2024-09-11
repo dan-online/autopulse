@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::error;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct NotifyService {
     pub paths: Vec<String>,
     pub rewrite: Option<Rewrite>,

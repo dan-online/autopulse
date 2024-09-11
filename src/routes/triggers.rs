@@ -131,7 +131,6 @@ pub async fn trigger_get(
             let mut file_path = query.path.clone();
 
             if let Some(rewrite) = rewrite {
-                println!("rewriting path {} with {:?}", file_path, rewrite);
                 file_path = rewrite_path(file_path, rewrite);
             }
 
