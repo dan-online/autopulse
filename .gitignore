@@ -1,4 +1,4 @@
 /target
 /config.toml
 .envrc
-test.sqlite
+data

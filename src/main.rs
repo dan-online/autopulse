@@ -8,7 +8,7 @@ use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use tracing::info;
-use utils::conn::get_pool;
+use utils::conn::{get_conn, get_pool};
 use utils::settings::Settings;
 
 pub mod routes {
@@ -43,8 +43,10 @@ async fn main() -> anyhow::Result<()> {
     info!("💫 autopulse starting up...");
 
     let pool = get_pool(database_url)?;
+    let conn = &mut get_conn(&pool);
 
-    run_db_migrations(&mut pool.get().expect("Failed to get connection"));
+    run_db_migrations(conn);
+    conn.init()?;
 
     let manager = PulseManager::new(settings, pool.clone());
 
