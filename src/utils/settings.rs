@@ -35,6 +35,7 @@ pub struct Auth {
 pub struct Opts {
     pub check_path: bool,
     pub max_retries: i32,
+    pub default_timer_wait: u64,
 }
 
 #[derive(Deserialize, Clone, Debug)]
