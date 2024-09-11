@@ -12,11 +12,10 @@ pub struct Emby {
 
     #[serde(default)]
     pub metadata_refresh_mode: EmbyMetadataRefreshMode,
-
-    #[serde(skip)]
-    items_cache: HashMap<String, Item>,
-    #[serde(skip)]
-    last_cache: chrono::DateTime<chrono::Utc>,
+    // #[serde(skip)]
+    // items_cache: HashMap<String, Item>,
+    // #[serde(skip)]
+    // last_cache: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -53,6 +52,8 @@ struct Library {
     #[allow(dead_code)]
     name: String,
     locations: Vec<String>,
+    item_id: String,
+    collection_type: Option<String>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -107,29 +108,34 @@ impl Emby {
         Ok(libraries)
     }
 
-    fn in_library(&self, libraries: &[Library], path: &str) -> bool {
+    fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
         libraries
             .iter()
-            .any(|lib| lib.locations.iter().any(|loc| path.starts_with(loc)))
+            .find(|lib| lib.locations.iter().any(|loc| path.starts_with(loc)))
+            .cloned()
     }
 
-    async fn get_items(&mut self) -> anyhow::Result<&HashMap<String, Item>> {
-        if chrono::Utc::now() - self.last_cache < chrono::Duration::seconds(10) {
-            return Ok(&self.items_cache);
-        }
-
+    async fn get_items(&mut self, library: &Library) -> anyhow::Result<HashMap<String, Item>> {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
         url.query_pairs_mut().append_pair("EnableImages", "false");
+        if let Some(collection_type) = &library.collection_type {
+            url.query_pairs_mut().append_pair(
+                "IncludeItemTypes",
+                match collection_type.as_str() {
+                    "tvshows" => "Episode",
+                    "books" => "Book",
+                    "music" => "Audio",
+                    "movie" => "VideoFile,Movie",
+                    _ => "",
+                },
+            );
+        }
         url.query_pairs_mut()
-            .append_pair("LocationTypes", "FileSystem");
-        url.query_pairs_mut()
-            // TODO: Use the trigger type to reduce the data needed
-            .append_pair("MediaTypes", "Video,Audio,Book");
-        url.query_pairs_mut().append_pair("Filters", "IsNotFolder");
+            .append_pair("ParentId", &library.item_id);
         url.query_pairs_mut()
             .append_pair("EnableTotalRecordCount", "false");
 
@@ -137,20 +143,20 @@ impl Emby {
 
         let res = res.json::<ItemsResponse>().await?;
 
-        self.items_cache = res
+        let items = res
             .items
             .iter()
             .filter_map(|item| item.path.clone().map(|path| (path, item.clone())))
-            .collect();
+            .collect::<HashMap<String, Item>>();
 
-        self.last_cache = chrono::Utc::now();
+        debug!("found {} items in {} library", items.len(), library.name);
 
-        Ok(&self.items_cache)
+        Ok(items)
     }
 
     // sadly this is quite memory intensive, maybe a stream option is possible
-    async fn find_item(&mut self, path: &str) -> anyhow::Result<Option<Item>> {
-        let items = self.get_items().await?;
+    async fn find_item(&mut self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
+        let items = self.get_items(&library).await?;
 
         Ok(items.get(path).cloned())
     }
@@ -217,18 +223,16 @@ impl TargetProcess for Emby {
         let mut to_scan = Vec::new();
 
         for ev in evs {
-            if !self.in_library(&libraries, &ev.file_path) {
-                error!("unable to find library for file: {}", ev.file_path);
+            if let Some(library) = self.get_library(&libraries, &ev.file_path) {
+                let item = self.find_item(&library, &ev.file_path).await?;
 
-                continue;
-            }
-
-            let item = self.find_item(&ev.file_path).await?;
-
-            if let Some(item) = item {
-                to_refresh.push((*ev, item));
+                if let Some(item) = item {
+                    to_refresh.push((*ev, item));
+                } else {
+                    to_scan.push(*ev);
+                }
             } else {
-                to_scan.push(*ev);
+                error!("unable to find library for file: {}", ev.file_path);
             }
         }
 
