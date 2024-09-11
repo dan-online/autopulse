@@ -15,7 +15,9 @@ use crate::{
     },
 };
 
-#[derive(Deserialize, Clone, Debug)]
+use super::timer::Timer;
+
+#[derive(Deserialize, Clone)]
 pub struct App {
     pub hostname: String,
     pub port: u16,
@@ -23,22 +25,25 @@ pub struct App {
     pub log_level: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Auth {
     pub username: String,
     pub password: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Opts {
     pub check_path: bool,
     pub max_retries: i32,
+    pub default_timer_wait: u64,
+    pub cleanup_days: u64,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub app: App,
     pub auth: Auth,
+
     pub opts: Opts,
 
     pub triggers: HashMap<String, Trigger>,
@@ -53,29 +58,56 @@ impl Settings {
             .add_source(File::with_name("default.toml"))
             .add_source(config::File::with_name("config").required(false))
             .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"))
-            .build()
-            .unwrap();
+            .build()?;
 
         settings
-            .try_deserialize::<Self>()
+            .try_deserialize::<Settings>()
             .map_err(|e| anyhow::anyhow!(e))
+    }
+
+    pub fn get_tickable_triggers(&self) -> Vec<String> {
+        self.triggers
+            .iter()
+            .filter(|(_, x)| x.can_tick(self.opts.default_timer_wait))
+            .map(|(k, _)| k.clone())
+            .collect::<Vec<String>>()
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Rewrite {
     pub from: String,
     pub to: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
-    Manual { rewrite: Option<Rewrite> },
-    Radarr { rewrite: Option<Rewrite> },
-    Sonarr { rewrite: Option<Rewrite> },
-    Lidarr { rewrite: Option<Rewrite> },
-    Readarr { rewrite: Option<Rewrite> },
+    Manual {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Radarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Sonarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Lidarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
+    Readarr {
+        rewrite: Option<Rewrite>,
+        #[serde(default)]
+        timer: Timer,
+    },
     Notify(NotifyService),
 }
 
@@ -91,9 +123,31 @@ impl Trigger {
             }
         }
     }
+
+    pub fn can_tick(&self, default: u64) -> bool {
+        match &self {
+            Self::Manual { timer, .. }
+            | Self::Radarr { timer, .. }
+            | Self::Sonarr { timer, .. }
+            | Self::Lidarr { timer, .. }
+            | Self::Readarr { timer, .. } => timer.can_tick(default),
+            Self::Notify(service) => service.timer.can_tick(default),
+        }
+    }
+
+    pub fn tick(&self) {
+        match &self {
+            Self::Manual { timer, .. } => timer.tick(),
+            Self::Radarr { timer, .. } => timer.tick(),
+            Self::Sonarr { timer, .. } => timer.tick(),
+            Self::Lidarr { timer, .. } => timer.tick(),
+            Self::Readarr { timer, .. } => timer.tick(),
+            Self::Notify(service) => service.timer.tick(),
+        }
+    }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Webhook {
     Discord(DiscordWebhook),
@@ -115,7 +169,7 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {
     Plex(Plex),

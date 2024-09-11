@@ -186,7 +186,7 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
 - [ ] Add more webhooks
   - [ ] Generic JSON
 - [ ] Add more options
-  - [ ] Cleanup duration (currently 10 days)
+  - [x] Cleanup duration (currently 10 days)
   - [x] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
 - [x] Databases
   - [x] SQLite

@@ -8,27 +8,22 @@ use tracing::debug;
 
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
-    service::{service::PulseService, triggers::manual::ManualQueryParams, webhooks::EventType},
-    utils::{
-        check_auth::check_auth,
-        rewrite::rewrite_path,
-        settings::{Settings, Trigger},
-    },
+    service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
+    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger},
 };
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
     trigger: Path<String>,
-    settings: Data<Settings>,
-    service: Data<PulseService>,
+    manager: Data<PulseManager>,
     auth: BasicAuth,
     body: Json<serde_json::Value>,
 ) -> Result<impl Responder> {
-    if !check_auth(&auth, &settings) {
+    if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    let trigger_settings = settings.triggers.get(&trigger.to_string());
+    let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
 
     if trigger_settings.is_none() {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
@@ -36,11 +31,11 @@ pub async fn trigger_post(
 
     let trigger_settings = trigger_settings.unwrap();
 
-    match &trigger_settings {
-        Trigger::Sonarr { rewrite }
-        | Trigger::Radarr { rewrite }
-        | Trigger::Lidarr { rewrite }
-        | Trigger::Readarr { rewrite } => {
+    match trigger_settings {
+        Trigger::Sonarr { rewrite, timer }
+        | Trigger::Radarr { rewrite, timer }
+        | Trigger::Lidarr { rewrite, timer }
+        | Trigger::Readarr { rewrite, timer } => {
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -69,14 +64,14 @@ pub async fn trigger_post(
                     ..Default::default()
                 };
 
-                let scan_event = service.add_event(&new_scan_event);
+                let scan_event = manager.add_event(&new_scan_event);
 
                 if let Ok(scan_event) = scan_event {
                     scan_events.push(scan_event);
                 }
             }
 
-            service
+            manager
                 .webhooks
                 .send(
                     EventType::New,
@@ -88,6 +83,8 @@ pub async fn trigger_post(
                         .collect::<Vec<String>>(),
                 )
                 .await;
+
+            timer.tick();
 
             debug!(
                 "added {} file{} from {} trigger",
@@ -112,15 +109,14 @@ pub async fn trigger_post(
 pub async fn trigger_get(
     req: HttpRequest,
     trigger: Path<String>,
-    settings: Data<Settings>,
-    service: Data<PulseService>,
+    manager: Data<PulseManager>,
     auth: BasicAuth,
 ) -> Result<impl Responder> {
-    if !check_auth(&auth, &settings) {
+    if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    let trigger_settings = settings.triggers.get(&trigger.to_string());
+    let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
 
     if trigger_settings.is_none() {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
@@ -129,7 +125,7 @@ pub async fn trigger_get(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Manual { rewrite } => {
+        Trigger::Manual { rewrite, timer } => {
             let query = Query::<ManualQueryParams>::from_query(req.query_string())?;
 
             let mut file_path = query.path.clone();
@@ -145,16 +141,18 @@ pub async fn trigger_get(
                 ..Default::default()
             };
 
-            let scan_event = service.add_event(&new_scan_event);
+            let scan_event = manager.add_event(&new_scan_event);
 
             if let Err(e) = scan_event {
                 return Ok(HttpResponse::InternalServerError().body(e.to_string()));
             }
 
-            service
+            manager
                 .webhooks
                 .send(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
+
+            timer.tick();
 
             debug!("added 1 file from {} trigger", trigger);
 

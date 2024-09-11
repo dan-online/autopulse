@@ -4,3 +4,4 @@ pub mod conn;
 pub mod join_path;
 pub mod rewrite;
 pub mod settings;
+pub mod timer;

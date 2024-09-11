@@ -4,31 +4,31 @@ use tracing::error;
 
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 pub struct Plex {
     pub url: String,
     pub token: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 struct Location {
     path: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 struct Library {
     key: String,
     #[serde(rename = "Location")]
     location: Vec<Location>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct MediaContainer {
     directory: Vec<Library>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct LibraryResponse {
     media_container: MediaContainer,

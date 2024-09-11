@@ -1,4 +1,4 @@
-use crate::utils::{rewrite::rewrite_path, settings::Rewrite};
+use crate::utils::{rewrite::rewrite_path, settings::Rewrite, timer::Timer};
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
@@ -8,12 +8,14 @@ use std::path::PathBuf;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::error;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct NotifyService {
     pub paths: Vec<String>,
     pub rewrite: Option<Rewrite>,
     pub recursive: Option<bool>,
     // pub exclude: Option<Vec<String>>,
+    #[serde(skip)]
+    pub timer: Timer,
 }
 
 impl NotifyService {

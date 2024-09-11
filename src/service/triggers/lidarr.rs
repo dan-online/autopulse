@@ -2,13 +2,13 @@ use serde::Deserialize;
 
 use crate::utils::settings::TriggerRequest;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackFile {
     path: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 pub enum LidarrRequest {
     #[serde(rename = "Download")]

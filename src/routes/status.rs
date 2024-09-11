@@ -5,23 +5,19 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
-use crate::{
-    service::service::PulseService,
-    utils::{check_auth::check_auth, settings::Settings},
-};
+use crate::{service::manager::PulseManager, utils::check_auth::check_auth};
 
 #[get("/status/{id}")]
 pub async fn status(
     id: Path<String>,
-    service: Data<PulseService>,
-    settings: Data<Settings>,
+    manager: Data<PulseManager>,
     auth: BasicAuth,
 ) -> Result<impl Responder> {
-    if !check_auth(&auth, &settings) {
+    if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    let scan_ev = service.get_event(&id);
+    let scan_ev = manager.get_event(&id);
 
     Ok(HttpResponse::Ok().json(scan_ev))
 }

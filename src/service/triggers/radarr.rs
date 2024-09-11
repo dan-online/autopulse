@@ -2,19 +2,19 @@ use serde::Deserialize;
 
 use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieFile {
     relative_path: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Movie {
     folder_path: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 pub enum RadarrRequest {
     #[serde(rename = "Download")]

@@ -1,5 +1,5 @@
-use super::runner::PulseRunner;
 use super::webhooks::WebhookManager;
+use super::{runner::PulseRunner, webhooks::EventType};
 use crate::{
     db::{
         models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
@@ -12,7 +12,9 @@ use crate::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::Serialize;
-use tracing::error;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tracing::{debug, error};
 
 #[derive(Clone, Serialize)]
 pub struct Stats {
@@ -24,13 +26,13 @@ pub struct Stats {
 }
 
 #[derive(Clone)]
-pub struct PulseService {
+pub struct PulseManager {
     pub settings: Settings,
     pub pool: DbPool,
     pub webhooks: WebhookManager,
 }
 
-impl PulseService {
+impl PulseManager {
     pub fn new(settings: Settings, pool: DbPool) -> Self {
         Self {
             settings: settings.clone(),
@@ -91,7 +93,7 @@ impl PulseService {
         let webhooks = self.webhooks.clone();
 
         tokio::spawn(async move {
-            let mut runner = PulseRunner::new(settings, pool, webhooks);
+            let runner = PulseRunner::new(Arc::new(RwLock::new(settings)), pool, webhooks);
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
@@ -107,7 +109,10 @@ impl PulseService {
     pub async fn start_notify(&self) {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
-        for (name, trigger) in self.settings.clone().triggers {
+        let settings = self.settings.clone();
+        let settings = Arc::new(settings);
+
+        for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
                 let cloned_name = name.clone();
                 let global_tx = global_tx.clone();
@@ -120,10 +125,14 @@ impl PulseService {
                     }
                 });
 
+                let settings_clone = settings.clone();
+
                 tokio::spawn(async move {
                     while let Some(file_path) = rx.recv().await {
                         if let Err(e) = global_tx.send((name.clone(), file_path)) {
                             error!("unable to send notify event: {:?}", e);
+                        } else {
+                            settings_clone.triggers.get(&name).unwrap().tick();
                         }
                     }
                 });
@@ -133,13 +142,19 @@ impl PulseService {
         while let Some((name, file_path)) = global_rx.recv().await {
             let new_scan_event = NewScanEvent {
                 event_source: name.clone(),
-                file_path,
+                file_path: file_path.clone(),
                 ..Default::default()
             };
 
             if let Err(e) = self.add_event(&new_scan_event) {
                 error!("unable to add notify event: {:?}", e);
+            } else {
+                debug!("added 1 file from {} trigger", name);
             }
+
+            self.webhooks
+                .send(EventType::New, Some(name), &[file_path])
+                .await;
         }
     }
 }

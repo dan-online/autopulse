@@ -2,13 +2,13 @@ use serde::Deserialize;
 
 use crate::utils::settings::TriggerRequest;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BookFile {
     path: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 pub enum ReadarrRequest {
     #[serde(rename = "Download")]
