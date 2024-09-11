@@ -254,10 +254,13 @@ impl PulseRunner {
         Ok((succeeded, retrying, failed))
     }
 
-    fn cleanup(&self) -> anyhow::Result<()> {
+    async fn cleanup(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
-        let time_before_cleanup = chrono::Utc::now().naive_utc() - chrono::Duration::days(10);
+        let read_settings = self.settings.read().await;
+
+        let time_before_cleanup = chrono::Utc::now().naive_utc()
+            - chrono::Duration::days(read_settings.opts.cleanup_days as i64);
 
         let delete_not_found = diesel::delete(
             scan_events
@@ -286,7 +289,7 @@ impl PulseRunner {
     pub async fn run(&self) -> anyhow::Result<()> {
         self.update_found_status().await?;
         self.update_process_status().await?;
-        self.cleanup()?;
+        self.cleanup().await?;
 
         Ok(())
     }

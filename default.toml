@@ -12,6 +12,7 @@ password = "password"
 check_path = false
 max_retries = 5
 default_timer_wait = 60
+cleanup_days = 10
 
 [triggers.manual]
 type = "manual"
