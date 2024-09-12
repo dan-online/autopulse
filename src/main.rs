@@ -52,12 +52,13 @@ async fn main() -> anyhow::Result<()> {
     if database_url.starts_with("sqlite://") {
         let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
         let path = PathBuf::from(path);
+        let parent = path.parent().unwrap();
 
         if !std::path::Path::new(&path).exists() {
-            std::fs::create_dir_all(path.parent().unwrap())?;
+            std::fs::create_dir_all(parent)?;
         }
 
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o777))?;
+        std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777))?;
     }
 
     let pool = get_pool(database_url)?;
