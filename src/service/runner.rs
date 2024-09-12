@@ -186,10 +186,17 @@ impl PulseRunner {
         let mut failed_ids = vec![];
         let mut rw_settings = self.settings.write().await;
 
+        let trigger_settings = rw_settings.triggers.clone();
+
         for (name, target) in rw_settings.targets.iter_mut() {
             let evs = evs
                 .iter_mut()
                 .filter(|x| !x.get_targets_hit().contains(name))
+                .filter(|x| {
+                    trigger_settings
+                        .get(&x.event_source)
+                        .map_or(true, |trigger| !trigger.excludes().contains(name))
+                })
                 .collect::<Vec<&mut ScanEvent>>();
 
             let res = target

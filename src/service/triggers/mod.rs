@@ -21,6 +21,7 @@
 ///       to: "/music"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Lidarr](crate::utils::settings::Trigger::Lidarr) for all options
@@ -50,6 +51,7 @@ pub mod lidarr;
 ///       to: "/stuff"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Manual](crate::utils::settings::Trigger::Manual) for all options
@@ -84,6 +86,7 @@ pub mod manual;
 ///       to: "/media"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Notify](notify::Notify) for all options
@@ -111,6 +114,7 @@ pub mod notify;
 ///       to: "/movies"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Radarr](crate::utils::settings::Trigger::Radarr) for all options
@@ -138,6 +142,7 @@ pub mod radarr;
 ///       to: "/books"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Readarr](crate::utils::settings::Trigger::Readarr) for all options
@@ -165,6 +170,7 @@ pub mod readarr;
 ///       to: "/shows"
 ///     timer:
 ///       wait: 30
+///     excludes: [ "ignored_target" ]
 /// ```
 ///
 /// See [Sonarr](crate::utils::settings::Trigger::Sonarr) for all options

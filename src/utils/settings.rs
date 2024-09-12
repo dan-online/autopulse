@@ -2,7 +2,7 @@ use super::timer::Timer;
 use crate::{
     db::models::ScanEvent,
     service::{
-        targets::{command::Command, emby::Emby, plex::Plex, tdarr::Tdarr},
+        targets::{command::Command, emby::Emby, fileflows::FileFlows, plex::Plex, tdarr::Tdarr},
         triggers::{
             lidarr::LidarrRequest, notify::Notify, radarr::RadarrRequest, readarr::ReadarrRequest,
             sonarr::SonarrRequest,
@@ -142,26 +142,36 @@ pub enum Trigger {
         rewrite: Option<Rewrite>,
         #[serde(default)]
         timer: Timer,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     Radarr {
         rewrite: Option<Rewrite>,
         #[serde(default)]
         timer: Timer,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     Sonarr {
         rewrite: Option<Rewrite>,
         #[serde(default)]
         timer: Timer,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     Lidarr {
         rewrite: Option<Rewrite>,
         #[serde(default)]
         timer: Timer,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     Readarr {
         rewrite: Option<Rewrite>,
         #[serde(default)]
         timer: Timer,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     Notify(Notify),
 }
@@ -200,6 +210,17 @@ impl Trigger {
             Self::Notify(service) => service.timer.tick(),
         }
     }
+
+    pub const fn excludes(&self) -> &Vec<String> {
+        match &self {
+            Self::Manual { excludes, .. }
+            | Self::Radarr { excludes, .. }
+            | Self::Sonarr { excludes, .. }
+            | Self::Lidarr { excludes, .. }
+            | Self::Readarr { excludes, .. } => excludes,
+            Self::Notify(service) => &service.excludes,
+        }
+    }
 }
 
 /// [Webhooks](crate::service::webhooks) for the service
@@ -234,6 +255,7 @@ pub enum Target {
     Emby(Emby),
     Tdarr(Tdarr),
     Command(Command),
+    FileFlows(FileFlows),
 }
 
 impl Target {
@@ -244,6 +266,7 @@ impl Target {
             Self::Emby(e) => e.process(evs).await,
             Self::Command(c) => c.process(evs).await,
             Self::Tdarr(t) => t.process(evs).await,
+            Self::FileFlows(f) => f.process(evs).await,
         }
     }
 }
