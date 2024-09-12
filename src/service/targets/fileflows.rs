@@ -1,7 +1,7 @@
+use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::Deserialize;
 use tracing::error;
-use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 
 #[derive(Deserialize, Clone)]
 pub struct FileFlows {
