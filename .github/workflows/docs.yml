@@ -17,12 +17,11 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
-      - name: Stable with rustdoc
+      - name: Stable Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-          components: rustdoc
 
       - name: Cargo Cache
         uses: actions/cache@v4
