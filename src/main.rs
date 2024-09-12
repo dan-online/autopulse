@@ -8,6 +8,7 @@ use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use tracing::info;
 use utils::settings::Settings;
@@ -57,6 +58,15 @@ async fn main() -> anyhow::Result<()> {
                 format!("Failed to create database directory: {}", parent.display())
             })?;
         }
+
+        std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777)).with_context(
+            || {
+                format!(
+                    "Failed to set permissions on database directory: {}",
+                    parent.display()
+                )
+            },
+        )?;
     }
 
     let pool = get_pool(database_url)?;
