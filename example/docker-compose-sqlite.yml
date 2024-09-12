@@ -1,0 +1,12 @@
+services:
+  autopulse:
+    image: danonline/autopulse
+    container_name: autopulse
+    restart: always
+    ports:
+      - 2875:2875
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+    environment:
+       AUTOPULSE__APP__DATABASE_URL: sqlite://data/autopulse.db
