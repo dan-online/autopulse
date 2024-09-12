@@ -115,7 +115,7 @@ impl Emby {
             .cloned()
     }
 
-    async fn get_item(&mut self, library: &Library, path: &String) -> anyhow::Result<Option<Item>> {
+    async fn get_item(&mut self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
@@ -151,7 +151,7 @@ impl Emby {
         while json_reader.has_next()? {
             let item: Item = json_reader.deserialize_next()?;
 
-            if item.path == Some(path.clone()) {
+            if item.path == Some(path.to_owned()) {
                 return Ok(Some(item));
             }
         }
