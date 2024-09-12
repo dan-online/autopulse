@@ -1,3 +1,5 @@
+use std::os::unix::fs::PermissionsExt;
+
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
@@ -45,6 +47,16 @@ async fn main() -> anyhow::Result<()> {
     let database_url = settings.app.database_url.clone();
 
     info!("💫 autopulse starting up...");
+
+    if database_url.starts_with("sqlite://") {
+        let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
+
+        if !std::path::Path::new(path).exists() {
+            std::fs::create_dir_all(path)?;
+        }
+
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o777))?;
+    }
 
     let pool = get_pool(database_url)?;
     let conn = &mut get_conn(&pool);
