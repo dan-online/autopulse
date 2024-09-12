@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 use super::EventType;
 
 #[derive(Serialize, Clone)]
+#[doc(hidden)]
 pub struct DiscordEmbedField {
     pub name: String,
     pub value: String,
 }
 
 #[derive(Serialize, Clone)]
+#[doc(hidden)]
 pub struct DiscordEmbed {
     pub color: i32,
     pub timestamp: String,
@@ -17,6 +19,7 @@ pub struct DiscordEmbed {
 }
 
 #[derive(Serialize, Clone)]
+#[doc(hidden)]
 pub struct DiscordEmbedContent {
     pub username: String,
     pub avatar_url: String,
@@ -25,8 +28,11 @@ pub struct DiscordEmbedContent {
 
 #[derive(Deserialize, Clone)]
 pub struct DiscordWebhook {
+    /// Webhook URL
     pub url: String,
+    /// Optional avatar URL
     pub avatar_url: Option<String>,
+    /// Optional username
     pub username: Option<String>,
 }
 

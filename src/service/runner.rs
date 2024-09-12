@@ -1,16 +1,14 @@
 use super::webhooks::EventType;
 use crate::{
     db::{
+        conn::{get_conn, DbPool},
         models::{FoundStatus, ProcessStatus, ScanEvent},
         schema::scan_events::{
             dsl::scan_events, event_source, found_at, found_status, next_retry_at, process_status,
         },
     },
     service::webhooks::WebhookManager,
-    utils::{
-        conn::{get_conn, DbPool},
-        settings::Settings,
-    },
+    utils::settings::Settings,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::{path::PathBuf, sync::Arc};

@@ -1,6 +1,7 @@
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
+use db::conn::{get_conn, get_pool};
 use db::migration::run_db_migrations;
 use routes::stats::stats;
 use routes::status::status;
@@ -8,23 +9,26 @@ use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use tracing::info;
-use utils::conn::{get_conn, get_pool};
 use utils::settings::Settings;
 
-pub mod routes {
-    pub mod index;
-    pub mod stats;
-    pub mod status;
-    pub mod triggers;
-}
-pub mod utils;
-pub mod db {
-    pub mod migration;
-    pub mod models;
-    pub mod schema;
-}
+/// Web server routes
+pub mod routes;
+
+/// Database handler
+pub mod db;
+
+/// Core of autopulse
+///
+/// Includes:
+/// - `Triggers`
+/// - `Webhooks`
+/// - `Targets`
 pub mod service;
 
+/// Internal utility functions
+pub mod utils;
+
+#[doc(hidden)]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
@@ -50,13 +54,13 @@ async fn main() -> anyhow::Result<()> {
 
     let manager = PulseManager::new(settings, pool.clone());
 
-    let service_task = manager.start();
+    let manager_task = manager.start();
 
     // Not a fan but the performance hit is negligible
-    let service_clone = manager.clone();
+    let manager_clone = manager.clone();
 
     let notify_task = tokio::spawn(async move {
-        service_clone.start_notify().await;
+        manager_clone.start_notify().await;
     });
 
     HttpServer::new(move || {
@@ -77,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Shutting down...");
 
-    service_task.abort();
+    manager_task.abort();
     notify_task.abort();
 
     Ok(())

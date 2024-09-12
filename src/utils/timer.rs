@@ -8,8 +8,10 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone)]
 pub struct Timer {
     #[serde(skip)]
+    #[doc(hidden)]
     last_tick: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
 
+    /// Time to wait before processing events (default: [opts.default_timer_wait](super::settings::Opts::default_timer_wait))
     wait: Option<u64>,
 }
 
@@ -19,6 +21,7 @@ impl Default for Timer {
     }
 }
 
+#[doc(hidden)]
 impl Timer {
     pub fn new() -> Self {
         Self {

@@ -4,12 +4,14 @@ use crate::utils::settings::TriggerRequest;
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct BookFile {
     path: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
+#[doc(hidden)]
 pub enum ReadarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]

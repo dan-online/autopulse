@@ -1,3 +1,4 @@
+use crate::{service::manager::PulseManager, utils::check_auth::check_auth};
 use actix_web::{
     get,
     web::{Data, Path},
@@ -5,8 +6,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
-use crate::{service::manager::PulseManager, utils::check_auth::check_auth};
-
+#[doc(hidden)]
 #[get("/status/{id}")]
 pub async fn status(
     id: Path<String>,

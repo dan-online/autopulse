@@ -1,0 +1,2 @@
+[build]
+rustdocflags = ["--extend-css=assets/docs.css", "--default-theme=ayu"]

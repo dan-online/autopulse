@@ -5,10 +5,39 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 
+/// Represents a connection to either a PostgreSQL or SQLite database.
 #[derive(diesel::MultiConnection)]
 pub enum AnyConnection {
+    /// A connection to a PostgreSQL database.
+    ///
+    /// This is used when the `database_url` is a PostgreSQL URL.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// postgres://user:password@localhost:5432/database
+    /// ```
     Postgresql(diesel::PgConnection),
     // Mysql(diesel::MysqlConnection),
+    /// A connection to a SQLite database.
+    ///
+    /// This is used when the `database_url` is a SQLite URL.
+    ///
+    /// Note: The directory where the database is stored will also be populated with a WAL file and a journal file.
+    ///
+    /// # Example
+    ///
+    /// ```bash
+    /// # Relative path
+    /// sqlite://database.db
+    /// sqlite://data/database.db
+    ///
+    /// # Absolute path
+    /// sqlite:///data/database.db
+    ///
+    /// # In-memory database
+    /// sqlite://:memory: # In-memory database
+    /// ```
     Sqlite(diesel::SqliteConnection),
 }
 
@@ -54,8 +83,10 @@ impl AnyConnection {
     }
 }
 
+#[doc(hidden)]
 pub type DbPool = Pool<ConnectionManager<AnyConnection>>;
 
+#[doc(hidden)]
 pub fn get_conn(
     pool: &Pool<ConnectionManager<AnyConnection>>,
 ) -> PooledConnection<ConnectionManager<AnyConnection>> {
@@ -63,6 +94,7 @@ pub fn get_conn(
         .expect("Failed to get database connection from pool")
 }
 
+#[doc(hidden)]
 pub fn get_pool(database_url: String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 

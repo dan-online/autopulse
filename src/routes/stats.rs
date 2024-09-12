@@ -1,17 +1,37 @@
-use std::time::Instant;
-
+use crate::service::manager::PulseManager;
 use actix_web::{get, web::Data, HttpResponse, Responder, Result};
 use serde::Serialize;
+use std::time::Instant;
 use tracing::error;
 
-use crate::service::{manager::PulseManager, manager::Stats};
+/// Represents the service statistics.
+#[derive(Clone, Serialize)]
+pub struct Stats {
+    /// The total number of events.
+    pub total: i64,
+    /// The number of file events that have been found.
+    pub found: i64,
+    /// The number of file events that have been processed.
+    pub processed: i64,
+    /// The number of file events that are being retried.
+    pub retrying: i64,
+    /// The number of file events that have failed.
+    pub failed: i64,
+}
 
+/// Represents the response format for the `/stats` endpoint.
+///
+/// This structure is used to serialize the response returned by the `/stats` endpoint,
+/// providing both the service statistics and the response time.
 #[derive(Serialize)]
-struct StatsResponse {
+pub struct StatsResponse {
+    /// Detailed service statistics.
     stats: Stats,
+    /// The time taken to retrieve the statistics, measured in milliseconds.
     speed: f64,
 }
 
+#[doc(hidden)]
 #[get("/stats")]
 pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let start = Instant::now();

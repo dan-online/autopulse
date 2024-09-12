@@ -1,0 +1,62 @@
+name: Docs
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+
+      - name: Stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Clean docs folder
+        run: cargo clean --doc
+
+      - name: Build docs
+        run: cargo doc --no-deps
+
+      - name: Add redirect
+        run: echo '<meta http-equiv="refresh" content="0;url=autopulse/index.html">' > target/doc/index.html
+
+      - name: Remove lock file
+        run: rm target/doc/.lock
+
+      - name: Publish to Cloudflare Pages
+        uses: dan-online/pages-action@main
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: autopulse
+          directory: target/doc
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          productionBranch: main

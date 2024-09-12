@@ -16,6 +16,8 @@
     <a href="https://github.com/dan-online/autopulse/issues">Report Bug</a>
     ·
     <a href="https://github.com/dan-online/autopulse/issues">Request Feature</a>
+    .
+    <a href="https://autopulse.pages.dev/">Documentation</a>
   </p>
 </div>
 
@@ -74,7 +76,20 @@ $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://databas
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory: --name autopulse danonline/autopulse
 ```
 
-### Configuration
+### Documentation
+
+All the documentation can be found [on the website](https://autopulse.pages.dev/)
+
+Here's some quick links:
+
+- [Settings](https://autopulse.pages.dev/autopulse/utils/settings/)
+- [Targets](https://autopulse.pages.dev/autopulse/service/targets/)
+- [Triggers](https://autopulse.pages.dev/autopulse/service/triggers/)
+- [Webhooks](https://autopulse.pages.dev/autopulse/service/webhooks/)
+
+### Quick Start
+
+#### Configuration
 
 autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the [default values](default.toml) using [a config file](example/config.toml) or by [setting environment variables](example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``. 
 
@@ -84,7 +99,7 @@ An example has been provided in the [example](example) directory
 
 > Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
 
-#### Authorization
+##### Authorization
 
 autopulse uses basic authorization for the API. You can set the username and password in the config file or by setting the `AUTOPULSE__AUTH__USERNAME` and `AUTOPULSE__AUTH__PASSWORD` environment variables.
 
@@ -153,14 +168,6 @@ targets:
     raw: "echo $FILE_PATH >> list.txt"
 ```
 
-#### Path Checking
-
-By enabling path checking either by setting `check_path` to `true` in the config file or by setting the `AUTOPULSE__OPTS__CHECK_PATH` environment variable, autopulse will check if the path exists before updating targets.
-
-```yaml
-opts:
-  check_path: true
-```
 
 #### Manual
 
@@ -169,7 +176,6 @@ By default a `manual` endpoint is provided which can be used to manually trigger
 ```bash
 $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890'
 ```
-
 
 ## To-do
 

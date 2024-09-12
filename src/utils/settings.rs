@@ -1,47 +1,88 @@
-use std::collections::HashMap;
-
-use config::{Config, File};
-use serde::Deserialize;
-
+use super::timer::Timer;
 use crate::{
     db::models::ScanEvent,
     service::{
         targets::{command::Command, emby::Emby, plex::Plex},
         triggers::{
-            lidarr::LidarrRequest, notify::NotifyService, radarr::RadarrRequest,
-            readarr::ReadarrRequest, sonarr::SonarrRequest,
+            lidarr::LidarrRequest, notify::Notify, radarr::RadarrRequest, readarr::ReadarrRequest,
+            sonarr::SonarrRequest,
         },
         webhooks::discord::DiscordWebhook,
     },
 };
+use config::{Config, File};
+use serde::Deserialize;
+use std::collections::HashMap;
 
-use super::timer::Timer;
-
+/// App-specific settings
+///
+/// Example:
+///
+/// ```yml
+/// app:
+///   hostname: 0.0.0.0
+///   port: 1234
+///   database_url: sqlite://autopulse.db
+///   log_level: debug
+/// ```
 #[derive(Deserialize, Clone)]
 pub struct App {
+    /// Hostname to bind to
     pub hostname: String,
+    /// Port to bind to (default: 2875)
     pub port: u16,
+    /// Database URL (see [AnyConnection](crate::db::conn::AnyConnection))
     pub database_url: String,
+    /// Log level (default: info) (trace, debug, info, warn, error)
+    // TODO: change to enum?
     pub log_level: String,
 }
 
+/// Authentication settings
+///
+/// Example:
+///
+/// ```yml
+/// auth:
+///   username: terry
+///   password: yogurt
+/// ```
 #[derive(Deserialize, Clone)]
 pub struct Auth {
+    /// Username for basic auth (default: admin)
     pub username: String,
+    /// Password for basic auth (default: password)
     pub password: String,
 }
 
+/// Global settings
+///
+/// Example:
+///
+/// ```yml
+/// opts:
+///   check_path: true
+///   max_retries: 10
+///   default_timer_wait: 300
+///   cleanup_days: 7
+/// ```
 #[derive(Deserialize, Clone)]
 pub struct Opts {
+    /// Check if the path exists before processing (default: false)
     pub check_path: bool,
+    /// Maximum retries before giving up (default: 5)
     pub max_retries: i32,
+    /// Default timer wait time (default: 60)
     pub default_timer_wait: u64,
+    /// Cleanup events older than x days (default: 10)
     pub cleanup_days: u64,
 }
 
+/// autopulse settings
 #[derive(Deserialize, Clone)]
 pub struct Settings {
     pub app: App,
+
     pub auth: Auth,
 
     pub opts: Opts,
@@ -74,12 +115,26 @@ impl Settings {
     }
 }
 
+/// Rewrite structure for triggers
+///
+/// Example:
+///
+/// ```yml
+/// triggers:
+///   sonarr:
+///     type: sonarr
+///     rewrite:
+///       from: /tv
+///       to: /media/tv
 #[derive(Deserialize, Clone)]
 pub struct Rewrite {
+    /// Path to rewrite from
     pub from: String,
+    /// Path to rewrite to
     pub to: String,
 }
 
+/// [Triggers](crate::service::triggers) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
@@ -108,7 +163,7 @@ pub enum Trigger {
         #[serde(default)]
         timer: Timer,
     },
-    Notify(NotifyService),
+    Notify(Notify),
 }
 
 impl Trigger {
@@ -147,6 +202,7 @@ impl Trigger {
     }
 }
 
+/// [Webhooks](crate::service::webhooks) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Webhook {
@@ -169,6 +225,7 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
+/// [Targets](crate::service::targets) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {

@@ -1,6 +1,7 @@
 use actix_web::{get, web::Json, Responder};
 use serde::Serialize;
 
+#[doc(hidden)]
 #[derive(Serialize)]
 struct Hello {
     autopulse: String,

@@ -1,29 +1,18 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
+use crate::routes::stats::Stats;
 use crate::{
     db::{
+        conn::{get_conn, DbPool},
         models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
         schema::scan_events::{dsl::scan_events, found_status, process_status},
     },
-    utils::{
-        conn::{get_conn, DbPool},
-        settings::{Settings, Trigger},
-    },
+    utils::settings::{Settings, Trigger},
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error};
-
-#[derive(Clone, Serialize)]
-pub struct Stats {
-    total: i64,
-    found: i64,
-    processed: i64,
-    retrying: i64,
-    failed: i64,
-}
 
 #[derive(Clone)]
 pub struct PulseManager {

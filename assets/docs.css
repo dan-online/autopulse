@@ -1,0 +1,19 @@
+#trait-implementations,
+#trait-implementations-list,
+#synthetic-implementations,
+#synthetic-implementations-list,
+#blanket-implementations,
+#blanket-implementations-list,
+#implementations,
+#implementations-list,
+#traits,
+#traits-list,
+.trait-implementation,
+h3>[href="#trait-implementations"],
+.synthetic-implementation,
+h3>[href="#synthetic-implementations"],
+.blanket-implementation,
+h3>[href="#blanket-implementations"],
+h2#traits+ul {
+    display: none
+}

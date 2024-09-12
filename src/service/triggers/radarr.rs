@@ -4,18 +4,21 @@ use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct MovieFile {
     relative_path: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct Movie {
     folder_path: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
+#[doc(hidden)]
 pub enum RadarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
