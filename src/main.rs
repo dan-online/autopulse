@@ -1,4 +1,5 @@
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
@@ -50,9 +51,10 @@ async fn main() -> anyhow::Result<()> {
 
     if database_url.starts_with("sqlite://") {
         let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
+        let path = PathBuf::from(path);
 
-        if !std::path::Path::new(path).exists() {
-            std::fs::create_dir_all(path)?;
+        if !std::path::Path::new(&path).exists() {
+            std::fs::create_dir_all(path.parent().unwrap())?;
         }
 
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o777))?;
