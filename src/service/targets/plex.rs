@@ -87,7 +87,13 @@ impl Plex {
         let mut url = url::Url::parse(&self.url)?
             .join(&format!("/library/sections/{}/refresh", library.key))?;
 
-        url.query_pairs_mut().append_pair("path", &ev.file_path);
+        let file_dir = std::path::Path::new(&ev.file_path)
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("unable to get parent directory"))?
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("unable to convert path to string"))?;
+
+        url.query_pairs_mut().append_pair("path", file_dir);
 
         let res = client.get(url.to_string()).send().await?;
 
