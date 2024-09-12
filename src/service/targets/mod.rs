@@ -63,4 +63,19 @@ pub mod emby;
 ///
 /// See [Plex](plex::Plex) for all options
 pub mod plex;
+/// Tdarr - Tdarr target
+///
+/// This target is used to scan a file in Tdarr
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   tdarr:
+///     type: tdarr
+///     url: "http://localhost:8265"
+///     db_id: "<LIBRARY_ID>"
+/// ```
+///
+/// See [Tdarr](tdarr::Tdarr) for all options
 pub mod tdarr;

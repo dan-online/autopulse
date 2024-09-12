@@ -5,12 +5,15 @@ use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 
 #[derive(Deserialize, Clone)]
 pub struct Tdarr {
+    /// URL to the Tdarr server
     pub url: String,
+    /// Library ID for the Tdarr server
     pub db_id: String,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 struct ScanConfig {
     #[serde(rename = "dbID")]
     db_id: String,
@@ -20,12 +23,14 @@ struct ScanConfig {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 struct Data {
     scan_config: ScanConfig,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 struct Payload {
     data: Data,
 }
