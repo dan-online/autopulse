@@ -2,7 +2,7 @@ use super::timer::Timer;
 use crate::{
     db::models::ScanEvent,
     service::{
-        targets::{command::Command, emby::Emby, plex::Plex},
+        targets::{command::Command, emby::Emby, plex::Plex, tdarr::Tdarr},
         triggers::{
             lidarr::LidarrRequest, notify::Notify, radarr::RadarrRequest, readarr::ReadarrRequest,
             sonarr::SonarrRequest,
@@ -232,6 +232,7 @@ pub enum Target {
     Plex(Plex),
     Jellyfin(Emby),
     Emby(Emby),
+    Tdarr(Tdarr),
     Command(Command),
 }
 
@@ -242,6 +243,7 @@ impl Target {
             Self::Jellyfin(j) => j.process(evs).await,
             Self::Emby(e) => e.process(evs).await,
             Self::Command(c) => c.process(evs).await,
+            Self::Tdarr(t) => t.process(evs).await,
         }
     }
 }

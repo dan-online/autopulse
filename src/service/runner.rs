@@ -261,6 +261,8 @@ impl PulseRunner {
         let time_before_cleanup = chrono::Utc::now().naive_utc()
             - chrono::Duration::days(read_settings.opts.cleanup_days as i64);
 
+        drop(read_settings);
+
         let delete_not_found = diesel::delete(
             scan_events
                 .filter(found_status.eq::<String>(FoundStatus::NotFound.into()))
