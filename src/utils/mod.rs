@@ -17,7 +17,7 @@ pub mod rewrite;
 /// - Config file
 ///   - `config.{json,toml,yaml,json5,ron,ini}` in the current directory
 /// - Environment variables
-///   - `AUTOPULSE__{SECTION}__{KEY}` (e.g. `AUTOPULSE__WEBHOOKS__MY_DISCORD__URL`)
+///   - `AUTOPULSE__{SECTION}__{KEY}` (e.g. `AUTOPULSE__APP__DATABASE_URL`)
 ///
 /// See [Settings](settings::Settings) for all options and [default.toml](https://github.com/dan-online/autopulse/blob/main/default.toml) for defaults
 pub mod settings;
