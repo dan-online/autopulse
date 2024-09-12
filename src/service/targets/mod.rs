@@ -63,3 +63,4 @@ pub mod emby;
 ///
 /// See [Plex](plex::Plex) for all options
 pub mod plex;
+pub mod tdarr;

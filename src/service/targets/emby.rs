@@ -121,7 +121,7 @@ impl Emby {
             .cloned()
     }
 
-    async fn get_item(&mut self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
+    async fn get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
