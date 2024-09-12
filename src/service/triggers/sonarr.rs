@@ -4,24 +4,28 @@ use crate::utils::{join_path::join_path, settings::TriggerRequest};
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct EpisodeFile {
     pub relative_path: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct Series {
     path: String,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[doc(hidden)]
 pub struct RenamedEpisodeFile {
     previous_path: String,
     relative_path: String,
 }
 #[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
+#[doc(hidden)]
 pub enum SonarrRequest {
     #[serde(rename = "EpisodeFileDelete")]
     #[serde(rename_all = "camelCase")]

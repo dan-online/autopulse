@@ -1,0 +1,50 @@
+name: Docs
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Clean docs folder
+        run: cargo clean --doc
+
+      - name: Build docs
+        run: cargo doc --no-deps
+
+      - name: Add redirect
+        run: echo '<meta http-equiv="refresh" content="0;url=autopulse/index.html">' > target/doc/index.html
+
+      - name: Remove lock file
+        run: rm target/doc/.lock
+
+      - name: Publish to Cloudflare Pages
+        uses: dan-online/pages-action@main
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: autopulse
+          directory: target/doc
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          productionBranch: main

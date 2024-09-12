@@ -6,15 +6,19 @@ use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 
 #[derive(Deserialize, Clone)]
 pub struct Plex {
+    /// URL to the Plex server
     pub url: String,
+    /// API token for the Plex server
     pub token: String,
 }
 
+#[doc(hidden)]
 #[derive(Deserialize, Clone)]
 struct Location {
     path: String,
 }
 
+#[doc(hidden)]
 #[derive(Deserialize, Clone)]
 struct Library {
     key: String,
@@ -22,12 +26,14 @@ struct Library {
     location: Vec<Location>,
 }
 
+#[doc(hidden)]
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct MediaContainer {
     directory: Vec<Library>,
 }
 
+#[doc(hidden)]
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct LibraryResponse {

@@ -9,16 +9,19 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::error;
 
 #[derive(Deserialize, Clone)]
-pub struct NotifyService {
+pub struct Notify {
+    /// Paths to monitor
     pub paths: Vec<String>,
+    /// Rewrite path
     pub rewrite: Option<Rewrite>,
+    /// Recursive monitoring (default: true)
     pub recursive: Option<bool>,
     // pub exclude: Option<Vec<String>>,
-    #[serde(skip)]
+    /// Timer
     pub timer: Timer,
 }
 
-impl NotifyService {
+impl Notify {
     pub fn send_event(
         &self,
         tx: UnboundedSender<String>,

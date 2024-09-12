@@ -11,19 +11,27 @@ use tracing::{debug, error};
 
 #[derive(Clone, Deserialize)]
 pub struct Emby {
+    /// URL to the Jellyfin/Emby server
     pub url: String,
+    /// API token for the Jellyfin/Emby server
     pub token: String,
 
+    /// Metadata refresh mode (default: FullRefresh)
     #[serde(default)]
     pub metadata_refresh_mode: EmbyMetadataRefreshMode,
 }
 
+/// Metadata refresh mode for Jellyfin/Emby
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EmbyMetadataRefreshMode {
+    /// `none`
     None,
+    /// `validation_only`
     ValidationOnly,
+    /// `default`
     Default,
+    /// `full_refresh`
     FullRefresh,
 }
 
@@ -48,6 +56,7 @@ impl Default for EmbyMetadataRefreshMode {
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+#[doc(hidden)]
 struct Library {
     #[allow(dead_code)]
     name: String,
@@ -58,6 +67,7 @@ struct Library {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+#[doc(hidden)]
 struct UpdateRequest {
     path: String,
     update_type: String,
@@ -65,22 +75,18 @@ struct UpdateRequest {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+#[doc(hidden)]
 struct ScanPayload {
     updates: Vec<UpdateRequest>,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+#[doc(hidden)]
 struct Item {
     id: String,
     path: Option<String>,
 }
-
-// #[derive(Deserialize, Clone, Debug)]
-// #[serde(rename_all = "PascalCase")]
-// struct ItemsResponse {
-//     items: Vec<Item>,
-// }
 
 impl Emby {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
