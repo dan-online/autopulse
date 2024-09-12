@@ -9,8 +9,6 @@ concurrency:
   group: docs
   cancel-in-progress: false
 
-
-
 jobs:
   build:
     name: Build
@@ -46,7 +44,9 @@ jobs:
         run: cargo doc --no-deps
 
       - name: Add redirect
-        run: echo '<meta http-equiv="refresh" content="0;url=autopulse/index.html">' > target/doc/index.html
+        run: |
+          echo '<meta http-equiv="refresh" content="0;url=autopulse/index.html">' > target/doc/index.html
+          echo '404 Not Found' > target/doc/404.html
 
       - name: Remove lock file
         run: rm target/doc/.lock
