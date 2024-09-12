@@ -43,13 +43,13 @@ FROM alpine AS runtime
 
 WORKDIR /app
 
-RUN addgroup -S user && adduser -S user -G user
+# RUN addgroup -S user && adduser -S user -G user
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/autopulse /usr/local/bin/
 COPY default.toml default.toml
 
-RUN chown -R user:user /app
+# RUN chown -R user:user /app
 
-USER user
+# USER user
 
 CMD ["/usr/local/bin/autopulse"]
