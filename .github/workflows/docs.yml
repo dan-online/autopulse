@@ -14,18 +14,26 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Checkout Project
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
-      - name: Configure cache
-        uses: Swatinem/rust-cache@v2
+      - name: Stable with rustdoc
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustdoc
 
-      - name: Setup pages
-        id: pages
-        uses: actions/configure-pages@v4
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Clean docs folder
         run: cargo clean --doc
