@@ -52,7 +52,7 @@ jobs:
         run: rm target/doc/.lock
 
       - name: Publish to Cloudflare Pages
-        uses: dan-online/pages-action@main
+        uses: dan-online/pages-action@959843cff135bfb200e7ed5509b4a7dd86164fce
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
