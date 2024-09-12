@@ -32,10 +32,10 @@ pub async fn trigger_post(
     let trigger_settings = trigger_settings.unwrap();
 
     match trigger_settings {
-        Trigger::Sonarr { rewrite, timer }
-        | Trigger::Radarr { rewrite, timer }
-        | Trigger::Lidarr { rewrite, timer }
-        | Trigger::Readarr { rewrite, timer } => {
+        Trigger::Sonarr { rewrite, timer, .. }
+        | Trigger::Radarr { rewrite, timer, .. }
+        | Trigger::Lidarr { rewrite, timer, .. }
+        | Trigger::Readarr { rewrite, timer, .. } => {
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -125,7 +125,7 @@ pub async fn trigger_get(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Manual { rewrite, timer } => {
+        Trigger::Manual { rewrite, timer, .. } => {
             let query = Query::<ManualQueryParams>::from_query(req.query_string())?;
 
             let mut file_path = query.path.clone();

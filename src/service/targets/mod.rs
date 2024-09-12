@@ -32,7 +32,7 @@ pub mod command;
 /// targets:
 ///   my_jellyfin:
 ///     type: jellyfin
-///     url: "http://localhost:8096"
+///     url: http://localhost:8096
 ///     token: "<API_KEY>"
 /// ```
 /// or
@@ -40,13 +40,28 @@ pub mod command;
 /// targets:
 ///   my_emby:
 ///     type: emby
-///     url: "http://localhost:8096"
+///     url: http://localhost:8096
 ///     token: "<API_KEY>"
 /// ```
 ///
 /// See [Emby](emby::Emby) for all options
 #[doc(alias("jellyfin"))]
 pub mod emby;
+/// FileFlows - FileFlows target
+///
+/// This target is used to process a file in FileFlows
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   fileflows:
+///     type: fileflows
+///     url: http://localhost:5000
+/// ```
+///
+/// See [FileFlows](fileflows::FileFlows) for all options
+pub mod fileflows;
 /// Plex - Plex target
 ///
 /// This target is used to scan a file in Plex
@@ -57,7 +72,7 @@ pub mod emby;
 /// targets:
 ///   my_plex:
 ///     type: plex
-///     url: "http://localhost:32400"
+///     url: http://localhost:32400
 ///     token: "<PLEX_TOKEN>"
 /// ```
 ///
@@ -65,7 +80,7 @@ pub mod emby;
 pub mod plex;
 /// Tdarr - Tdarr target
 ///
-/// This target is used to scan a file in Tdarr
+/// This target is used to process a file in Tdarr
 ///
 /// # Example
 ///
@@ -73,7 +88,7 @@ pub mod plex;
 /// targets:
 ///   tdarr:
 ///     type: tdarr
-///     url: "http://localhost:8265"
+///     url: http://localhost:8265
 ///     db_id: "<LIBRARY_ID>"
 /// ```
 ///

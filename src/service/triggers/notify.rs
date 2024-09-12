@@ -16,7 +16,9 @@ pub struct Notify {
     pub rewrite: Option<Rewrite>,
     /// Recursive monitoring (default: true)
     pub recursive: Option<bool>,
-    // pub exclude: Option<Vec<String>>,
+    /// Targets to exclude
+    #[serde(default)]
+    pub excludes: Vec<String>,
     /// Timer
     pub timer: Timer,
 }
