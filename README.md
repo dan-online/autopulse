@@ -45,6 +45,7 @@ Following autoscan, we use the following terminology:
   - Jellyfin
   - Emby
   - Command
+  - Tdarr
 
 ### Features
 
