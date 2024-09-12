@@ -38,6 +38,6 @@ jobs:
       - name: Format Check
         run: cargo fmt -- --check
       - name: Clippy Check
-        run: cargo clippy --release # -- -D warnings
+        run: cargo clippy --release -- -D warnings
       - name: Test
         run: cargo test --release
