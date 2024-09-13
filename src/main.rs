@@ -1,3 +1,12 @@
+//! ## Quick docs
+//!
+//! - **[Triggers](service::triggers)**: Create triggers that will be executed by a service when a certain event occurs
+//! - **[Targets](service::targets)**: Create targets that will be scanned by a service
+//! - **[Webhooks](service::webhooks)**: Send webhooks to services to notify them of an event
+//!
+//! ## About
+#![doc = include_str!("../README.md")]
+
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;

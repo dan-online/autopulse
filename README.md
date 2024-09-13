@@ -5,7 +5,8 @@
 <br />
 <div align="center">
 <a href="https://github.com/dan-online/autopulse">
-  <img src="assets/logo.webp" alt="Logo" width="80" height="80">
+  <img src="https://github.com/dan-online/autopulse/raw/main/assets/logo.webp" alt="Logo"
+   width="80" height="80">
 </a>
 
 <h3 align="center">autopulse</h3>
