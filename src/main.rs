@@ -21,6 +21,7 @@ use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::info;
 use utils::settings::Settings;
 
@@ -47,17 +48,17 @@ async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
     let filter = format!(
-        "autopulse={},actix_web=info,actix_server=info",
+        "autopulse={},actix_web=info,actix_server=info,",
         settings.app.log_level
     );
 
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
+    info!("💫 autopulse starting up...");
+
     let hostname = settings.app.hostname.clone();
     let port = settings.app.port;
     let database_url = settings.app.database_url.clone();
-
-    info!("💫 autopulse starting up...");
 
     if database_url.starts_with("sqlite://") {
         let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
@@ -87,15 +88,11 @@ async fn main() -> anyhow::Result<()> {
     conn.init()?;
 
     let manager = PulseManager::new(settings, pool.clone());
+    let manager = Arc::new(manager);
 
     let manager_task = manager.start();
-
-    // Not a fan but the performance hit is negligible
-    let manager_clone = manager.clone();
-
-    let notify_task = tokio::spawn(async move {
-        manager_clone.start_notify().await;
-    });
+    let webhook_task = manager.start_webhooks();
+    let notify_task = manager.start_notify();
 
     HttpServer::new(move || {
         App::new()
@@ -116,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Shutting down...");
 
     manager_task.abort();
+    webhook_task.abort();
     notify_task.abort();
 
     Ok(())

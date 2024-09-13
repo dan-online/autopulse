@@ -4,6 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use std::sync::Arc;
 use tracing::debug;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
     trigger: Path<String>,
-    manager: Data<PulseManager>,
+    manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
     body: Json<serde_json::Value>,
 ) -> Result<impl Responder> {
@@ -73,7 +74,7 @@ pub async fn trigger_post(
 
             manager
                 .webhooks
-                .send(
+                .add_event(
                     EventType::New,
                     Some(trigger.to_string()),
                     &paths
@@ -109,7 +110,7 @@ pub async fn trigger_post(
 pub async fn trigger_get(
     req: HttpRequest,
     trigger: Path<String>,
-    manager: Data<PulseManager>,
+    manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
 ) -> Result<impl Responder> {
     if !check_auth(&auth, &manager.settings) {
@@ -149,7 +150,7 @@ pub async fn trigger_get(
 
             manager
                 .webhooks
-                .send(EventType::New, Some(trigger.to_string()), &[file_path])
+                .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
             timer.tick();

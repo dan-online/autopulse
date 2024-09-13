@@ -5,6 +5,8 @@ pub mod checksum;
 #[doc(hidden)]
 pub mod generate_uuid;
 #[doc(hidden)]
+pub mod get_timestamp;
+#[doc(hidden)]
 pub mod join_path;
 #[doc(hidden)]
 pub mod rewrite;

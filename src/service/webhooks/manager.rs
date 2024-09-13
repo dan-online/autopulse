@@ -1,26 +1,26 @@
-use std::fmt::Display;
-
-use super::discord::DiscordWebhook;
-use reqwest::Client;
+use crate::utils::settings::Settings;
+use std::{collections::HashMap, fmt::Display, sync::Arc};
+use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::utils::settings::{Settings, Webhook};
+pub type WebhookBatch = Vec<(EventType, Option<String>, Vec<String>)>;
+type WebhookQueue = HashMap<(EventType, Option<String>), Vec<String>>;
 
 /// Event type
-#[derive(Clone)]
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum EventType {
     /// New event
-    New,
-    /// Found file
-    Found,
-    /// Error event
-    Error,
+    New = 0,
     /// Hash mismatch
-    HashMismatch,
+    HashMismatch = 1,
+    /// Found file
+    Found = 2,
     /// Retrying event
-    Retrying,
+    Retrying = 3,
     /// Processed event
-    Processed,
+    Processed = 4,
+    /// Error event
+    Error = 5,
 }
 
 impl Display for EventType {
@@ -53,70 +53,47 @@ impl EventType {
 }
 
 #[derive(Clone)]
-#[doc(hidden)]
 pub struct WebhookManager {
     settings: Settings,
+    queue: Arc<RwLock<WebhookQueue>>,
 }
 
 impl WebhookManager {
-    pub const fn new(settings: Settings) -> Self {
-        Self { settings }
-    }
-
-    pub async fn discord_webhook(
-        &self,
-        client: &Client,
-        settings: &DiscordWebhook,
-        event: EventType,
-        trigger: Option<String>,
-        files: Vec<String>,
-    ) -> anyhow::Result<()> {
-        let embed = DiscordWebhook::generate_json(
-            settings
-                .username
-                .clone()
-                .unwrap_or_else(|| "autopulse".to_string()),
-            settings.avatar_url.clone().unwrap_or_default(),
-            event,
-            trigger,
-            files,
-        );
-
-        let mut url = url::Url::parse(&settings.url).map_err(|e| anyhow::anyhow!(e))?;
-
-        if !url.path().ends_with("/json") {
-            url.set_path(&format!("{}/json", url.path()));
+    pub fn new(settings: Settings) -> Self {
+        Self {
+            settings,
+            queue: Arc::new(RwLock::new(HashMap::new())),
         }
-
-        client
-            .post(&settings.url)
-            .json(&embed)
-            .send()
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
-            .map(|_| ())
     }
 
-    pub async fn send(&self, event: EventType, trigger: Option<String>, files: &[String]) {
-        let client = Client::new();
+    pub async fn add_event(&self, event: EventType, trigger: Option<String>, files: &[String]) {
+        let mut queue = self.queue.write().await;
+        let key = (event, trigger);
 
-        for (name, webhook) in &self.settings.webhooks {
-            let result = match webhook {
-                Webhook::Discord(discord) => {
-                    self.discord_webhook(
-                        &client,
-                        discord,
-                        event.clone(),
-                        trigger.clone(),
-                        files.to_owned(),
-                    )
-                    .await
-                }
-            };
+        queue.entry(key).or_default().extend(files.iter().cloned());
+    }
 
-            if result.is_err() {
-                error!("unable to send webhook {}: {:?}", name, result);
+    pub async fn send(&self) -> anyhow::Result<()> {
+        let mut queue = self.queue.write().await;
+        let webhooks = &self.settings.webhooks;
+
+        let mut batch = queue
+            .drain()
+            .map(|((event_type, trigger), files)| (event_type, trigger, files))
+            .collect::<WebhookBatch>();
+
+        drop(queue);
+
+        batch.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
+
+        for (name, webhook) in webhooks {
+            let webhook = webhook.clone();
+
+            if let Err(e) = webhook.send(&batch).await {
+                error!("failed to send webhook '{}': {}", name, e);
             }
         }
+
+        Ok(())
     }
 }
