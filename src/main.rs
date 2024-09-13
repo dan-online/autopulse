@@ -1,3 +1,5 @@
+//! automated scanning tool that integrates widely-used media management services with various media servers for seamless media organization
+//!
 //! ## Quick docs
 //!
 //! - **[Triggers](service::triggers)**: Create triggers that will be executed by a service when a certain event occurs
