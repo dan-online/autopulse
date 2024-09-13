@@ -18,7 +18,7 @@ use tracing::{debug, error};
 pub struct PulseManager {
     pub settings: Settings,
     pub pool: DbPool,
-    pub webhooks: WebhookManager,
+    pub webhooks: Arc<WebhookManager>,
 }
 
 impl PulseManager {
@@ -26,7 +26,7 @@ impl PulseManager {
         Self {
             settings: settings.clone(),
             pool,
-            webhooks: WebhookManager::new(settings),
+            webhooks: Arc::new(WebhookManager::new(settings)),
         }
     }
 
@@ -95,7 +95,22 @@ impl PulseManager {
         })
     }
 
-    pub async fn start_notify(&self) {
+    pub fn start_webhooks(&self) -> tokio::task::JoinHandle<()> {
+        let webhooks = self.webhooks.clone();
+        let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
+
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = webhooks.send().await {
+                    error!("unable to send webhooks: {:?}", e);
+                }
+
+                timer.tick().await;
+            }
+        })
+    }
+
+    pub fn start_notify(&self) -> tokio::task::JoinHandle<()> {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settings = self.settings.clone();
@@ -128,22 +143,27 @@ impl PulseManager {
             }
         }
 
-        while let Some((name, file_path)) = global_rx.recv().await {
-            let new_scan_event = NewScanEvent {
-                event_source: name.clone(),
-                file_path: file_path.clone(),
-                ..Default::default()
-            };
+        let manager = Arc::new(self.clone());
 
-            if let Err(e) = self.add_event(&new_scan_event) {
-                error!("unable to add notify event: {:?}", e);
-            } else {
-                debug!("added 1 file from {} trigger", name);
+        tokio::spawn(async move {
+            while let Some((name, file_path)) = global_rx.recv().await {
+                let new_scan_event = NewScanEvent {
+                    event_source: name.clone(),
+                    file_path: file_path.clone(),
+                    ..Default::default()
+                };
+
+                if let Err(e) = manager.add_event(&new_scan_event) {
+                    error!("unable to add notify event: {:?}", e);
+                } else {
+                    debug!("added 1 file from {} trigger", name);
+                }
+
+                manager
+                    .webhooks
+                    .add_event(EventType::New, Some(name), &[file_path])
+                    .await;
             }
-
-            self.webhooks
-                .send(EventType::New, Some(name), &[file_path])
-                .await;
-        }
+        })
     }
 }

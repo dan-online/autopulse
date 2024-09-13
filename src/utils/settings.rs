@@ -7,7 +7,7 @@ use crate::{
             lidarr::LidarrRequest, notify::Notify, radarr::RadarrRequest, readarr::ReadarrRequest,
             sonarr::SonarrRequest,
         },
-        webhooks::discord::DiscordWebhook,
+        webhooks::{discord::DiscordWebhook, WebhookBatch},
     },
 };
 use config::{Config, File};
@@ -228,6 +228,14 @@ impl Trigger {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Webhook {
     Discord(DiscordWebhook),
+}
+
+impl Webhook {
+    pub async fn send(&self, batch: &WebhookBatch) -> anyhow::Result<()> {
+        match self {
+            Self::Discord(d) => d.send(batch).await,
+        }
+    }
 }
 
 pub trait TargetProcess {

@@ -16,7 +16,7 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 pub(super) struct PulseRunner {
-    webhooks: WebhookManager,
+    webhooks: Arc<WebhookManager>,
     settings: Arc<RwLock<Settings>>,
     pool: DbPool,
 }
@@ -25,7 +25,7 @@ impl PulseRunner {
     pub const fn new(
         settings: Arc<RwLock<Settings>>,
         pool: DbPool,
-        webhooks: WebhookManager,
+        webhooks: Arc<WebhookManager>,
     ) -> Self {
         Self {
             webhooks,
@@ -89,7 +89,7 @@ impl PulseRunner {
             );
 
             self.webhooks
-                .send(EventType::Found, None, &found_files)
+                .add_event(EventType::Found, None, &found_files)
                 .await;
         }
 
@@ -101,7 +101,7 @@ impl PulseRunner {
             );
 
             self.webhooks
-                .send(EventType::HashMismatch, None, &mismatched_files)
+                .add_event(EventType::HashMismatch, None, &mismatched_files)
                 .await;
         }
 
@@ -150,7 +150,7 @@ impl PulseRunner {
             );
 
             self.webhooks
-                .send(EventType::Processed, None, &processed)
+                .add_event(EventType::Processed, None, &processed)
                 .await;
         }
 
@@ -162,7 +162,7 @@ impl PulseRunner {
             );
 
             self.webhooks
-                .send(EventType::Retrying, None, &retrying)
+                .add_event(EventType::Retrying, None, &retrying)
                 .await;
         }
 
@@ -173,7 +173,9 @@ impl PulseRunner {
                 if failed.len() > 1 { "s" } else { "" }
             );
 
-            self.webhooks.send(EventType::Error, None, &failed).await;
+            self.webhooks
+                .add_event(EventType::Error, None, &failed)
+                .await;
         }
 
         Ok(())
