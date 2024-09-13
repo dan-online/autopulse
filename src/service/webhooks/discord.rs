@@ -1,3 +1,5 @@
+use crate::utils::get_timestamp::get_timestamp;
+
 use super::{EventType, WebhookBatch};
 use serde::{Deserialize, Serialize};
 
@@ -90,7 +92,7 @@ impl DiscordWebhook {
             let fields = vec![
                 DiscordEmbedField {
                     name: "Timestamp".to_string(),
-                    value: chrono::Local::now().to_rfc3339(),
+                    value: get_timestamp(),
                 },
                 DiscordEmbedField {
                     name: "Files".to_string(),
