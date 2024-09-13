@@ -29,9 +29,9 @@ pub struct DiscordEmbedContent {
 pub struct DiscordWebhook {
     /// Webhook URL
     pub url: String,
-    /// Optional avatar URL
+    /// Optional avatar URL (default [assets/logo.webp](https://raw.githubusercontent.com/dan-online/autopulse/main/assets/logo.webp))
     pub avatar_url: Option<String>,
-    /// Optional username
+    /// Optional username (default: autopulse)
     pub username: Option<String>,
 }
 
