@@ -63,7 +63,7 @@ Following autoscan, we use the following terminology:
 
 The easiest way to get started with autopulse is to use the provided Docker image
 
-> Here is a sample [docker-compose.yml](example/docker-compose.yml)
+> Here is a sample [docker-compose.yml](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml)
 
 ```bash
 # create a network
@@ -94,11 +94,11 @@ Here's some quick links:
 
 #### Configuration
 
-autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the [default values](default.toml) using [a config file](example/config.toml) or by [setting environment variables](example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``. 
+autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the [default values](https://github.com/dan-online/autopulse/blob/main/default.toml) using a config file or by [setting environment variables](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``. 
 
 For example: `AUTOPULSE__APP__DATABASE_URL`
 
-An example has been provided in the [example](example) directory
+An example has been provided in the [example](https://github.com/dan-online/autopulse/blob/main/example) directory
 
 > Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
 
