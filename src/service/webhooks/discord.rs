@@ -45,11 +45,14 @@ impl DiscordWebhook {
 
     fn generate_json(&self, batch: &WebhookBatch) -> DiscordEmbedContent {
         let mut content = DiscordEmbedContent {
-            username: self.username.clone().unwrap_or("autopulse".to_string()),
-            avatar_url: self.avatar_url.clone().unwrap_or(
+            username: self
+                .username
+                .clone()
+                .unwrap_or_else(|| "autopulse".to_string()),
+            avatar_url: self.avatar_url.clone().unwrap_or_else(|| {
                 "https://raw.githubusercontent.com/dan-online/autopulse/main/assets/logo.webp"
-                    .to_string(),
-            ),
+                    .to_string()
+            }),
             embeds: vec![],
         };
 

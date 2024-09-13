@@ -4,6 +4,7 @@ use tokio::sync::RwLock;
 use tracing::error;
 
 pub type WebhookBatch = Vec<(EventType, Option<String>, Vec<String>)>;
+type WebhookQueue = HashMap<(EventType, Option<String>), Vec<String>>;
 
 /// Event type
 #[derive(Clone, Eq, Hash, PartialEq)]
@@ -54,7 +55,7 @@ impl EventType {
 #[derive(Clone)]
 pub struct WebhookManager {
     settings: Settings,
-    queue: Arc<RwLock<HashMap<(EventType, Option<String>), Vec<String>>>>,
+    queue: Arc<RwLock<WebhookQueue>>,
 }
 
 impl WebhookManager {
@@ -80,6 +81,8 @@ impl WebhookManager {
             .drain()
             .map(|((event_type, trigger), files)| (event_type, trigger, files))
             .collect::<Vec<_>>();
+
+        drop(queue);
 
         for (name, webhook) in webhooks {
             let webhook = webhook.clone();
