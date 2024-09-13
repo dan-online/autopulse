@@ -1,6 +1,20 @@
+use crate::utils::{
+    join_path::join_path, settings::Rewrite, settings::TriggerRequest, timer::Timer,
+};
 use serde::Deserialize;
 
-use crate::utils::{join_path::join_path, settings::TriggerRequest};
+#[derive(Deserialize, Clone)]
+
+pub struct Radarr {
+    /// Rewrite path
+    pub rewrite: Option<Rewrite>,
+    /// Timer settings
+    #[serde(default)]
+    pub timer: Timer,
+    /// Targets to ignore
+    #[serde(default)]
+    pub excludes: Vec<String>,
+}
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

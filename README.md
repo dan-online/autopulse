@@ -186,7 +186,7 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
   - [x] Lidarr
   - [x] Readarr
   - [x] inotify
-- [ ] Move triggers to structs
+- [x] Move triggers to structs
 - [ ] Hooks
   - [ ] Add/Found/Processed hooks
   - [ ] Move Webhooks to hook

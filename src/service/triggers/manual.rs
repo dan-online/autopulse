@@ -1,4 +1,18 @@
+use crate::utils::{settings::Rewrite, timer::Timer};
 use serde::Deserialize;
+
+#[derive(Deserialize, Clone)]
+
+pub struct Manual {
+    /// Rewrite path
+    pub rewrite: Option<Rewrite>,
+    /// Timer settings
+    #[serde(default)]
+    pub timer: Timer,
+    /// Targets to ignore
+    #[serde(default)]
+    pub excludes: Vec<String>,
+}
 
 #[derive(Deserialize)]
 pub struct ManualQueryParams {

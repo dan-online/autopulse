@@ -33,10 +33,11 @@ pub async fn trigger_post(
     let trigger_settings = trigger_settings.unwrap();
 
     match trigger_settings {
-        Trigger::Sonarr { rewrite, timer, .. }
-        | Trigger::Radarr { rewrite, timer, .. }
-        | Trigger::Lidarr { rewrite, timer, .. }
-        | Trigger::Readarr { rewrite, timer, .. } => {
+        Trigger::Manual(_) | Trigger::Notify(_) => {
+            Ok(HttpResponse::BadRequest().body("Invalid request"))
+        }
+        _ => {
+            let rewrite = trigger_settings.get_rewrite();
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -50,7 +51,7 @@ pub async fn trigger_post(
             for path in &paths {
                 let (mut path, search) = path.clone();
 
-                if let Some(rewrite) = rewrite {
+                if let Some(rewrite) = &rewrite {
                     path = rewrite_path(path, rewrite);
                 }
 
@@ -85,7 +86,7 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            timer.tick();
+            trigger_settings.tick();
 
             debug!(
                 "added {} file{} from {} trigger",
@@ -99,9 +100,6 @@ pub async fn trigger_post(
             }
 
             Ok(HttpResponse::Ok().json(scan_events))
-        }
-        Trigger::Manual { .. } | Trigger::Notify(_) => {
-            Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
     }
 }
@@ -126,12 +124,12 @@ pub async fn trigger_get(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Manual { rewrite, timer, .. } => {
+        Trigger::Manual(trigger_settings) => {
             let query = Query::<ManualQueryParams>::from_query(req.query_string())?;
 
             let mut file_path = query.path.clone();
 
-            if let Some(rewrite) = rewrite {
+            if let Some(rewrite) = &trigger_settings.rewrite {
                 file_path = rewrite_path(file_path, rewrite);
             }
 
@@ -153,7 +151,7 @@ pub async fn trigger_get(
                 .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
-            timer.tick();
+            trigger_settings.timer.tick();
 
             debug!("added 1 file from {} trigger", trigger);
 

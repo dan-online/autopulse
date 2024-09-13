@@ -24,7 +24,7 @@
 ///     excludes: [ "ignored_target" ]
 /// ```
 ///
-/// See [Lidarr](crate::utils::settings::Trigger::Lidarr) for all options
+/// See [Lidarr](lidarr::Lidarr) for all options
 pub mod lidarr;
 /// Manual - Manual trigger
 ///
@@ -54,7 +54,7 @@ pub mod lidarr;
 ///     excludes: [ "ignored_target" ]
 /// ```
 ///
-/// See [Manual](crate::utils::settings::Trigger::Manual) for all options
+/// See [Manual](manual::Manual) for all options
 /// and
 /// [ManualQueryParams](manual::ManualQueryParams) for query parameters
 pub mod manual;
@@ -117,7 +117,7 @@ pub mod notify;
 ///     excludes: [ "ignored_target" ]
 /// ```
 ///
-/// See [Radarr](crate::utils::settings::Trigger::Radarr) for all options
+/// See [Radarr](radarr::Radarr) for all options
 pub mod radarr;
 /// Readarr - Readarr trigger
 ///
@@ -145,7 +145,7 @@ pub mod radarr;
 ///     excludes: [ "ignored_target" ]
 /// ```
 ///
-/// See [Readarr](crate::utils::settings::Trigger::Readarr) for all options
+/// See [Readarr](readarr::Readarr) for all options
 pub mod readarr;
 /// Sonarr - Sonarr trigger
 ///
@@ -173,5 +173,5 @@ pub mod readarr;
 ///     excludes: [ "ignored_target" ]
 /// ```
 ///
-/// See [Sonarr](crate::utils::settings::Trigger::Sonarr) for all options
+/// See [Sonarr](sonarr::Sonarr) for all options
 pub mod sonarr;

@@ -1,11 +1,14 @@
-use super::timer::Timer;
 use crate::{
     db::models::ScanEvent,
     service::{
         targets::{command::Command, emby::Emby, fileflows::FileFlows, plex::Plex, tdarr::Tdarr},
         triggers::{
-            lidarr::LidarrRequest, notify::Notify, radarr::RadarrRequest, readarr::ReadarrRequest,
-            sonarr::SonarrRequest,
+            lidarr::{Lidarr, LidarrRequest},
+            manual::Manual,
+            notify::Notify,
+            radarr::{Radarr, RadarrRequest},
+            readarr::ReadarrRequest,
+            sonarr::{Sonarr, SonarrRequest},
         },
         webhooks::{discord::DiscordWebhook, WebhookBatch},
     },
@@ -138,52 +141,33 @@ pub struct Rewrite {
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
-    Manual {
-        rewrite: Option<Rewrite>,
-        #[serde(default)]
-        timer: Timer,
-        #[serde(default)]
-        excludes: Vec<String>,
-    },
-    Radarr {
-        rewrite: Option<Rewrite>,
-        #[serde(default)]
-        timer: Timer,
-        #[serde(default)]
-        excludes: Vec<String>,
-    },
-    Sonarr {
-        rewrite: Option<Rewrite>,
-        #[serde(default)]
-        timer: Timer,
-        #[serde(default)]
-        excludes: Vec<String>,
-    },
-    Lidarr {
-        rewrite: Option<Rewrite>,
-        #[serde(default)]
-        timer: Timer,
-        #[serde(default)]
-        excludes: Vec<String>,
-    },
-    Readarr {
-        rewrite: Option<Rewrite>,
-        #[serde(default)]
-        timer: Timer,
-        #[serde(default)]
-        excludes: Vec<String>,
-    },
+    Manual(Manual),
+    Radarr(Radarr),
+    Sonarr(Sonarr),
+    Lidarr(Lidarr),
+    Readarr(Sonarr),
     Notify(Notify),
 }
 
 impl Trigger {
+    pub fn get_rewrite(&self) -> Option<Rewrite> {
+        match &self {
+            Self::Sonarr(trigger) => trigger.rewrite.clone(),
+            Self::Radarr(trigger) => trigger.rewrite.clone(),
+            Self::Lidarr(trigger) => trigger.rewrite.clone(),
+            Self::Readarr(trigger) => trigger.rewrite.clone(),
+            Self::Manual(trigger) => trigger.rewrite.clone(),
+            Self::Notify(trigger) => trigger.rewrite.clone(),
+        }
+    }
+
     pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<Vec<(String, bool)>> {
         match &self {
-            Self::Sonarr { .. } => Ok(SonarrRequest::from_json(body)?.paths()),
-            Self::Radarr { .. } => Ok(RadarrRequest::from_json(body)?.paths()),
-            Self::Lidarr { .. } => Ok(LidarrRequest::from_json(body)?.paths()),
-            Self::Readarr { .. } => Ok(ReadarrRequest::from_json(body)?.paths()),
-            Self::Manual { .. } | Self::Notify(_) => {
+            Self::Sonarr(_) => Ok(SonarrRequest::from_json(body)?.paths()),
+            Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
+            Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
+            Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
+            Self::Manual(_) | Self::Notify(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
         }
@@ -191,34 +175,34 @@ impl Trigger {
 
     pub fn can_tick(&self, default: u64) -> bool {
         match &self {
-            Self::Manual { timer, .. }
-            | Self::Radarr { timer, .. }
-            | Self::Sonarr { timer, .. }
-            | Self::Lidarr { timer, .. }
-            | Self::Readarr { timer, .. } => timer.can_tick(default),
-            Self::Notify(service) => service.timer.can_tick(default),
+            Self::Manual(trigger) => trigger.timer.can_tick(default),
+            Self::Radarr(trigger) => trigger.timer.can_tick(default),
+            Self::Sonarr(trigger) => trigger.timer.can_tick(default),
+            Self::Lidarr(trigger) => trigger.timer.can_tick(default),
+            Self::Readarr(trigger) => trigger.timer.can_tick(default),
+            Self::Notify(trigger) => trigger.timer.can_tick(default),
         }
     }
 
     pub fn tick(&self) {
         match &self {
-            Self::Manual { timer, .. } => timer.tick(),
-            Self::Radarr { timer, .. } => timer.tick(),
-            Self::Sonarr { timer, .. } => timer.tick(),
-            Self::Lidarr { timer, .. } => timer.tick(),
-            Self::Readarr { timer, .. } => timer.tick(),
-            Self::Notify(service) => service.timer.tick(),
+            Self::Manual(trigger) => trigger.timer.tick(),
+            Self::Radarr(trigger) => trigger.timer.tick(),
+            Self::Sonarr(trigger) => trigger.timer.tick(),
+            Self::Lidarr(trigger) => trigger.timer.tick(),
+            Self::Readarr(trigger) => trigger.timer.tick(),
+            Self::Notify(trigger) => trigger.timer.tick(),
         }
     }
 
     pub const fn excludes(&self) -> &Vec<String> {
         match &self {
-            Self::Manual { excludes, .. }
-            | Self::Radarr { excludes, .. }
-            | Self::Sonarr { excludes, .. }
-            | Self::Lidarr { excludes, .. }
-            | Self::Readarr { excludes, .. } => excludes,
-            Self::Notify(service) => &service.excludes,
+            Self::Manual(trigger) => &trigger.excludes,
+            Self::Radarr(trigger) => &trigger.excludes,
+            Self::Sonarr(trigger) => &trigger.excludes,
+            Self::Lidarr(trigger) => &trigger.excludes,
+            Self::Readarr(trigger) => &trigger.excludes,
+            Self::Notify(trigger) => &trigger.excludes,
         }
     }
 }

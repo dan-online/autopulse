@@ -1,6 +1,21 @@
+use crate::utils::{
+    settings::{Rewrite, TriggerRequest},
+    timer::Timer,
+};
 use serde::Deserialize;
 
-use crate::utils::settings::TriggerRequest;
+#[derive(Deserialize, Clone)]
+
+pub struct Lidarr {
+    /// Rewrite path
+    pub rewrite: Option<Rewrite>,
+    /// Timer settings
+    #[serde(default)]
+    pub timer: Timer,
+    /// Targets to ignore
+    #[serde(default)]
+    pub excludes: Vec<String>,
+}
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
