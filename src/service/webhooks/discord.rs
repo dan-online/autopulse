@@ -77,7 +77,7 @@ impl DiscordWebhook {
         let fields = vec![
             DiscordEmbedField {
                 name: "Timestamp".to_string(),
-                value: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                value: chrono::Local::now().to_rfc3339(),
             },
             DiscordEmbedField {
                 name: "Files".to_string(),
