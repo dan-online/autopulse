@@ -7,20 +7,20 @@ pub type WebhookBatch = Vec<(EventType, Option<String>, Vec<String>)>;
 type WebhookQueue = HashMap<(EventType, Option<String>), Vec<String>>;
 
 /// Event type
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum EventType {
     /// New event
-    New,
-    /// Found file
-    Found,
-    /// Error event
-    Error,
+    New = 0,
     /// Hash mismatch
-    HashMismatch,
+    HashMismatch = 1,
+    /// Found file
+    Found = 2,
     /// Retrying event
-    Retrying,
+    Retrying = 3,
     /// Processed event
-    Processed,
+    Processed = 4,
+    /// Error event
+    Error = 5,
 }
 
 impl Display for EventType {
@@ -77,12 +77,14 @@ impl WebhookManager {
         let mut queue = self.queue.write().await;
         let webhooks = &self.settings.webhooks;
 
-        let batch = queue
+        let mut batch = queue
             .drain()
             .map(|((event_type, trigger), files)| (event_type, trigger, files))
-            .collect::<Vec<_>>();
+            .collect::<WebhookBatch>();
 
         drop(queue);
+
+        batch.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
 
         for (name, webhook) in webhooks {
             let webhook = webhook.clone();

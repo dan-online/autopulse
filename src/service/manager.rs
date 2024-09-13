@@ -97,7 +97,7 @@ impl PulseManager {
 
     pub fn start_webhooks(&self) -> tokio::task::JoinHandle<()> {
         let webhooks = self.webhooks.clone();
-        let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
+        let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
         tokio::spawn(async move {
             loop {
