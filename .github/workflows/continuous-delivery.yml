@@ -36,7 +36,7 @@ jobs:
           fi
         id: tag
 
-      - name: Build and push (latest)
+      - name: Build and push (full)
         uses: docker/build-push-action@v6
         with:
           push: true
@@ -44,6 +44,28 @@ jobs:
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build and push (postgres)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args:
+            - ENABLED_FEATURES=postgres
+
+      - name: Build and push (sqlite)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args:
+            - ENABLED_FEATURES=sqlite
 
       # - name: Build and push (latest-ubuntu)
       #   uses: docker/build-push-action@v6

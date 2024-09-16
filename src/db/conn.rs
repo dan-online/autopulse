@@ -17,6 +17,7 @@ pub enum AnyConnection {
     /// ```
     /// postgres://user:password@localhost:5432/database
     /// ```
+    #[cfg(feature = "postgres")]
     Postgresql(diesel::PgConnection),
     // Mysql(diesel::MysqlConnection),
     /// A connection to a SQLite database.
@@ -38,11 +39,13 @@ pub enum AnyConnection {
     /// # In-memory database
     /// sqlite://:memory: # In-memory database
     /// ```
+    #[cfg(feature = "sqlite")]
     Sqlite(diesel::SqliteConnection),
 }
 
 impl AnyConnection {
     pub fn init(&mut self) -> anyhow::Result<()> {
+        #[cfg(feature = "sqlite")]
         if let Self::Sqlite(conn) = self {
             conn.batch_execute("
                 PRAGMA journal_mode = WAL;          -- better write-concurrency
@@ -59,8 +62,11 @@ impl AnyConnection {
 
     pub fn save_changes(&mut self, ev: &mut ScanEvent) -> anyhow::Result<ScanEvent> {
         let ev = match self {
+            #[cfg(feature = "postgres")]
             Self::Postgresql(conn) => ev.save_changes::<ScanEvent>(conn),
+            // #[cfg(feature = "mysql")]
             // AnyConnection::Mysql(conn) => ev.save_changes::<ScanEvent>(conn),
+            #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => ev.save_changes::<ScanEvent>(conn),
         }?;
 
@@ -69,11 +75,13 @@ impl AnyConnection {
 
     pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         match self {
+            #[cfg(feature = "postgres")]
             Self::Postgresql(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
                 .values(ev)
                 .returning(ScanEvent::as_returning())
                 .get_result::<ScanEvent>(conn)
                 .map_err(Into::into),
+            #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
                 .values(ev)
                 .returning(ScanEvent::as_returning())
@@ -100,5 +108,5 @@ pub fn get_pool(database_url: String) -> anyhow::Result<Pool<ConnectionManager<A
 
     Pool::builder()
         .build(manager)
-        .with_context(|| "Failed to create connection pool")
+        .with_context(|| "Failed to connect to database")
 }
