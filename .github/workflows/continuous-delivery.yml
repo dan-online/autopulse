@@ -53,8 +53,8 @@ jobs:
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args:
-            - ENABLED_FEATURES=postgres
+          build-args: |
+            ENABLED_FEATURES=postgres
 
       - name: Build and push (sqlite)
         uses: docker/build-push-action@v6
@@ -64,8 +64,8 @@ jobs:
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args:
-            - ENABLED_FEATURES=sqlite
+          build-args: |
+            ENABLED_FEATURES=sqlite
 
       # - name: Build and push (latest-ubuntu)
       #   uses: docker/build-push-action@v6
