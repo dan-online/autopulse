@@ -286,10 +286,9 @@ impl PulseRunner {
             scan_events
                 .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
                 .filter(found_at.lt(time_before_cleanup)),
-        )
-        .execute(&mut conn);
+        );
 
-        if let Err(e) = delete_failed {
+        if let Err(e) = delete_failed.execute(&mut conn) {
             error!("unable to delete failed events: {:?}", e);
         }
 
