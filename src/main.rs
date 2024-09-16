@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
 
     let filter = format!(
-        "autopulse={},actix_web=info,actix_server=info,",
+        "autopulse={},actix_web=info,actix_server=info",
         settings.app.log_level
     );
 
