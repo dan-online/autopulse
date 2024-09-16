@@ -42,7 +42,7 @@ COPY README.md README.md
 # Database support: postgres, sqlite
 ARG ENABLED_FEATURES="postgres,sqlite"
 
-RUN cargo build --release --target x86_64-unknown-linux-musl --features ${ENABLED_FEATURES}
+RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
 
 FROM alpine AS runtime
 
