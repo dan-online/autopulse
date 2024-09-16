@@ -5,6 +5,8 @@
 //! - **[Triggers](service::triggers)**: Create triggers that will be executed by a service when a certain event occurs
 //! - **[Targets](service::targets)**: Create targets that will be scanned by a service
 //! - **[Webhooks](service::webhooks)**: Send webhooks to services to notify them of an event
+//! - **[Settings](utils::settings)**: Settings handler
+//! - **[Database](db::conn::AnyConnection)**: Database handler
 //!
 //! ## About
 #![doc = include_str!("../README.md")]
