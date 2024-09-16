@@ -1,6 +1,3 @@
-# Database support: postgres, sqlite
-ARG ENABLED_FEATURES="postgres,sqlite"
-
 # Install cargo-chef for a base step
 FROM clux/muslrust:stable AS chef
 USER root
@@ -41,6 +38,10 @@ COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY migrations migrations
 COPY README.md README.md
+
+# Database support: postgres, sqlite
+ARG ENABLED_FEATURES="postgres,sqlite"
+
 RUN cargo build --release --target x86_64-unknown-linux-musl --features ${ENABLED_FEATURES}
 
 FROM alpine AS runtime
