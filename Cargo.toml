@@ -7,6 +7,7 @@ build = "src/build.rs"
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
+vendored-openssl = ["reqwest/native-tls-vendored"]
 default = ["postgres", "sqlite"]
 
 [dependencies]
@@ -39,3 +40,4 @@ struson = { version = "0.5.0", features = ["experimental", "serde"] }
 regex = "1.10.6"
 clap = { version = "4.5.18", features = ["derive"] }
 clap_derive = { version = "4.5.18" }
+# openssl = { version = "0.10.66" }

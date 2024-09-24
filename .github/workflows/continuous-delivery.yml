@@ -68,4 +68,5 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
+          features: vendored-openssl
           token: ${{ secrets.GITHUB_TOKEN }}
