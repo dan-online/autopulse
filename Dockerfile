@@ -41,7 +41,6 @@ WORKDIR /app
 RUN apt-get update -y && apt-get install -y ca-certificates libssl-dev libpq-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/autopulse/target/release/autopulse /usr/local/bin/
-COPY default.toml default.toml
 
 EXPOSE 2875
 
