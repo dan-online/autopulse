@@ -76,7 +76,7 @@ impl Command {
 }
 
 impl TargetProcess for Command {
-    async fn process(&mut self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
+    async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeded = Vec::new();
 
         for ev in evs {

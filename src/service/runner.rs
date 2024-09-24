@@ -12,21 +12,16 @@ use crate::{
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::{path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 pub(super) struct PulseRunner {
     webhooks: Arc<WebhookManager>,
-    settings: Arc<RwLock<Settings>>,
+    settings: Arc<Settings>,
     pool: DbPool,
 }
 
 impl PulseRunner {
-    pub const fn new(
-        settings: Arc<RwLock<Settings>>,
-        pool: DbPool,
-        webhooks: Arc<WebhookManager>,
-    ) -> Self {
+    pub const fn new(settings: Arc<Settings>, pool: DbPool, webhooks: Arc<WebhookManager>) -> Self {
         Self {
             webhooks,
             settings,
@@ -35,13 +30,9 @@ impl PulseRunner {
     }
 
     async fn update_found_status(&self) -> anyhow::Result<()> {
-        let read_settings = self.settings.read().await;
-
-        if !read_settings.opts.check_path {
+        if !self.settings.opts.check_path {
             return Ok(());
         }
-
-        drop(read_settings);
 
         let mut found_files = vec![];
         let mut mismatched_files = vec![];
@@ -111,9 +102,7 @@ impl PulseRunner {
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
-        let read_settings = self.settings.read().await;
-
-        let tickable = read_settings.get_tickable_triggers();
+        let tickable = self.settings.get_tickable_triggers();
 
         let base_query = scan_events
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
@@ -126,7 +115,7 @@ impl PulseRunner {
             // filter by trigger in tickable
             .filter(event_source.eq_any(tickable));
 
-        let mut evs = if read_settings.opts.check_path {
+        let mut evs = if self.settings.opts.check_path {
             base_query
                 .filter(found_status.eq::<String>(FoundStatus::Found.into()))
                 .load::<ScanEvent>(&mut conn)?
@@ -137,8 +126,6 @@ impl PulseRunner {
         if evs.is_empty() {
             return Ok(());
         }
-
-        drop(read_settings);
 
         let (processed, retrying, failed) = self.process_events(&mut evs).await?;
 
@@ -186,11 +173,10 @@ impl PulseRunner {
         evs: &mut [ScanEvent],
     ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
         let mut failed_ids = vec![];
-        let mut rw_settings = self.settings.write().await;
 
-        let trigger_settings = rw_settings.triggers.clone();
+        let trigger_settings = &self.settings.triggers;
 
-        for (name, target) in rw_settings.targets.iter_mut() {
+        for (name, target) in self.settings.targets.iter() {
             let evs = evs
                 .iter_mut()
                 .filter(|x| !x.get_targets_hit().contains(name))
@@ -239,7 +225,7 @@ impl PulseRunner {
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
 
-                if ev.failed_times >= rw_settings.opts.max_retries {
+                if ev.failed_times >= self.settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
                     failed.push(conn.save_changes(ev)?.file_path.clone());
@@ -265,12 +251,8 @@ impl PulseRunner {
     async fn cleanup(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
-        let read_settings = self.settings.read().await;
-
         let time_before_cleanup = chrono::Utc::now().naive_utc()
-            - chrono::Duration::days(read_settings.opts.cleanup_days as i64);
-
-        drop(read_settings);
+            - chrono::Duration::days(self.settings.opts.cleanup_days as i64);
 
         let delete_not_found = diesel::delete(
             scan_events

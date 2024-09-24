@@ -11,18 +11,19 @@ use crate::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{debug, error};
 
 #[derive(Clone)]
 pub struct PulseManager {
-    pub settings: Settings,
+    pub settings: Arc<Settings>,
     pub pool: DbPool,
     pub webhooks: Arc<WebhookManager>,
 }
 
 impl PulseManager {
     pub fn new(settings: Settings, pool: DbPool) -> Self {
+        let settings = Arc::new(settings);
+
         Self {
             settings: settings.clone(),
             pool,
@@ -77,12 +78,12 @@ impl PulseManager {
     }
 
     pub fn start(&self) -> tokio::task::JoinHandle<()> {
-        let settings = self.settings.clone();
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();
+        let settings = self.settings.clone();
 
         tokio::spawn(async move {
-            let runner = PulseRunner::new(Arc::new(RwLock::new(settings)), pool, webhooks);
+            let runner = PulseRunner::new(settings, pool, webhooks);
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
             loop {
@@ -114,7 +115,6 @@ impl PulseManager {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settings = self.settings.clone();
-        let settings = Arc::new(settings);
 
         for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
@@ -129,14 +129,10 @@ impl PulseManager {
                     }
                 });
 
-                let settings_clone = settings.clone();
-
                 tokio::spawn(async move {
                     while let Some(file_path) = rx.recv().await {
                         if let Err(e) = global_tx.send((name.clone(), file_path)) {
                             error!("unable to send notify event: {:?}", e);
-                        } else {
-                            settings_clone.triggers.get(&name).unwrap().tick();
                         }
                     }
                 });
@@ -161,8 +157,10 @@ impl PulseManager {
 
                 manager
                     .webhooks
-                    .add_event(EventType::New, Some(name), &[file_path])
+                    .add_event(EventType::New, Some(name.clone()), &[file_path])
                     .await;
+
+                settings.triggers.get(&name).unwrap().tick();
             }
         })
     }

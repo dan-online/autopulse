@@ -54,12 +54,12 @@ impl EventType {
 
 #[derive(Clone)]
 pub struct WebhookManager {
-    settings: Settings,
+    settings: Arc<Settings>,
     queue: Arc<RwLock<WebhookQueue>>,
 }
 
 impl WebhookManager {
-    pub fn new(settings: Settings) -> Self {
+    pub fn new(settings: Arc<Settings>) -> Self {
         Self {
             settings,
             queue: Arc::new(RwLock::new(HashMap::new())),

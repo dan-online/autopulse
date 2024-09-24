@@ -229,7 +229,7 @@ impl Webhook {
 
 pub trait TargetProcess {
     fn process<'a>(
-        &mut self,
+        &self,
         evs: &[&'a ScanEvent],
     ) -> impl std::future::Future<Output = anyhow::Result<Vec<String>>> + Send;
 }
@@ -256,7 +256,7 @@ pub enum Target {
 }
 
 impl Target {
-    pub async fn process(&mut self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
+    pub async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         match self {
             Self::Plex(p) => p.process(evs).await,
             Self::Jellyfin(j) => j.process(evs).await,
