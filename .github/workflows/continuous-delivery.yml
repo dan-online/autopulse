@@ -38,7 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release:
+  release_binaries:
     name: Release & Build / ${{ matrix.target }}
     if: github.event_name != 'pull_request'
     needs: release
