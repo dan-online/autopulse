@@ -38,7 +38,11 @@ COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY migrations migrations
 COPY README.md README.md
-RUN cargo build --release --target x86_64-unknown-linux-musl
+
+# Database support: postgres, sqlite
+ARG ENABLED_FEATURES="postgres,sqlite"
+
+RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
 
 FROM alpine AS runtime
 

@@ -2,6 +2,12 @@
 name = "autopulse"
 version = "1.0.0"
 edition = "2021"
+build = "src/build.rs"
+
+[features]
+postgres = ["diesel/postgres", "diesel_migrations/postgres"]
+sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
+default = ["postgres", "sqlite"]
 
 [dependencies]
 actix-web = "4.9.0"
@@ -12,9 +18,6 @@ serde_json = "1.0.128"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 diesel = { version = "2.2.4", features = [
-    "postgres",
-    # "mysql",
-    "sqlite",
     "returning_clauses_for_sqlite_3_35",
     "r2d2",
     "chrono",
@@ -29,11 +32,7 @@ tokio = { version = "1.40.0", features = [
 sha2 = "0.10.8"
 reqwest = { version = "0.12.7", features = ["json", "stream"] }
 url = "2.5.2"
-diesel_migrations = { version = "2.2.0", features = [
-    "postgres",
-    # "mysql",
-    "sqlite",
-] }
+diesel_migrations = { version = "2.2.0" }
 uuid = { version = "1.10.0", features = ["v4"] }
 notify = "6.1.1"
 struson = { version = "0.5.0", features = ["experimental", "serde"] }

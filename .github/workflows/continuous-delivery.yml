@@ -7,6 +7,23 @@ on:
   pull_request:
 
 jobs:
+  push_readme:
+    name: Push README to Docker hub
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: danonline/autopulse
+          provider: dockerhub
+          short_description: '💫 bridge your media server'
+          readme_file: 'README.md'
+
   build_and_push:
     name: Build & Push
     runs-on: ubuntu-latest
@@ -36,7 +53,7 @@ jobs:
           fi
         id: tag
 
-      - name: Build and push (latest)
+      - name: Build and push (full)
         uses: docker/build-push-action@v6
         with:
           push: true
@@ -44,6 +61,28 @@ jobs:
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build and push (postgres)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENABLED_FEATURES=postgres
+
+      - name: Build and push (sqlite)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENABLED_FEATURES=sqlite
 
       # - name: Build and push (latest-ubuntu)
       #   uses: docker/build-push-action@v6
