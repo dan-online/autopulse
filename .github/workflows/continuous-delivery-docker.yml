@@ -1,0 +1,94 @@
+name: Continuous Delivery / Docker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  push_readme:
+    name: Push README to Docker hub
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: danonline/autopulse
+          provider: dockerhub
+          short_description: '💫 bridge your media server'
+          readme_file: 'README.md'
+  
+  build:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull Request suffix
+        run: |
+          if [ -n "${{ github.event.number }}" ]; then
+            echo "PR number: ${{ github.event.number }}"
+            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a PR branch"
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+        id: tag
+
+      - name: Build and push (full)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push (postgres)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENABLED_FEATURES=postgres
+
+      - name: Build and push (sqlite)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENABLED_FEATURES=sqlite
+
+      # - name: Build and push (latest-ubuntu)
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     push: true
+      #     tags: danonline/autopulse:latest-ubuntu
+      #     file: Dockerfile
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max

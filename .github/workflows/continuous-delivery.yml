@@ -1,51 +1,29 @@
-name: Continuous Delivery
+name: Continuous Delivery / Binaries
+
+permissions:
+  contents: write
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  release:
+    types: [published]
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+  CARGO_NET_RETRY: 10
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: -D warnings
+  RUSTUP_MAX_RETRIES: 10
 
 defaults:
   run:
     shell: bash
 
-permissions:
-  pull-requests: write
-  contents: write
-
 jobs:
-  push_readme:
-    name: Push README to Docker hub
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - name: push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: danonline/autopulse
-          provider: dockerhub
-          short_description: '💫 bridge your media server'
-          readme_file: 'README.md'
-  
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release_binaries:
-    name: Release & Build / ${{ matrix.target }}
-    if: github.event_name != 'pull_request'
-    needs: release
+  upload-assets:
+    name: ${{ matrix.target }}
+    if: startsWith(github.event.release.name, 'autopulse-v')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -68,9 +46,9 @@ jobs:
             os: windows-2022
           - target: x86_64-unknown-freebsd
             os: ubuntu-22.04
+    timeout-minutes: 60
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -93,72 +71,3 @@ jobs:
           tar: all
           zip: windows
           token: ${{ secrets.GITHUB_TOKEN }}
-
-  docker:
-    name: Docker Build & Push
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Pull Request suffix
-        run: |
-          if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}"
-            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "Not a PR branch"
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-        id: tag
-
-      - name: Build and push (full)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push (postgres)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=postgres
-
-      - name: Build and push (sqlite)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=sqlite
-
-      # - name: Build and push (latest-ubuntu)
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: true
-      #     tags: danonline/autopulse:latest-ubuntu
-      #     file: Dockerfile
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
