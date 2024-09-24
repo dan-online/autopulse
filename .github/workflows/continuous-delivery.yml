@@ -5,6 +5,7 @@ permissions:
 
 on:
   release:
+    type: published
 
 env:
   CARGO_INCREMENTAL: 0
