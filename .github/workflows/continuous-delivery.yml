@@ -7,6 +7,23 @@ on:
   pull_request:
 
 jobs:
+  push_readme:
+    name: Push README to Docker hub
+    runs-on: ubuntu-latest
+    # if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: danonline/autopulse
+          provider: dockerhub
+          short_description: 'automated scanning tool that integrates widely-used media management services with various media servers for seamless media organization'
+          readme_file: 'README.md'
+
   build_and_push:
     name: Build & Push
     runs-on: ubuntu-latest

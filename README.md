@@ -61,9 +61,19 @@ Following autoscan, we use the following terminology:
 
 ### Docker
 
-The easiest way to get started with autopulse is to use the provided Docker image
+The easiest way to get started with autopulse is to use the provided [Docker image](https://hub.docker.com/r/danonline/autopulse)
+
+#### Tags
+
+- `latest` - full image with support for postgres/sqlite
+- `latest-postgres` - smaller image that only supports Postgres
+- `latest-sqlite` - smaller image that only supports SQLite
+
+#### Compose
 
 > Here is a sample [docker-compose.yml](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml)
+
+#### CLI
 
 ```bash
 # create a network
