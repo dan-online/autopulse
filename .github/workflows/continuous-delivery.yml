@@ -21,7 +21,7 @@ jobs:
         with:
           destination_container_repo: danonline/autopulse
           provider: dockerhub
-          short_description: 'automated scanning tool that integrates widely-used media management services with various media servers for seamless media organization'
+          short_description: '💫 bridge your media server'
           readme_file: 'README.md'
 
   build_and_push:
