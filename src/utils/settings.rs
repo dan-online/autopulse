@@ -97,12 +97,17 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn get_settings() -> anyhow::Result<Self> {
-        let settings = Config::builder()
+    pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
+        let mut settings = Config::builder()
             .add_source(File::with_name("default.toml"))
             .add_source(config::File::with_name("config").required(false))
-            .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"))
-            .build()?;
+            .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"));
+
+        if let Some(file_loc) = optional_config_file {
+            settings = settings.add_source(config::File::with_name(&file_loc));
+        }
+
+        let settings = settings.build()?;
 
         settings
             .try_deserialize::<Self>()

@@ -42,3 +42,12 @@ pub mod settings;
 ///
 /// See [Timer](timer::Timer) for all options
 pub mod timer;
+
+/// Arguments for CLI
+///
+/// ```
+/// $ autopulse --help
+/// ```
+///
+/// See [Args](cli::Args) for all options
+pub mod cli;

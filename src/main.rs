@@ -14,6 +14,7 @@
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
+use clap::Parser;
 use db::conn::{get_conn, get_pool};
 use db::migration::run_db_migrations;
 use routes::stats::stats;
@@ -25,6 +26,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::info;
+use utils::cli::Args;
 use utils::settings::Settings;
 
 /// Web server routes
@@ -47,7 +49,9 @@ pub mod utils;
 #[doc(hidden)]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let settings = Settings::get_settings().with_context(|| "Failed to get settings")?;
+    let args = Args::parse();
+
+    let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
 
     let filter = format!(
         "autopulse={},actix_web=info,actix_server=info",
@@ -62,6 +66,7 @@ async fn main() -> anyhow::Result<()> {
     let port = settings.app.port;
     let database_url = settings.app.database_url.clone();
 
+    // TODO: Move to pre-init
     if database_url.starts_with("sqlite://") {
         let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
         let path = PathBuf::from(path);
