@@ -2,7 +2,6 @@ use crate::utils::{settings::Rewrite, timer::Timer};
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
-
 pub struct Manual {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,
