@@ -10,6 +10,10 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   push_readme:
     name: Push README to Docker hub
