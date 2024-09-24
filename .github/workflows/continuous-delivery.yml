@@ -82,7 +82,7 @@ jobs:
         if: endsWith(matrix.target, 'windows-msvc')
 
       - run: |
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
           vcpkg install openssl:x64-windows-static-md
         if: startsWith(matrix.os, 'windows')
 
