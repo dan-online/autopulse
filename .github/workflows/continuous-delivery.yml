@@ -50,22 +50,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies on Linux
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libpq-dev libsqlite3-dev
+      # - name: Install dependencies on Linux
+      #   if: startsWith(matrix.os, 'ubuntu')
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y libpq-dev libsqlite3-dev
 
-      - name: Install dependencies on macOS
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          brew update
-          brew install libpq sqlite3
+      # - name: Install dependencies on macOS
+      #   if: startsWith(matrix.os, 'macos')
+      #   run: |
+      #     brew update
+      #     brew install libpq sqlite3
 
-      - name: Install dependencies on Windows
-        if: startsWith(matrix.os, 'windows')
-        run: |
-          choco install postgresql libsqlite3
+      # - name: Install dependencies on Windows
+      #   if: startsWith(matrix.os, 'windows')
+      #   run: |
+      #     choco install postgresql libsqlite3
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -87,5 +87,5 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: vendored-openssl
+          features: vendored
           token: ${{ secrets.GITHUB_TOKEN }}

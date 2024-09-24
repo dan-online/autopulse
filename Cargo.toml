@@ -7,7 +7,11 @@ build = "src/build.rs"
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
-vendored-openssl = ["reqwest/native-tls-vendored"]
+vendored = [
+    "reqwest/native-tls-vendored",
+    "pq-sys/bundled",
+    "libsqlite3-sys/bundled",
+]
 default = ["postgres", "sqlite"]
 
 [dependencies]
@@ -40,4 +44,8 @@ struson = { version = "0.5.0", features = ["experimental", "serde"] }
 regex = "1.10.6"
 clap = { version = "4.5.18", features = ["derive"] }
 clap_derive = { version = "4.5.18" }
-# openssl = { version = "0.10.66" }
+
+# bundled
+pq-sys = "0.6.3"
+# mysqlclient-sys = "0.4.1"
+libsqlite3-sys = "0.30.1"

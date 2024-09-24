@@ -364,7 +364,9 @@ dependencies = [
  "config",
  "diesel",
  "diesel_migrations",
+ "libsqlite3-sys",
  "notify",
+ "pq-sys",
  "regex",
  "reqwest",
  "serde",
@@ -1397,6 +1399,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e99fb7a497b1e3339bc746195567ed8d3e24945ecd636e3619d20b9de9e9149"
 dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -1833,11 +1836,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "pq-sys"
-version = "0.6.1"
+name = "pq-src"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a24ff9e4cf6945c988f0db7005d87747bf72864965c3529d259ad155ac41d584"
+checksum = "8161ec7368f1abf8ee9cf7171e78ff9f4d807574c8cbd4647f49c9f929274bf0"
 dependencies = [
+ "cc",
+ "openssl-sys",
+]
+
+[[package]]
+name = "pq-sys"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6cc05d7ea95200187117196eee9edd0644424911821aeb28a18ce60ea0b8793"
+dependencies = [
+ "pq-src",
  "vcpkg",
 ]
 
