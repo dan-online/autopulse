@@ -81,6 +81,11 @@ jobs:
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
 
+      - run: |
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+          vcpkg install openssl:x64-windows-static-md
+        if: startsWith(matrix.os, 'windows')
+
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: autopulse
