@@ -80,7 +80,7 @@ impl Tdarr {
 }
 
 impl TargetProcess for Tdarr {
-    async fn process<'a>(&mut self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
+    async fn process<'a>(&self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeeded = Vec::new();
 
         self.scan(evs).await?;

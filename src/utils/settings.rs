@@ -13,7 +13,7 @@ use crate::{
         webhooks::{discord::DiscordWebhook, WebhookBatch},
     },
 };
-use config::{Config, File};
+use config::{Config, FileFormat};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -99,7 +99,10 @@ pub struct Settings {
 impl Settings {
     pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
         let mut settings = Config::builder()
-            .add_source(File::with_name("default.toml"))
+            .add_source(config::File::from_str(
+                include_str!("../../default.toml"),
+                FileFormat::Toml,
+            ))
             .add_source(config::File::with_name("config").required(false))
             .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"));
 
@@ -229,7 +232,7 @@ impl Webhook {
 
 pub trait TargetProcess {
     fn process<'a>(
-        &mut self,
+        &self,
         evs: &[&'a ScanEvent],
     ) -> impl std::future::Future<Output = anyhow::Result<Vec<String>>> + Send;
 }
@@ -256,7 +259,7 @@ pub enum Target {
 }
 
 impl Target {
-    pub async fn process(&mut self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
+    pub async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         match self {
             Self::Plex(p) => p.process(evs).await,
             Self::Jellyfin(j) => j.process(evs).await,

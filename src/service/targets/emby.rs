@@ -218,7 +218,7 @@ impl Emby {
 }
 
 impl TargetProcess for Emby {
-    async fn process<'a>(&mut self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
+    async fn process<'a>(&self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await?;
 
         let mut succeded = Vec::new();

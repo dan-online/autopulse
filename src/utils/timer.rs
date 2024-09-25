@@ -1,9 +1,8 @@
+use serde::Deserialize;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-
-use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct Timer {

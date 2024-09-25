@@ -5,7 +5,6 @@ use crate::utils::{
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
-
 pub struct Readarr {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,

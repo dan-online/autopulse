@@ -4,7 +4,6 @@ use crate::utils::{
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
-
 pub struct Radarr {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,
