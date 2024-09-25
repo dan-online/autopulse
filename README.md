@@ -208,6 +208,7 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
 - [ ] Add more options
   - [x] Cleanup duration (currently 10 days)
   - [x] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
+  - [ ] Plex refresh
 - [x] Databases
   - [x] SQLite
   - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
