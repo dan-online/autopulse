@@ -1,5 +1,6 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
+use crate::db::schema::scan_events::file_path;
 use crate::routes::stats::Stats;
 use crate::{
     db::{
@@ -68,6 +69,16 @@ impl PulseManager {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
+        // if there is an existing event with the same file path and not complete, return it
+        if let Some(existing) = scan_events
+            .filter(file_path.eq(&ev.file_path))
+            .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
+            .first::<ScanEvent>(&mut conn)
+            .ok()
+        {
+            return Ok(existing);
+        }
+
         conn.insert_and_return(ev)
     }
 
@@ -130,8 +141,8 @@ impl PulseManager {
                 });
 
                 tokio::spawn(async move {
-                    while let Some(file_path) = rx.recv().await {
-                        if let Err(e) = global_tx.send((name.clone(), file_path)) {
+                    while let Some(path) = rx.recv().await {
+                        if let Err(e) = global_tx.send((name.clone(), path)) {
                             error!("unable to send notify event: {:?}", e);
                         }
                     }
@@ -142,10 +153,10 @@ impl PulseManager {
         let manager = Arc::new(self.clone());
 
         tokio::spawn(async move {
-            while let Some((name, file_path)) = global_rx.recv().await {
+            while let Some((name, path)) = global_rx.recv().await {
                 let new_scan_event = NewScanEvent {
                     event_source: name.clone(),
-                    file_path: file_path.clone(),
+                    file_path: path.clone(),
                     ..Default::default()
                 };
 
@@ -157,7 +168,7 @@ impl PulseManager {
 
                 manager
                     .webhooks
-                    .add_event(EventType::New, Some(name.clone()), &[file_path])
+                    .add_event(EventType::New, Some(name.clone()), &[path])
                     .await;
 
                 settings.triggers.get(&name).unwrap().tick();
