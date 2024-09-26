@@ -68,7 +68,7 @@ pub mod stats;
 /// ```
 ///
 /// ```bash
-/// $ curl 'http://localhost:8080/trigger/my_manual?path=/path/to/file' -H 'Authorization Basic <base64_encoded>'
+/// $ curl -u 'admin:password' 'http://localhost:8080/trigger/my_manual?path=/path/to/file'
 /// {
 ///     ...
 /// }

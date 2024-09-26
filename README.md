@@ -187,6 +187,8 @@ targets:
 By default a `manual` endpoint is provided which can be used to manually trigger a scan. This can be useful for testing or for when you want to trigger a scan without waiting for a file to be ready.
 
 ```bash
+$ curl -u 'admin:password' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890' 
+# or
 $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890'
 ```
 
