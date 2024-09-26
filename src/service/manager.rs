@@ -70,11 +70,10 @@ impl PulseManager {
         let mut conn = get_conn(&self.pool);
 
         // if there is an existing event with the same file path and not complete, return it
-        if let Some(existing) = scan_events
+        if let Ok(existing) = scan_events
             .filter(file_path.eq(&ev.file_path))
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
             .first::<ScanEvent>(&mut conn)
-            .ok()
         {
             return Ok(existing);
         }
