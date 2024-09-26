@@ -9,6 +9,10 @@ use struson::{
 };
 use tracing::{debug, error};
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Clone, Deserialize)]
 pub struct Emby {
     /// URL to the Jellyfin/Emby server
@@ -19,6 +23,10 @@ pub struct Emby {
     /// Metadata refresh mode (default: FullRefresh)
     #[serde(default)]
     pub metadata_refresh_mode: EmbyMetadataRefreshMode,
+
+    /// Whether to try to refresh metadata for the item instead of scan (default: true)
+    #[serde(default = "default_true")]
+    pub refresh_metadata: bool,
 }
 
 /// Metadata refresh mode for Jellyfin/Emby
@@ -226,30 +234,34 @@ impl TargetProcess for Emby {
         let mut to_refresh = Vec::new();
         let mut to_scan = Vec::new();
 
-        for ev in evs {
-            if let Some(library) = self.get_library(&libraries, &ev.file_path) {
-                let item = self.get_item(&library, &ev.file_path).await?;
+        if self.refresh_metadata {
+            for ev in evs {
+                if let Some(library) = self.get_library(&libraries, &ev.file_path) {
+                    let item = self.get_item(&library, &ev.file_path).await?;
 
-                if let Some(item) = item {
-                    to_refresh.push((*ev, item));
+                    if let Some(item) = item {
+                        to_refresh.push((*ev, item));
+                    } else {
+                        to_scan.push(*ev);
+                    }
                 } else {
-                    to_scan.push(*ev);
+                    error!("unable to find library for file: {}", ev.file_path);
                 }
-            } else {
-                error!("unable to find library for file: {}", ev.file_path);
             }
-        }
 
-        for (ev, item) in to_refresh {
-            match self.refresh_item(&item).await {
-                Ok(_) => {
-                    debug!("refreshed item: {}", item.path.unwrap());
-                    succeded.push(ev.id.clone());
-                }
-                Err(e) => {
-                    error!("failed to refresh item: {}", e);
+            for (ev, item) in to_refresh {
+                match self.refresh_item(&item).await {
+                    Ok(_) => {
+                        debug!("refreshed item: {}", item.path.unwrap());
+                        succeded.push(ev.id.clone());
+                    }
+                    Err(e) => {
+                        error!("failed to refresh item: {}", e);
+                    }
                 }
             }
+        } else {
+            to_scan.extend(evs.iter().map(|ev| *ev));
         }
 
         self.scan(&to_scan).await?;
