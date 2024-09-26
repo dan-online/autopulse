@@ -261,7 +261,7 @@ impl TargetProcess for Emby {
                 }
             }
         } else {
-            to_scan.extend(evs.iter().map(|ev| *ev));
+            to_scan.extend(evs.iter().copied());
         }
 
         self.scan(&to_scan).await?;
