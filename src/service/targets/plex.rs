@@ -9,10 +9,10 @@ pub struct Plex {
     pub url: String,
     /// API token for the Plex server
     pub token: String,
-    // /// Whether to try to refresh metadata for the libraries affected by the scan (default: false)
-    // #[serde(default)]
-    // pub refresh_metadata: bool,
-    /// Whether to try to analyze the libraries affected by the scan (default: false)
+    /// Whether to refresh metadata of the file (default: false)
+    #[serde(default)]
+    pub refresh: bool,
+    /// Whether to analyze the file (default: false)
     #[serde(default)]
     pub analyze: bool,
 }
@@ -173,6 +173,20 @@ impl Plex {
     //     }
     // }
 
+    async fn refresh_item(&self, key: &str) -> anyhow::Result<()> {
+        let client = self.get_client()?;
+        let url = url::Url::parse(&self.url)?.join(&format!("{}/refresh", key))?;
+
+        let res = client.put(url.to_string()).send().await?;
+
+        if res.status().is_success() {
+            Ok(())
+        } else {
+            let body = res.text().await?;
+            Err(anyhow::anyhow!("unable to send analyze: {}", body))
+        }
+    }
+
     async fn analyze_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?.join(&format!("{}/analyze", key))?;
@@ -223,22 +237,47 @@ impl TargetProcess for Plex {
                     Ok(_) => {
                         trace!("scanned file '{}'", ev.file_path);
 
-                        if self.analyze {
+                        if self.analyze || self.refresh {
                             match self.get_item(&library, &ev.file_path).await {
                                 Ok(Some(item)) => {
                                     trace!("found item for file '{}'", ev.file_path);
 
-                                    match self.analyze_item(&item.key).await {
-                                        Ok(_) => {
-                                            trace!("analyzed metadata '{}'", item.key);
-                                            succeeded.push(ev.id.clone());
+                                    let mut success = true;
+
+                                    if self.analyze {
+                                        match self.analyze_item(&item.key).await {
+                                            Ok(_) => {
+                                                trace!("analyzed metadata '{}'", item.key);
+                                            }
+                                            Err(e) => {
+                                                error!(
+                                                    "failed to analyze library '{}': {}",
+                                                    library.key, e
+                                                );
+
+                                                success = false;
+                                            }
                                         }
-                                        Err(e) => {
-                                            error!(
-                                                "failed to analyze library '{}': {}",
-                                                library.key, e
-                                            );
+                                    }
+
+                                    if self.refresh {
+                                        match self.refresh_item(&item.key).await {
+                                            Ok(_) => {
+                                                trace!("refreshed metadata '{}'", item.key);
+                                            }
+                                            Err(e) => {
+                                                error!(
+                                                    "failed to refresh library '{}': {}",
+                                                    library.key, e
+                                                );
+
+                                                success = false;
+                                            }
                                         }
+                                    }
+
+                                    if success {
+                                        succeeded.push(ev.id.clone());
                                     }
                                 }
                                 Ok(None) => {
