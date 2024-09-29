@@ -1,3 +1,32 @@
+/// Autopulse - Autopulse target
+///
+/// This target is used to process a file in another instance of Autopulse
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   autopulse:
+///     type: autopulse
+///     url: http://localhost:2875
+///     auth:
+///       username: "admin"
+///       password: "password"
+/// ```
+/// or
+/// ```yml
+/// targets:
+///   autopulse:
+///     type: autopulse
+///     url: http://localhost:2875
+///     auth:
+///       username: "admin"
+///       password: "password"
+///     trigger: "other"
+/// ```
+///
+/// See [Autopulse](autopulse::Autopulse) for all options
+pub mod autopulse;
 /// Command - Command target
 ///
 /// This target is used to run a command to process a file

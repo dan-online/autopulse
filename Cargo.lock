@@ -358,6 +358,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "clap",
  "clap_derive",
