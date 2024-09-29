@@ -3,6 +3,8 @@ pub mod check_auth;
 #[doc(hidden)]
 pub mod checksum;
 #[doc(hidden)]
+pub mod default_true;
+#[doc(hidden)]
 pub mod generate_uuid;
 #[doc(hidden)]
 pub mod get_timestamp;

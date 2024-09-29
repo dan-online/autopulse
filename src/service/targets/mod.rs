@@ -34,6 +34,7 @@ pub mod command;
 ///     type: jellyfin
 ///     url: http://localhost:8096
 ///     token: "<API_KEY>"
+///     # refresh_metadata: false # To disable metadata refresh
 /// ```
 /// or
 /// ```yml
@@ -42,6 +43,8 @@ pub mod command;
 ///     type: emby
 ///     url: http://localhost:8096
 ///     token: "<API_KEY>"
+///     # refresh_metadata: false # To disable metadata refresh
+///     # metadata_refresh_mode: "validation_only" # To change metadata refresh mode
 /// ```
 ///
 /// See [Emby](emby::Emby) for all options
@@ -74,6 +77,16 @@ pub mod fileflows;
 ///     type: plex
 ///     url: http://localhost:32400
 ///     token: "<PLEX_TOKEN>"
+/// ```
+/// or
+/// ```yml
+/// targets:
+///   my_plex:
+///     type: plex
+///     url: http://localhost:32400
+///     token: "<PLEX_TOKEN>"
+///     refresh: true
+///     analyze: true
 /// ```
 ///
 /// See [Plex](plex::Plex) for all options

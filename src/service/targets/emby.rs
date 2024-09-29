@@ -1,6 +1,9 @@
 use std::{fmt::Display, io::Cursor};
 
-use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
+use crate::{
+    db::models::ScanEvent,
+    utils::{default_true::default_true, settings::TargetProcess},
+};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use struson::{
@@ -8,10 +11,6 @@ use struson::{
     reader::{JsonReader, JsonStreamReader},
 };
 use tracing::{debug, error};
-
-fn default_true() -> bool {
-    true
-}
 
 #[derive(Clone, Deserialize)]
 pub struct Emby {
@@ -155,6 +154,7 @@ impl Emby {
 
         let res = client.get(url.to_string()).send().await?;
 
+        // Possibly uneeded unless we can use streams
         let bytes = res.bytes().await?;
 
         let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
