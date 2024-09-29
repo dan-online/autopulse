@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     let database_url = settings.app.database_url.clone();
 
     // TODO: Move to pre-init
-    if database_url.starts_with("sqlite://") {
+    if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
         let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
         let path = PathBuf::from(path);
         let parent = path.parent().unwrap();

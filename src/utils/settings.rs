@@ -1,7 +1,10 @@
 use crate::{
     db::models::ScanEvent,
     service::{
-        targets::{command::Command, emby::Emby, fileflows::FileFlows, plex::Plex, tdarr::Tdarr},
+        targets::{
+            autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
+            tdarr::Tdarr,
+        },
         triggers::{
             lidarr::{Lidarr, LidarrRequest},
             manual::Manual,
@@ -13,6 +16,7 @@ use crate::{
         webhooks::{discord::DiscordWebhook, WebhookBatch},
     },
 };
+use base64::prelude::*;
 use config::{Config, FileFormat};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -56,6 +60,15 @@ pub struct Auth {
     pub username: String,
     /// Password for basic auth (default: password)
     pub password: String,
+}
+
+impl Auth {
+    pub fn to_auth_encoded(&self) -> String {
+        format!(
+            "Basic {}",
+            BASE64_STANDARD.encode(format!("{}:{}", self.username, self.password))
+        )
+    }
 }
 
 /// Global settings
@@ -256,6 +269,7 @@ pub enum Target {
     Tdarr(Tdarr),
     Command(Command),
     FileFlows(FileFlows),
+    Autopulse(Autopulse),
 }
 
 impl Target {
@@ -267,6 +281,7 @@ impl Target {
             Self::Command(c) => c.process(evs).await,
             Self::Tdarr(t) => t.process(evs).await,
             Self::FileFlows(f) => f.process(evs).await,
+            Self::Autopulse(a) => a.process(evs).await,
         }
     }
 }

@@ -59,6 +59,7 @@ sha2 = "0.10.8"
 
 # HTTP client
 reqwest = { version = "0.12.7", features = ["json", "stream"] }
+base64 = "0.22.1"
 
 # URL parsing
 url = "2.5.2"
