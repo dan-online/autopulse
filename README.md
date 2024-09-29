@@ -215,6 +215,47 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
   - [x] SQLite
   - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
 
+## Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+> This project follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feat/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'feat: add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feat/AmazingFeature`)
+5. Open a Pull Request
+
+### Development
+
+#### Dependencies
+
+- [Rust](https://www.rust-lang.org/tools/install)
+
+#### Setup
+
+```bash
+# clone the repo
+$ git clone https://github.com/dan-online/autopulse.git
+$ cd autopulse
+
+# basic easy config
+$ cat <<EOF > config.toml
+[app]
+database_url = "sqlite://data/test.sqlite"
+log_level = "trace"
+EOF
+
+# easy start using vendored/bundled dependencies
+$ cargo run --features vendored
+
+# or if you have the dependencies installed (libql-dev, libsqlite3-dev)
+$ cargo run
+# or if you only have one of the dependencies installed
+$ cargo run --no-default-features --features sqlite   # for sqlite
+$ cargo run --no-default-features --features postgres # for postgres
+```
 
 ## License
 
