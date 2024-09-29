@@ -44,6 +44,7 @@ pub mod command;
 ///     url: http://localhost:8096
 ///     token: "<API_KEY>"
 ///     # refresh_metadata: false # To disable metadata refresh
+///     # metadata_refresh_mode: "validation_only" # To change metadata refresh mode
 /// ```
 ///
 /// See [Emby](emby::Emby) for all options
