@@ -134,7 +134,7 @@ impl Plex {
                 .iter()
                 .any(|media| media.part.iter().any(|part| part.file == path))
             {
-                return Ok(Some(item.clone()));
+                return Ok(Some(item));
             }
         }
 

@@ -39,7 +39,7 @@ impl Autopulse {
 
         if ev.file_hash.is_some() {
             url.query_pairs_mut()
-                .append_pair("hash", &ev.file_hash.as_ref().unwrap());
+                .append_pair("hash", ev.file_hash.as_ref().unwrap());
         }
 
         let res = client.get(url.to_string()).send().await?;
