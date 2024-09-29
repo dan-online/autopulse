@@ -48,6 +48,7 @@ Following autoscan, we use the following terminology:
   - Command
   - Tdarr
   - FileFlows
+  - Another autopulse instance
 
 ### Features
 
