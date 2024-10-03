@@ -17,6 +17,7 @@ COPY --from=planner /app/recipe.json recipe.json
 ARG ENABLED_FEATURES="postgres,sqlite,mysql,vendored_mysql"
 
 # if mysql is in the list of enabled features, we need to set musl-g++ to musl-gcc
+ENV CC="musl-gcc -fPIC -pie"
 RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then ln -s /usr/bin/musl-gcc /usr/bin/musl-g++; fi
 RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then \
     export CURSES_VERSION=6.2; \
@@ -24,7 +25,7 @@ RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then \
     wget https://ftp.gnu.org/pub/gnu/ncurses/ncurses-${CURSES_VERSION}.tar.gz && \
     tar xzf ncurses-${CURSES_VERSION}.tar.gz && \
     cd ncurses-${CURSES_VERSION} && \
-    ./configure && \
+    LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --prefix=$PREFIX && \
     make -j$(nproc) && \
     make install && \
     cd .. && \
