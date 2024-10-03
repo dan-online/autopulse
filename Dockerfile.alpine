@@ -25,7 +25,7 @@ RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then \
     wget https://ftp.gnu.org/pub/gnu/ncurses/ncurses-${CURSES_VERSION}.tar.gz && \
     tar xzf ncurses-${CURSES_VERSION}.tar.gz && \
     cd ncurses-${CURSES_VERSION} && \
-    LDFLAGS="-L$PREFIX/lib" CFLAGS="-I$PREFIX/include" ./configure --prefix=$PREFIX && \
+    ./configure && \
     make -j$(nproc) && \
     make install && \
     cd .. && \
