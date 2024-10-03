@@ -16,6 +16,9 @@ COPY --from=planner /app/recipe.json recipe.json
 # Database support: postgres, sqlite (this base image does not support mysql so we use vendored_mysql)
 ARG ENABLED_FEATURES="postgres,sqlite,mysql,vendored_mysql"
 
+# if mysql is in the list of enabled features, we need to install musl-tools
+RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then apk add --no-cache musl-dev; fi
+
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
