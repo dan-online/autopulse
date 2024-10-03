@@ -1,9 +1,12 @@
+use super::schema::scan_events::id;
 use crate::db::models::{NewScanEvent, ScanEvent};
+use crate::db::schema::scan_events::table as scan_events;
 use crate::utils::sify::sify;
 use anyhow::Context;
 use diesel::connection::SimpleConnection;
+use diesel::query_dsl::methods::FilterDsl;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
+use diesel::{Connection, ConnectionError, ExpressionMethods, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::os::unix::fs::PermissionsExt;
@@ -32,7 +35,16 @@ pub enum AnyConnection {
     /// ```
     #[cfg(feature = "postgres")]
     Postgresql(diesel::PgConnection),
-    // Mysql(diesel::MysqlConnection),
+    /// A connection to a MySQL database.
+    ///
+    /// This is used when the `database_url` is a MySQL URL.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// mysql://user:password@localhost:3306/database
+    /// ```
+    Mysql(diesel::MysqlConnection),
     /// A connection to a SQLite database.
     ///
     /// This is used when the `database_url` is a SQLite URL.
@@ -122,8 +134,8 @@ impl AnyConnection {
         let ev = match self {
             #[cfg(feature = "postgres")]
             Self::Postgresql(conn) => ev.save_changes::<ScanEvent>(conn),
-            // #[cfg(feature = "mysql")]
-            // AnyConnection::Mysql(conn) => ev.save_changes::<ScanEvent>(conn),
+            #[cfg(feature = "mysql")]
+            AnyConnection::Mysql(conn) => ev.save_changes::<ScanEvent>(conn),
             #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => ev.save_changes::<ScanEvent>(conn),
         }?;
@@ -134,11 +146,21 @@ impl AnyConnection {
     pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         match self {
             #[cfg(feature = "postgres")]
-            Self::Postgresql(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
+            Self::Postgresql(conn) => diesel::insert_into(scan_events)
                 .values(ev)
                 .returning(ScanEvent::as_returning())
                 .get_result::<ScanEvent>(conn)
                 .map_err(Into::into),
+            #[cfg(feature = "mysql")]
+            AnyConnection::Mysql(conn) => {
+                // mysql does not support returning clause, so we insert and then select the inserted row
+                diesel::insert_into(scan_events).values(ev).execute(conn)?;
+
+                scan_events
+                    .filter(id.eq(ev.id.clone()))
+                    .first(conn)
+                    .map_err(Into::into)
+            }
             #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => diesel::insert_into(crate::db::schema::scan_events::table)
                 .values(ev)

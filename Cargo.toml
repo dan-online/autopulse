@@ -7,12 +7,17 @@ build = "src/build.rs"
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql"]
+vendored_postgres = ["pq-sys/bundled"]
+vendored_sqlite = ["libsqlite3-sys/bundled"]
+vendored_mysql = ["mysqlclient-sys/bundled"]
 vendored = [
     "reqwest/native-tls-vendored",
-    "pq-sys/bundled",
-    "libsqlite3-sys/bundled",
+    "vendored_postgres",
+    "vendored_sqlite",
+    "vendored_mysql",
 ]
-default = ["postgres", "sqlite"]
+default = ["postgres", "sqlite", "mysql"]
 
 [dependencies]
 # Web framework
@@ -56,7 +61,7 @@ diesel = { version = "2.2.4", features = [
 ] }
 diesel_migrations = { version = "2.2.0" }
 pq-sys = "0.6.3"
-# mysqlclient-sys = "0.4.1"
+mysqlclient-sys = "0.4.1"
 libsqlite3-sys = "0.30.1"
 
 # Date and time
