@@ -1,34 +1,31 @@
+ARG BUILD_FROM=clux/muslrust:stable
+ARG RUNTIME_FROM=alpine:latest
+ARG TARGET=x86_64-unknown-linux-musl
+
 # Install cargo-chef for a base step
-FROM clux/muslrust:stable AS chef
+FROM ${BUILD_FROM} AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
 
 # Plan out the build
 FROM chef AS planner
+<<<<<<< HEAD
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
+=======
+COPY Cargo.toml .
+RUN mkdir -p src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs
+RUN cargo chef prepare --recipe-path recipe.json --features ${ENABLED_FEATURES}
+>>>>>>> d28740a (feat(docker): amd64 builds)
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
-# # Set up environment variables for the build
-# ENV MYSQL_VERSION=8.0.30
+# Database support: postgres, sqlite
+ARG ENABLED_FEATURES="postgres,sqlite"
 
-# RUN apt update -y && apt install -y libncurses5-dev
-# # Build libmysqlclient
-# RUN curl -sSL https://downloads.mysql.com/archives/get/p/23/file/mysql-${MYSQL_VERSION}.tar.gz | tar xz && \
-#     cd mysql-$MYSQL_VERSION && \
-#     export CC="musl-gcc -fPIE -pie" && \
-#     mkdir bld && \
-#     cd bld && \
-#     cmake .. -DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost -DWITHOUT_SERVER:BOOL=ON -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INCLUDE_PATH=$PREFIX/include -DCMAKE_CXX_INCLUDE_PATH=$PREFIX/include \
-#     make -j$(nproc) && \
-#     make install && \
-#     cd ../.. && \
-#     rm -rf mysql-$MYSQL_VERSION
-
-RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
 COPY Cargo.toml Cargo.lock ./
@@ -38,18 +35,25 @@ COPY src src
 COPY migrations migrations
 COPY README.md README.md
 
+<<<<<<< HEAD
 # Database support: postgres, sqlite
 ARG ENABLED_FEATURES="postgres,sqlite"
 
 RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
+=======
+# Add file to include
+ADD default.toml default.toml
 
-FROM alpine AS runtime
+RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+>>>>>>> d28740a (feat(docker): amd64 builds)
+
+FROM ${RUNTIME_FROM} as runtime
 
 WORKDIR /app
 
 # RUN addgroup -S user && adduser -S user -G user
 
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/autopulse /usr/local/bin/
+COPY --from=builder /app/target/${TARGET}/release/autopulse /usr/local/bin/
 
 # RUN chown -R user:user /app
 
