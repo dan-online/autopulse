@@ -1,8 +1,5 @@
 # Install cargo-chef for a base step
-ARG BUILD_FROM=clux/muslrust:stable
-ARG RUNTIME_FROM=alpine:latest
-
-FROM ${BUILD_FROM} AS chef
+FROM clux/muslrust:stable AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
@@ -40,7 +37,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-featur
 >>>>>>> 93d7eaa (chore(docker): hard-code target)
 
 
-FROM ${RUNTIME_FROM} as runtime
+FROM alpine as runtime
 
 WORKDIR /app
 

@@ -27,7 +27,7 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Build & Push
+    name: Build/Push - ${{ matrix.feature }} - ${{ matrix.arch.build }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -36,11 +36,6 @@ jobs:
           - postgres
           - sqlite
           # - mysql
-        arch:
-          - build: clux/muslrust:stable
-            run: alpine:latest
-          - build: clux/muslrust:amd64-1.81.0-stable-2024-10-01
-            run: amd64/alpine:latest
     steps:
       - uses: actions/checkout@v4
 
@@ -117,7 +112,6 @@ jobs:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}-${{ matrix.arch }}
           file: Dockerfile.alpine
           cache-from: |
             type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
@@ -125,4 +119,4 @@ jobs:
           # cache-to: type=gha,mode=max
           build-args: |
             ENABLED_FEATURES=${{ matrix.feature }}
-            ARCH=${{ matrix.arch }}
+          platforms: linux/amd64,linux/arm64
