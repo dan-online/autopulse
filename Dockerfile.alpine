@@ -1,5 +1,6 @@
 # Install cargo-chef for a base step
 ARG BUILD_FROM=clux/muslrust:stable
+ARG RUNTIME_FROM=alpine:latest
 
 FROM ${BUILD_FROM} AS chef
 USER root
@@ -42,8 +43,6 @@ COPY README.md README.md
 
 RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
 
-
-ARG RUNTIME_FROM=alpine:latest
 
 FROM ${RUNTIME_FROM} as runtime
 
