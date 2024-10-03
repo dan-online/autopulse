@@ -1,5 +1,5 @@
 # Install cargo-chef for a base step
-FROM clux/muslrust:stable AS chef
+FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
@@ -16,8 +16,8 @@ COPY --from=planner /app/recipe.json recipe.json
 
 # Database support: postgres, sqlite
 ARG ENABLED_FEATURES="postgres,sqlite"
-
-RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json --features ${ENABLED_FEATURES}
+ARG TARGET="x86_64-unknown-linux-musl"
+RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
 COPY Cargo.toml Cargo.lock ./
@@ -33,9 +33,14 @@ RUN cargo build --release --target ${TARGET} --no-default-features --features ${
 # Add file to include
 ADD default.toml default.toml
 
+<<<<<<< HEAD
 RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
 >>>>>>> 93d7eaa (chore(docker): hard-code target)
+=======
+RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+>>>>>>> df21a80 (chore(docker): use correct target)
 
+RUN cp $CARGO_TARGET_DIR/${TARGET}/release/autopulse /tmp/autopulse
 
 FROM alpine as runtime
 
@@ -43,7 +48,7 @@ WORKDIR /app
 
 # RUN addgroup -S user && adduser -S user -G user
 
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/autopulse /usr/local/bin/
+COPY --from=builder /tmp/autopulse /usr/local/bin/
 
 # RUN chown -R user:user /app
 

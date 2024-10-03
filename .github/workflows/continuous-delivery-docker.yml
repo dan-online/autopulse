@@ -27,7 +27,7 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Build/Push - ${{ matrix.feature }} - ${{ matrix.arch.build }}
+    name: Build/Push - ${{ matrix.feature }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -35,7 +35,11 @@ jobs:
           - full
           - postgres
           - sqlite
-          # - mysql
+        platform:
+          - name: linux/amd64
+            target: x86_64-unknown-linux-musl
+          - name: linux/arm64
+            target: aarch64-unknown-linux-musl
     steps:
       - uses: actions/checkout@v4
 
@@ -91,19 +95,17 @@ jobs:
         
       - name: Build and push
         uses: docker/build-push-action@v6
-        if: matrix.feature == 'full' && matrix.arch.build != 'clux/muslrust:stable'
+        if: matrix.feature == 'full'
         with:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}
           file: Dockerfile.alpine
-          cache-from: |
-            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
-            type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform.name }}
           build-args: |
-            BUILD_FROM=${{ matrix.arch.build }}
-            RUNTIME_FROM=${{ matrix.arch.run }}
+            TARGET=${{ matrix.platform.target }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -119,4 +121,5 @@ jobs:
           # cache-to: type=gha,mode=max
           build-args: |
             ENABLED_FEATURES=${{ matrix.feature }}
-          platforms: linux/amd64,linux/arm64
+            TARGET=${{ matrix.platform.target }}
+          platforms: ${{ matrix.platform.name }}
