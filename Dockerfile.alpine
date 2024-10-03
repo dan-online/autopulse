@@ -11,12 +11,15 @@ RUN cargo chef prepare --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 FROM chef AS builder
 
-
 COPY --from=planner /app/recipe.json recipe.json
 
 # Database support: postgres, sqlite
 ARG ENABLED_FEATURES="postgres,sqlite"
 ARG TARGET="x86_64-unknown-linux-musl"
+
+# if target is not x86_64-unknown-linux-musl, we need to cross compile
+RUN if [ "${TARGET}" != "x86_64-unknown-linux-musl" ]; then rustup target add ${TARGET}; fi
+
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
@@ -42,7 +45,7 @@ RUN cargo build --release --target ${TARGET} --no-default-features --features ${
 
 RUN cp $CARGO_TARGET_DIR/${TARGET}/release/autopulse /tmp/autopulse
 
-FROM alpine as runtime
+FROM alpine AS runtime
 
 WORKDIR /app
 
