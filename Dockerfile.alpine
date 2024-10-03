@@ -17,7 +17,8 @@ COPY --from=planner /app/recipe.json recipe.json
 ARG ENABLED_FEATURES="postgres,sqlite,mysql,vendored_mysql"
 
 # if mysql is in the list of enabled features, we need to install musl-tools
-RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then apk add --no-cache musl-dev; fi
+RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then apt install -y musl-tools; fi
+RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then ln -s /usr/bin/musl-gcc /usr/local/bin/musl-g++; fi
 
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
