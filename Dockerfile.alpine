@@ -1,4 +1,6 @@
 # Install cargo-chef for a base step
+ARG BUILD_FROM=clux/muslrust:stable
+
 FROM ${BUILD_FROM} AS chef
 USER root
 RUN cargo install cargo-chef
@@ -21,8 +23,6 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 
-ARG BUILD_FROM=clux/muslrust:stable
-ARG RUNTIME_FROM=alpine:latest
 ARG TARGET=x86_64-unknown-linux-musl
 
 COPY --from=planner /app/recipe.json recipe.json
@@ -41,6 +41,9 @@ COPY migrations migrations
 COPY README.md README.md
 
 RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+
+
+ARG RUNTIME_FROM=alpine:latest
 
 FROM ${RUNTIME_FROM} as runtime
 
