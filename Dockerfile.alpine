@@ -12,7 +12,7 @@ WORKDIR /app
 FROM chef AS planner
 COPY Cargo.toml .
 RUN mkdir -p src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs
-RUN cargo chef prepare --recipe-path recipe.json --features ${ENABLED_FEATURES}
+RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
