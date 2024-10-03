@@ -7,6 +7,7 @@ build = "src/build.rs"
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql", "mysqlclient-sys"]
 vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled"]
 
 [dependencies]
@@ -30,4 +31,4 @@ diesel_migrations = { version = "2.2.0", default-features = false }
 # Connectors
 pq-sys = { version = "0.7.0", optional = true }
 libsqlite3-sys = { version = "0.31.0", optional = true }
-# mysqlclient-sys = "x.x.x"
+mysqlclient-sys = { version = "0.4.4", optional = true }
