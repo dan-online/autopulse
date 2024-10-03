@@ -39,8 +39,8 @@ COPY src src
 COPY migrations migrations
 COPY README.md README.md
 
-# Database support: postgres, sqlite
-ARG ENABLED_FEATURES="postgres,sqlite"
+# Database support: postgres, sqlite (this base image does not support mysql so we use vendored_mysql)
+ARG ENABLED_FEATURES="postgres,sqlite,mysql,vendored_mysql"
 
 # Add file to include
 ADD default.toml default.toml
