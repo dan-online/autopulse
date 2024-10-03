@@ -25,7 +25,7 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Docker Build & Push
+    name: Build/Push - ${{ matrix.feature }} - ${{ matrix.arch.build }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,11 +34,6 @@ jobs:
           - postgres
           - sqlite
           # - mysql
-        arch:
-          - build: clux/muslrust:stable
-            run: alpine:latest
-          - build: clux/muslrust:amd64-1.81.0-stable-2024-10-01
-            run: amd64/alpine:latest
     steps:
       - uses: actions/checkout@v4
 
@@ -64,17 +59,6 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
         id: tag
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        if: matrix.feature == 'full' && matrix.arch.build == 'clux/muslrust:stable'
-        with:
-          push: true
-          tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
         
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -86,9 +70,7 @@ jobs:
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_FROM=${{ matrix.arch.build }}
-            RUNTIME_FROM=${{ matrix.arch.run }}
+          platforms: linux/amd64,linux/arm64
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -97,10 +79,9 @@ jobs:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}-${{ matrix.arch }}
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             ENABLED_FEATURES=${{ matrix.feature }}
-            ARCH=${{ matrix.arch }}
+          platforms: linux/amd64,linux/arm64
