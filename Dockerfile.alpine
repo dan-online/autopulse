@@ -16,8 +16,8 @@ COPY --from=planner /app/recipe.json recipe.json
 # Database support: postgres, sqlite (this base image does not support mysql so we use vendored_mysql)
 ARG ENABLED_FEATURES="postgres,sqlite,mysql,vendored_mysql"
 
-# if mysql is in the list of enabled features, we need to set CC to musl-gcc
-RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then export CC=musl-gcc; fi
+# if mysql is in the list of enabled features, we need to set musl-g++ to musl-gcc
+RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then ln -s /usr/bin/musl-gcc /usr/bin/musl-g++; fi
 RUN if echo ${ENABLED_FEATURES} | grep -q mysql; then \
     export CURSES_VERSION=6.2; \
     apt update && apt install -y wget && \
