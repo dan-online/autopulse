@@ -17,16 +17,12 @@ COPY --from=planner /app/recipe.json recipe.json
 ARG ENABLED_FEATURES="postgres,sqlite"
 ARG TARGET="x86_64-unknown-linux-musl"
 
-# if target is not x86_64-unknown-linux-musl, we need to cross compile
-RUN if [ "${TARGET}" != "x86_64-unknown-linux-musl" ]; then rustup target add ${TARGET}; fi
-
 # Manually set the linker environment variable for specific targets
-RUN if [ "${TARGET}" = "x86_64-unknown-linux-musl" ]; then \
-      export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc; \
-    elif [ "${TARGET}" = "aarch64-unknown-linux-musl" ]; then \
+RUN if [ "${TARGET}" = "aarch64-unknown-linux-musl" ]; then \
+      rustup target add ${TARGET}; \
       export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
+      export RUSTFLAGS="-C linker=aarch64-linux-musl-gcc"; \
     fi
-
 
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
