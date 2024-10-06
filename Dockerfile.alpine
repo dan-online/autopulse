@@ -20,7 +20,9 @@ ARG TARGET="x86_64-unknown-linux-musl"
 # if target is not x86_64-unknown-linux-musl, we need to cross compile
 RUN if [ "${TARGET}" != "x86_64-unknown-linux-musl" ]; then rustup target add ${TARGET}; fi
 
-ENV RUSTFLAGS="-C linker=musl-gcc"
+# cc fix to use correct gcc
+RUN if [ "${TARGET}" != "x86_64-unknown-linux-musl" ]; then export CC=musl-gcc && export RUSTFLAGS="-C linker=musl-gcc"; fi
+
 
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
@@ -45,7 +47,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-featur
 RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
 >>>>>>> df21a80 (chore(docker): use correct target)
 
-RUN cp $CARGO_TARGET_DIR/${TARGET}/release/autopulse /tmp/autopulse
+RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
 
 FROM alpine AS runtime
 
