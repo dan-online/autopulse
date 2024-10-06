@@ -1,5 +1,5 @@
 # Install cargo-chef for a base step
-FROM clux/muslrust:stable AS chef
+FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
@@ -11,25 +11,21 @@ RUN mkdir -p src && echo "fn main() {println!(\"if you see this, the build broke
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+
 COPY --from=planner /app/recipe.json recipe.json
 
-# # Set up environment variables for the build
-# ENV MYSQL_VERSION=8.0.30
+# Database support: postgres, sqlite
+ARG ENABLED_FEATURES="postgres,sqlite"
+ARG TARGET="x86_64-unknown-linux-musl"
 
-# RUN apt update -y && apt install -y libncurses5-dev
-# # Build libmysqlclient
-# RUN curl -sSL https://downloads.mysql.com/archives/get/p/23/file/mysql-${MYSQL_VERSION}.tar.gz | tar xz && \
-#     cd mysql-$MYSQL_VERSION && \
-#     export CC="musl-gcc -fPIE -pie" && \
-#     mkdir bld && \
-#     cd bld && \
-#     cmake .. -DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost -DWITHOUT_SERVER:BOOL=ON -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INCLUDE_PATH=$PREFIX/include -DCMAKE_CXX_INCLUDE_PATH=$PREFIX/include \
-#     make -j$(nproc) && \
-#     make install && \
-#     cd ../.. && \
-#     rm -rf mysql-$MYSQL_VERSION
+# Manually set the linker environment variable for specific targets
+RUN if [ "${TARGET}" = "aarch64-unknown-linux-musl" ]; then \
+      rustup target add ${TARGET}; \
+      export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
+      export RUSTFLAGS="-C linker=aarch64-linux-musl-gcc"; \
+    fi
 
-RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
 COPY Cargo.toml Cargo.lock ./
@@ -39,13 +35,12 @@ COPY src src
 COPY migrations migrations
 COPY README.md README.md
 
-# Database support: postgres, sqlite
-ARG ENABLED_FEATURES="postgres,sqlite"
-
 # Add file to include
 ADD default.toml default.toml
 
-RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
+RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+
+RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
 
 FROM alpine AS runtime
 
@@ -53,7 +48,7 @@ WORKDIR /app
 
 # RUN addgroup -S user && adduser -S user -G user
 
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/autopulse /usr/local/bin/
+COPY --from=builder /tmp/autopulse /usr/local/bin/
 
 # RUN chown -R user:user /app
 
