@@ -20,6 +20,8 @@ ARG TARGET="x86_64-unknown-linux-musl"
 # if target is not x86_64-unknown-linux-musl, we need to cross compile
 RUN if [ "${TARGET}" != "x86_64-unknown-linux-musl" ]; then rustup target add ${TARGET}; fi
 
+ENV RUSTFLAGS="-C linker=musl-gcc"
+
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
 # Compile dependencies
