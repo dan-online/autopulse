@@ -84,11 +84,13 @@ jobs:
           build-args: |
             ENABLED_FEATURES=sqlite
 
-      # - name: Build and push (latest-ubuntu)
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: true
-      #     tags: danonline/autopulse:latest-ubuntu
-      #     file: Dockerfile
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+      - name: Build and push (mysql)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-mysql
+          file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENABLED_FEATURES=mysql,mysql_vendored
