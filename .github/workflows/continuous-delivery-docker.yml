@@ -41,7 +41,6 @@ jobs:
             build_image: clux/muslrust:stable
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
-            tag: -arm64
             build_image: clux/muslrust:arm64-1.81.0-stable-2024-10-09
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +101,7 @@ jobs:
         with:
           push: true
           tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+            danonline/autopulse:${{ steps.tag.outputs.tag }}
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -117,7 +116,7 @@ jobs:
         with:
           push: true
           tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}
           file: Dockerfile.alpine
           cache-from: |
             type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
