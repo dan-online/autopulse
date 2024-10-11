@@ -1,5 +1,6 @@
 # Install cargo-chef for a base step
-FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS chef
+ARG BUILD_IMAGE=clux/muslrust:stable
+FROM --platform=$BUILDPLATFORM ${BUILD_IMAGE} AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
@@ -18,11 +19,11 @@ ARG ENABLED_FEATURES="postgres,sqlite"
 ARG TARGET="x86_64-unknown-linux-musl"
 
 # Manually set the linker environment variable for specific targets
-RUN if [ "${TARGET}" = "aarch64-unknown-linux-musl" ]; then \
-      rustup target add ${TARGET}; \
-      export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
-      export RUSTFLAGS="-C linker=aarch64-linux-musl-gcc"; \
-    fi
+# RUN if [ "${TARGET}" = "aarch64-unknown-linux-musl" ]; then \
+#       rustup target add ${TARGET}; \
+#       export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
+#       export RUSTFLAGS="-C linker=aarch64-linux-musl-gcc"; \
+#     fi
 
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
 
@@ -49,7 +50,7 @@ RUN cargo build --release --target ${TARGET} --no-default-features --features ${
 
 RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
 
-FROM alpine AS runtime
+FROM --platform=$BUILDPLATFORM alpine AS runtime
 
 WORKDIR /app
 

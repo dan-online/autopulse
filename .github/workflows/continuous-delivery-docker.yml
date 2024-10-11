@@ -41,6 +41,7 @@ jobs:
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
+            build_image: arm64-1.81.0-stable-2024-10-09
     steps:
       - uses: actions/checkout@v4
 
@@ -107,6 +108,7 @@ jobs:
           platforms: ${{ matrix.platform.name }}
           build-args: |
             TARGET=${{ matrix.platform.target }}
+            BUILD_IMAGE=${{ matrix.platform.build_image }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -123,4 +125,5 @@ jobs:
           build-args: |
             ENABLED_FEATURES=${{ matrix.feature }}
             TARGET=${{ matrix.platform.target }}
+            BUILD_IMAGE=${{ matrix.platform.build_image }}
           platforms: ${{ matrix.platform.name }}
