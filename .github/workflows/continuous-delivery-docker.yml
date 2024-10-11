@@ -27,7 +27,7 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Build / ${{ matrix.feature }} / ${{ matrix.platform.name }}
+    name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

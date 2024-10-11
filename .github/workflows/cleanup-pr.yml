@@ -27,4 +27,11 @@ jobs:
           else
             pr_number="${{ github.event.number }}"
           fi
-          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number} danonline/autopulse:pr-${pr_number}-postgres danonline/autopulse:pr-${pr_number}-sqlite danonline/autopulse:ui-pr-${pr_number} || true
+
+          features=(full postgres sqlite)
+
+          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number} danonline/autopulse:ui-pr-${pr_number} || true
+
+          for feature in "${features[@]}"; do
+            docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number}-${feature} || true
+          done
