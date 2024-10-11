@@ -38,6 +38,7 @@ jobs:
         platform:
           - name: linux/amd64
             target: x86_64-unknown-linux-musl
+            build_image: clux/muslrust:stable
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
