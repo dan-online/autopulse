@@ -41,7 +41,7 @@ jobs:
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
-            build_image: arm64-1.81.0-stable-2024-10-09
+            build_image: clux/muslrust:arm64-1.81.0-stable-2024-10-09
     steps:
       - uses: actions/checkout@v4
 
