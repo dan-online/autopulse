@@ -129,14 +129,6 @@ impl Settings {
             .try_deserialize::<Self>()
             .map_err(|e| anyhow::anyhow!(e))
     }
-
-    pub fn get_tickable_triggers(&self) -> Vec<String> {
-        self.triggers
-            .iter()
-            .filter(|(_, x)| x.can_tick(self.opts.default_timer_wait))
-            .map(|(k, _)| k.clone())
-            .collect::<Vec<String>>()
-    }
 }
 
 /// Rewrite structure for triggers
@@ -158,6 +150,23 @@ pub struct Rewrite {
     pub to: String,
 }
 
+/// Timer structure for triggers
+///
+/// Example:
+///
+/// ```yml
+/// triggers:
+///  sonarr:
+///   type: sonarr
+///   timer:
+///    wait: 300 # wait 5 minutes before processing
+/// ```
+#[derive(Deserialize, Clone, Default)]
+pub struct Timer {
+    /// Time to wait before processing
+    pub wait: Option<u64>,
+}
+
 /// [Triggers](crate::service::triggers) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -171,14 +180,24 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub fn get_rewrite(&self) -> Option<Rewrite> {
+    pub fn get_rewrite(&self) -> Option<&Rewrite> {
         match &self {
-            Self::Sonarr(trigger) => trigger.rewrite.clone(),
-            Self::Radarr(trigger) => trigger.rewrite.clone(),
-            Self::Lidarr(trigger) => trigger.rewrite.clone(),
-            Self::Readarr(trigger) => trigger.rewrite.clone(),
-            Self::Manual(trigger) => trigger.rewrite.clone(),
-            Self::Notify(trigger) => trigger.rewrite.clone(),
+            Self::Sonarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Radarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Lidarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Readarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Manual(_) | Self::Notify(_) => None,
+        }
+    }
+
+    pub fn get_timer(&self) -> &Timer {
+        match &self {
+            Self::Sonarr(trigger) => &trigger.timer,
+            Self::Radarr(trigger) => &trigger.timer,
+            Self::Lidarr(trigger) => &trigger.timer,
+            Self::Readarr(trigger) => &trigger.timer,
+            Self::Manual(trigger) => &trigger.timer,
+            Self::Notify(trigger) => &trigger.timer,
         }
     }
 
@@ -191,28 +210,6 @@ impl Trigger {
             Self::Manual(_) | Self::Notify(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
-        }
-    }
-
-    pub fn can_tick(&self, default: u64) -> bool {
-        match &self {
-            Self::Manual(trigger) => trigger.timer.can_tick(default),
-            Self::Radarr(trigger) => trigger.timer.can_tick(default),
-            Self::Sonarr(trigger) => trigger.timer.can_tick(default),
-            Self::Lidarr(trigger) => trigger.timer.can_tick(default),
-            Self::Readarr(trigger) => trigger.timer.can_tick(default),
-            Self::Notify(trigger) => trigger.timer.can_tick(default),
-        }
-    }
-
-    pub fn tick(&self) {
-        match &self {
-            Self::Manual(trigger) => trigger.timer.tick(),
-            Self::Radarr(trigger) => trigger.timer.tick(),
-            Self::Sonarr(trigger) => trigger.timer.tick(),
-            Self::Lidarr(trigger) => trigger.timer.tick(),
-            Self::Readarr(trigger) => trigger.timer.tick(),
-            Self::Notify(trigger) => trigger.timer.tick(),
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::utils::{settings::Rewrite, timer::Timer};
+use crate::utils::settings::{Rewrite, Timer};
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]

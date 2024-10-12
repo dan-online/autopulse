@@ -1,4 +1,7 @@
-use crate::utils::{rewrite::rewrite_path, settings::Rewrite, timer::Timer};
+use crate::utils::{
+    rewrite::rewrite_path,
+    settings::{Rewrite, Timer},
+};
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,

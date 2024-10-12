@@ -38,6 +38,7 @@ pub async fn trigger_post(
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
+            let timer = trigger_settings.get_timer();
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -63,6 +64,13 @@ pub async fn trigger_post(
                     } else {
                         FoundStatus::NotFound.into()
                     },
+                    can_process: chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(
+                            timer
+                                .wait
+                                .unwrap_or(manager.settings.opts.default_timer_wait)
+                                as i64,
+                        ),
                     ..Default::default()
                 };
 
@@ -85,8 +93,6 @@ pub async fn trigger_post(
                         .collect::<Vec<String>>(),
                 )
                 .await;
-
-            trigger_settings.tick();
 
             debug!(
                 "added {} file{} from {} trigger",
@@ -137,6 +143,14 @@ pub async fn trigger_get(
                 event_source: trigger.to_string(),
                 file_path: file_path.clone(),
                 file_hash: query.hash.clone(),
+                can_process: chrono::Utc::now().naive_utc()
+                    + chrono::Duration::seconds(
+                        trigger_settings
+                            .timer
+                            .wait
+                            .unwrap_or(manager.settings.opts.default_timer_wait)
+                            as i64,
+                    ),
                 ..Default::default()
             };
 
@@ -150,8 +164,6 @@ pub async fn trigger_get(
                 .webhooks
                 .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
-
-            trigger_settings.timer.tick();
 
             debug!("added 1 file from {} trigger", trigger);
 

@@ -4,7 +4,7 @@ use crate::{
         conn::{get_conn, DbPool},
         models::{FoundStatus, ProcessStatus, ScanEvent},
         schema::scan_events::{
-            dsl::scan_events, event_source, found_at, found_status, next_retry_at, process_status,
+            can_process, dsl::scan_events, found_at, found_status, next_retry_at, process_status,
         },
     },
     service::webhooks::WebhookManager,
@@ -102,8 +102,6 @@ impl PulseRunner {
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
         let mut conn = get_conn(&self.pool);
 
-        let tickable = self.settings.get_tickable_triggers();
-
         let base_query = scan_events
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
             .filter(process_status.ne::<String>(ProcessStatus::Failed.into()))
@@ -112,8 +110,8 @@ impl PulseRunner {
                     .is_null()
                     .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
             )
-            // filter by trigger in tickable
-            .filter(event_source.eq_any(tickable));
+            // filter by processable events
+            .filter(can_process.lt(chrono::Utc::now().naive_utc()));
 
         let mut evs = if self.settings.opts.check_path {
             base_query

@@ -25,25 +25,6 @@ pub mod rewrite;
 ///
 /// See [Settings](settings::Settings) for all options and [default.toml](https://github.com/dan-online/autopulse/blob/main/default.toml) for defaults
 pub mod settings;
-/// Timer to buffer events
-///
-/// Used to buffer events and process them in a batch
-///
-/// # Example
-///
-/// ```yml
-/// triggers:
-///   buffered:
-///     type: manual
-///     timer:
-///       wait: 30
-/// ```
-///
-/// Every time an event is triggered, it will reset the timer.
-/// Once the timer reaches 30 seconds, it will process all of the events.
-///
-/// See [Timer](timer::Timer) for all options
-pub mod timer;
 
 /// Arguments for CLI
 ///

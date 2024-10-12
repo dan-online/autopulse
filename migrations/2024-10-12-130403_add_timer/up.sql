@@ -1,0 +1,1 @@
+ALTER TABLE scan_events ADD COLUMN can_process TIMESTAMP NOT NULL;
