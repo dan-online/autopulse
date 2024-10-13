@@ -2,3 +2,4 @@
 /config.toml
 .envrc
 data
+.direnv

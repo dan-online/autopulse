@@ -8,12 +8,12 @@ on:
 
 jobs:
   push_readme:
-    name: Push README to Docker hub
+    name: Push README to Docker Hub
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - name: push README to Dockerhub
+      - name: Push README to Docker Hub
         uses: christian-korneck/update-container-description-action@v1
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -25,8 +25,22 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Docker Build & Push
+    name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - full
+          - postgres
+          - sqlite
+        platform:
+          - name: linux/amd64
+            target: x86_64-unknown-linux-musl
+            build_image: clux/muslrust:stable
+          - name: linux/arm64
+            target: aarch64-unknown-linux-musl
+            tag: -arm64
+            build_image: clux/muslrust:arm64-1.81.0-stable-2024-10-09
     steps:
       - uses: actions/checkout@v4
 
@@ -52,43 +66,34 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
         id: tag
-
-      - name: Build and push (full)
+        
+      - name: Build and push
         uses: docker/build-push-action@v6
+        if: matrix.feature == 'full'
         with:
           push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform.name }}
+          build-args: |
+            TARGET=${{ matrix.platform.target }}
+            BUILD_IMAGE=${{ matrix.platform.build_image }}
 
-      - name: Build and push (postgres)
+      - name: Build and push
         uses: docker/build-push-action@v6
+        if: matrix.feature != 'full'
         with:
           push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           file: Dockerfile.alpine
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            ENABLED_FEATURES=postgres
-
-      - name: Build and push (sqlite)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=sqlite
-
-      # - name: Build and push (latest-ubuntu)
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: true
-      #     tags: danonline/autopulse:latest-ubuntu
-      #     file: Dockerfile
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+            ENABLED_FEATURES=${{ matrix.feature }}
+            TARGET=${{ matrix.platform.target }}
+            BUILD_IMAGE=${{ matrix.platform.build_image }}
+          platforms: ${{ matrix.platform.name }}
