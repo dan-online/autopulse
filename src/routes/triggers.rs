@@ -154,6 +154,8 @@ pub async fn trigger_get(
                 ..Default::default()
             };
 
+            println!("{:?}", new_scan_event.can_process);
+
             let scan_event = manager.add_event(&new_scan_event);
 
             if let Err(e) = scan_event {

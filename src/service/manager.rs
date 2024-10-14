@@ -1,6 +1,6 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
-use crate::db::schema::scan_events::{event_source, file_path, updated_at};
+use crate::db::schema::scan_events::{can_process, event_source, file_path, updated_at};
 use crate::routes::stats::Stats;
 use crate::{
     db::{
@@ -79,6 +79,7 @@ impl PulseManager {
                 .set((
                     event_source.eq(&ev.event_source),
                     updated_at.eq(chrono::Utc::now().naive_utc()),
+                    can_process.eq(ev.can_process),
                 ))
                 .get_result::<ScanEvent>(&mut conn)?;
 
@@ -167,11 +168,11 @@ impl PulseManager {
         let manager = Arc::new(self.clone());
 
         tokio::spawn(async move {
-            while let Some((name, path, can_process)) = global_rx.recv().await {
+            while let Some((name, path, when_process)) = global_rx.recv().await {
                 let new_scan_event = NewScanEvent {
                     event_source: name.clone(),
                     file_path: path.clone(),
-                    can_process,
+                    can_process: when_process,
                     ..Default::default()
                 };
 
