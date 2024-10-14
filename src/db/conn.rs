@@ -4,6 +4,15 @@ use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
+#[doc(hidden)]
+#[cfg(feature = "postgres")]
+const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/postgres");
+
+#[doc(hidden)]
+#[cfg(feature = "sqlite")]
+const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqlite");
 
 /// Represents a connection to either a PostgreSQL or SQLite database.
 #[derive(diesel::MultiConnection)]
@@ -56,6 +65,18 @@ impl AnyConnection {
                 PRAGMA foreign_keys = ON;           -- enforce foreign keys
             ").map_err(ConnectionError::CouldntSetupConfiguration)?;
         }
+
+        Ok(())
+    }
+
+    pub fn migrate(&mut self) -> anyhow::Result<()> {
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgresql(conn) => conn.run_pending_migrations(POSTGRES_MIGRATIONS),
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite(conn) => conn.run_pending_migrations(SQLITE_MIGRATIONS),
+        }
+        .expect("Could not run migrations");
 
         Ok(())
     }

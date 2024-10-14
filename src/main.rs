@@ -16,7 +16,6 @@ use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use clap::Parser;
 use db::conn::{get_conn, get_pool};
-use db::migration::run_db_migrations;
 use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
@@ -91,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = get_pool(database_url)?;
     let conn = &mut get_conn(&pool);
 
-    run_db_migrations(conn);
+    conn.migrate()?;
     conn.init()?;
 
     let manager = PulseManager::new(settings, pool.clone());
