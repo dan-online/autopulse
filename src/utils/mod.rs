@@ -11,6 +11,8 @@ pub mod get_timestamp;
 #[doc(hidden)]
 pub mod join_path;
 #[doc(hidden)]
+pub mod logs;
+#[doc(hidden)]
 pub mod rewrite;
 
 /// Configuration settings

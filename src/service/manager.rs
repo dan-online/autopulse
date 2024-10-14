@@ -69,7 +69,6 @@ impl PulseManager {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        // if there is an existing event with the same file path and waiting
         if let Ok(existing) = scan_events
             .filter(file_path.eq(&ev.file_path))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))

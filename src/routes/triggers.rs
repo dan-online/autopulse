@@ -1,7 +1,7 @@
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
-    HttpRequest, HttpResponse, Responder, Result,
+    HttpRequest, HttpResponse, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ pub async fn trigger_post(
     manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
     body: Json<serde_json::Value>,
-) -> Result<impl Responder> {
+) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
@@ -116,7 +116,7 @@ pub async fn trigger_get(
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
-) -> Result<impl Responder> {
+) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }

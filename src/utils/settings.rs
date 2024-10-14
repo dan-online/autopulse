@@ -19,7 +19,7 @@ use crate::{
 use base64::prelude::*;
 use config::{Config, FileFormat};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 /// App-specific settings
 ///
@@ -92,6 +92,8 @@ pub struct Opts {
     pub default_timer_wait: u64,
     /// Cleanup events older than x days (default: 10)
     pub cleanup_days: u64,
+    /// Log file path
+    pub log_file: Option<PathBuf>,
 }
 
 /// autopulse settings
@@ -180,7 +182,7 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub fn get_rewrite(&self) -> Option<&Rewrite> {
+    pub const fn get_rewrite(&self) -> Option<&Rewrite> {
         match &self {
             Self::Sonarr(trigger) => trigger.rewrite.as_ref(),
             Self::Radarr(trigger) => trigger.rewrite.as_ref(),
@@ -190,7 +192,7 @@ impl Trigger {
         }
     }
 
-    pub fn get_timer(&self) -> &Timer {
+    pub const fn get_timer(&self) -> &Timer {
         match &self {
             Self::Sonarr(trigger) => &trigger.timer,
             Self::Radarr(trigger) => &trigger.timer,
