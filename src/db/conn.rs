@@ -5,6 +5,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use tracing::info;
 
 #[doc(hidden)]
 #[cfg(feature = "postgres")]
@@ -70,13 +71,17 @@ impl AnyConnection {
     }
 
     pub fn migrate(&mut self) -> anyhow::Result<()> {
-        match self {
+        let migrations_applied = match self {
             #[cfg(feature = "postgres")]
             Self::Postgresql(conn) => conn.run_pending_migrations(POSTGRES_MIGRATIONS),
             #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => conn.run_pending_migrations(SQLITE_MIGRATIONS),
         }
         .expect("Could not run migrations");
+
+        if !migrations_applied.is_empty() {
+            info!("Applied {} migrations", migrations_applied.len());
+        }
 
         Ok(())
     }
