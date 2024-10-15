@@ -1,6 +1,5 @@
-use crate::utils::get_timestamp::get_timestamp;
-
 use super::{EventType, WebhookBatch};
+use crate::utils::{get_timestamp::get_timestamp, sify::sify};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone)]
@@ -73,7 +72,7 @@ impl DiscordWebhook {
                         "[{}] - {} file{} {}",
                         event,
                         files.len(),
-                        if files.len() > 1 { "s" } else { "" },
+                        sify(files),
                         event.action()
                     )
                 },
@@ -83,7 +82,7 @@ impl DiscordWebhook {
                         event,
                         trigger,
                         files.len(),
-                        if files.len() > 1 { "s" } else { "" },
+                        sify(files),
                         event.action()
                     )
                 },

@@ -1,3 +1,8 @@
+use crate::{
+    db::models::{FoundStatus, NewScanEvent},
+    service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
+    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger, sify::sify},
+};
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
@@ -6,12 +11,6 @@ use actix_web::{
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use std::sync::Arc;
 use tracing::debug;
-
-use crate::{
-    db::models::{FoundStatus, NewScanEvent},
-    service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
-    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger},
-};
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
@@ -97,7 +96,7 @@ pub async fn trigger_post(
             debug!(
                 "added {} file{} from {} trigger",
                 scan_events.len(),
-                if scan_events.len() > 1 { "s" } else { "" },
+                sify(&scan_events),
                 trigger
             );
 

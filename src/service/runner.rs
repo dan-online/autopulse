@@ -8,7 +8,7 @@ use crate::{
         },
     },
     service::webhooks::WebhookManager,
-    utils::settings::Settings,
+    utils::{settings::Settings, sify::sify},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::{path::PathBuf, sync::Arc};
@@ -73,11 +73,7 @@ impl PulseRunner {
         }
 
         if !found_files.is_empty() {
-            info!(
-                "found {} new file{}",
-                found_files.len(),
-                if found_files.len() > 1 { "s" } else { "" }
-            );
+            info!("found {} new file{}", found_files.len(), sify(&found_files));
 
             self.webhooks
                 .add_event(EventType::Found, None, &found_files)
@@ -88,7 +84,7 @@ impl PulseRunner {
             warn!(
                 "found {} mismatched file{}",
                 mismatched_files.len(),
-                if mismatched_files.len() > 1 { "s" } else { "" }
+                sify(&mismatched_files)
             );
 
             self.webhooks
@@ -131,7 +127,7 @@ impl PulseRunner {
             info!(
                 "sent {} file{} to targets",
                 processed.len(),
-                if processed.len() > 1 { "s" } else { "" }
+                sify(&processed)
             );
 
             self.webhooks
@@ -140,11 +136,7 @@ impl PulseRunner {
         }
 
         if !retrying.is_empty() {
-            warn!(
-                "retrying {} file{}",
-                retrying.len(),
-                if retrying.len() > 1 { "s" } else { "" }
-            );
+            warn!("retrying {} file{}", retrying.len(), sify(&retrying));
 
             self.webhooks
                 .add_event(EventType::Retrying, None, &retrying)
@@ -155,7 +147,7 @@ impl PulseRunner {
             error!(
                 "failed to send {} file{} to targets",
                 failed.len(),
-                if failed.len() > 1 { "s" } else { "" }
+                sify(&failed)
             );
 
             self.webhooks

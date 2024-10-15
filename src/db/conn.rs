@@ -1,4 +1,5 @@
 use crate::db::models::{NewScanEvent, ScanEvent};
+use crate::utils::sify::sify;
 use anyhow::Context;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
@@ -107,7 +108,11 @@ impl AnyConnection {
         .expect("Could not run migrations");
 
         if !migrations_applied.is_empty() {
-            info!("Applied {} migrations", migrations_applied.len());
+            info!(
+                "Applied {} migration{}",
+                migrations_applied.len(),
+                sify(&migrations_applied)
+            );
         }
 
         Ok(())

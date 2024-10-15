@@ -14,6 +14,8 @@ pub mod join_path;
 pub mod logs;
 #[doc(hidden)]
 pub mod rewrite;
+#[doc(hidden)]
+pub mod sify;
 
 /// Configuration settings
 ///
