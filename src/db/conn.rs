@@ -1,9 +1,22 @@
 use crate::db::models::{NewScanEvent, ScanEvent};
+use crate::utils::sify::sify;
 use anyhow::Context;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
+use tracing::info;
+
+#[doc(hidden)]
+#[cfg(feature = "postgres")]
+const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/postgres");
+
+#[doc(hidden)]
+#[cfg(feature = "sqlite")]
+const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqlite");
 
 /// Represents a connection to either a PostgreSQL or SQLite database.
 #[derive(diesel::MultiConnection)]
@@ -44,6 +57,31 @@ pub enum AnyConnection {
 }
 
 impl AnyConnection {
+    pub fn pre_init(database_url: &str) -> anyhow::Result<()> {
+        if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
+            let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
+            let path = PathBuf::from(path);
+            let parent = path.parent().unwrap();
+
+            if !std::path::Path::new(&path).exists() {
+                std::fs::create_dir_all(parent).with_context(|| {
+                    format!("Failed to create database directory: {}", parent.display())
+                })?;
+            }
+
+            std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777)).with_context(
+                || {
+                    format!(
+                        "Failed to set permissions on database directory: {}",
+                        parent.display()
+                    )
+                },
+            )?;
+        }
+
+        Ok(())
+    }
+
     pub fn init(&mut self) -> anyhow::Result<()> {
         #[cfg(feature = "sqlite")]
         if let Self::Sqlite(conn) = self {
@@ -55,6 +93,26 @@ impl AnyConnection {
                 PRAGMA busy_timeout = 5000;         -- sleep if the database is busy
                 PRAGMA foreign_keys = ON;           -- enforce foreign keys
             ").map_err(ConnectionError::CouldntSetupConfiguration)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn migrate(&mut self) -> anyhow::Result<()> {
+        let migrations_applied = match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgresql(conn) => conn.run_pending_migrations(POSTGRES_MIGRATIONS),
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite(conn) => conn.run_pending_migrations(SQLITE_MIGRATIONS),
+        }
+        .expect("Could not run migrations");
+
+        if !migrations_applied.is_empty() {
+            info!(
+                "Applied {} migration{}",
+                migrations_applied.len(),
+                sify(&migrations_applied)
+            );
         }
 
         Ok(())

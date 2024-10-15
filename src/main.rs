@@ -15,18 +15,16 @@ use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use clap::Parser;
-use db::conn::{get_conn, get_pool};
-use db::migration::run_db_migrations;
+use db::conn::{get_conn, get_pool, AnyConnection};
 use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
-use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::info;
 use utils::cli::Args;
+use utils::logs::setup_logs;
 use utils::settings::Settings;
 
 /// Web server routes
@@ -53,12 +51,10 @@ async fn main() -> anyhow::Result<()> {
 
     let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
 
-    let filter = format!(
-        "autopulse={},actix_web=info,actix_server=info",
-        settings.app.log_level
-    );
-
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    let _guard = setup_logs(
+        settings.app.log_level.clone(),
+        settings.opts.log_file.clone(),
+    )?;
 
     info!("💫 autopulse starting up...");
 
@@ -66,32 +62,12 @@ async fn main() -> anyhow::Result<()> {
     let port = settings.app.port;
     let database_url = settings.app.database_url.clone();
 
-    // TODO: Move to pre-init
-    if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
-        let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
-        let path = PathBuf::from(path);
-        let parent = path.parent().unwrap();
-
-        if !std::path::Path::new(&path).exists() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("Failed to create database directory: {}", parent.display())
-            })?;
-        }
-
-        std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777)).with_context(
-            || {
-                format!(
-                    "Failed to set permissions on database directory: {}",
-                    parent.display()
-                )
-            },
-        )?;
-    }
+    AnyConnection::pre_init(&database_url)?;
 
     let pool = get_pool(database_url)?;
     let conn = &mut get_conn(&pool);
 
-    run_db_migrations(conn);
+    conn.migrate()?;
     conn.init()?;
 
     let manager = PulseManager::new(settings, pool.clone());
@@ -100,6 +76,8 @@ async fn main() -> anyhow::Result<()> {
     let manager_task = manager.start();
     let webhook_task = manager.start_webhooks();
     let notify_task = manager.start_notify();
+
+    info!("🚀 Listening on {}:{}", hostname, port);
 
     HttpServer::new(move || {
         App::new()

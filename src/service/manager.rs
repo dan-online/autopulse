@@ -1,6 +1,6 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
-use crate::db::schema::scan_events::file_path;
+use crate::db::schema::scan_events::{can_process, event_source, file_path, updated_at};
 use crate::routes::stats::Stats;
 use crate::{
     db::{
@@ -69,13 +69,20 @@ impl PulseManager {
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        // if there is an existing event with the same file path and waiting
         if let Ok(existing) = scan_events
             .filter(file_path.eq(&ev.file_path))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
             .first::<ScanEvent>(&mut conn)
         {
-            return Ok(existing);
+            let updated = diesel::update(&existing)
+                .set((
+                    event_source.eq(&ev.event_source),
+                    updated_at.eq(chrono::Utc::now().naive_utc()),
+                    can_process.eq(ev.can_process),
+                ))
+                .get_result::<ScanEvent>(&mut conn)?;
+
+            return Ok(updated);
         }
 
         conn.insert_and_return(ev)
@@ -129,6 +136,10 @@ impl PulseManager {
         for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
                 let cloned_name = name.clone();
+                let timer = service
+                    .timer
+                    .wait
+                    .unwrap_or(settings.opts.default_timer_wait) as i64;
                 let global_tx = global_tx.clone();
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -141,7 +152,11 @@ impl PulseManager {
 
                 tokio::spawn(async move {
                     while let Some(path) = rx.recv().await {
-                        if let Err(e) = global_tx.send((name.clone(), path)) {
+                        if let Err(e) = global_tx.send((
+                            name.clone(),
+                            path,
+                            chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
+                        )) {
                             error!("unable to send notify event: {:?}", e);
                         }
                     }
@@ -152,10 +167,11 @@ impl PulseManager {
         let manager = Arc::new(self.clone());
 
         tokio::spawn(async move {
-            while let Some((name, path)) = global_rx.recv().await {
+            while let Some((name, path, when_process)) = global_rx.recv().await {
                 let new_scan_event = NewScanEvent {
                     event_source: name.clone(),
                     file_path: path.clone(),
+                    can_process: when_process,
                     ..Default::default()
                 };
 
@@ -169,8 +185,6 @@ impl PulseManager {
                     .webhooks
                     .add_event(EventType::New, Some(name.clone()), &[path])
                     .await;
-
-                settings.triggers.get(&name).unwrap().tick();
             }
         })
     }

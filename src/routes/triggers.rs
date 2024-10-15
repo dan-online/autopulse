@@ -1,17 +1,16 @@
+use crate::{
+    db::models::{FoundStatus, NewScanEvent},
+    service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
+    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger, sify::sify},
+};
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
-    HttpRequest, HttpResponse, Responder, Result,
+    HttpRequest, HttpResponse, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use std::sync::Arc;
 use tracing::debug;
-
-use crate::{
-    db::models::{FoundStatus, NewScanEvent},
-    service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
-    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger},
-};
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
@@ -19,7 +18,7 @@ pub async fn trigger_post(
     manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
     body: Json<serde_json::Value>,
-) -> Result<impl Responder> {
+) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
@@ -38,6 +37,7 @@ pub async fn trigger_post(
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
+            let timer = trigger_settings.get_timer();
             let paths = trigger_settings.paths(body.into_inner());
 
             if paths.is_err() {
@@ -63,6 +63,13 @@ pub async fn trigger_post(
                     } else {
                         FoundStatus::NotFound.into()
                     },
+                    can_process: chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(
+                            timer
+                                .wait
+                                .unwrap_or(manager.settings.opts.default_timer_wait)
+                                as i64,
+                        ),
                     ..Default::default()
                 };
 
@@ -86,12 +93,10 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            trigger_settings.tick();
-
             debug!(
                 "added {} file{} from {} trigger",
                 scan_events.len(),
-                if scan_events.len() > 1 { "s" } else { "" },
+                sify(&scan_events),
                 trigger
             );
 
@@ -110,7 +115,7 @@ pub async fn trigger_get(
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
     auth: BasicAuth,
-) -> Result<impl Responder> {
+) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
@@ -137,8 +142,18 @@ pub async fn trigger_get(
                 event_source: trigger.to_string(),
                 file_path: file_path.clone(),
                 file_hash: query.hash.clone(),
+                can_process: chrono::Utc::now().naive_utc()
+                    + chrono::Duration::seconds(
+                        trigger_settings
+                            .timer
+                            .wait
+                            .unwrap_or(manager.settings.opts.default_timer_wait)
+                            as i64,
+                    ),
                 ..Default::default()
             };
+
+            println!("{:?}", new_scan_event.can_process);
 
             let scan_event = manager.add_event(&new_scan_event);
 
@@ -150,8 +165,6 @@ pub async fn trigger_get(
                 .webhooks
                 .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
-
-            trigger_settings.timer.tick();
 
             debug!("added 1 file from {} trigger", trigger);
 

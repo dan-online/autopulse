@@ -1,0 +1,1 @@
+ALTER TABLE scan_events DROP COLUMN can_process;

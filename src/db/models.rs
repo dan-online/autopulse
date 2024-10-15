@@ -94,6 +94,9 @@ pub struct ScanEvent {
     pub created_at: NaiveDateTime,
     /// The time the scan event was updated.
     pub updated_at: NaiveDateTime,
+
+    /// The time the scan event can be processed.
+    pub can_process: NaiveDateTime,
 }
 
 impl ScanEvent {
@@ -121,6 +124,7 @@ pub struct NewScanEvent {
     pub file_hash: Option<String>,
 
     pub found_status: String,
+    pub can_process: NaiveDateTime,
 }
 
 impl Default for NewScanEvent {
@@ -131,6 +135,7 @@ impl Default for NewScanEvent {
             file_path: "unknown".to_string(),
             file_hash: None,
             found_status: FoundStatus::NotFound.into(),
+            can_process: chrono::Utc::now().naive_utc(),
         }
     }
 }

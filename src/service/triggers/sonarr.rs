@@ -1,7 +1,6 @@
 use crate::utils::{
     join_path::join_path,
-    settings::{Rewrite, TriggerRequest},
-    timer::Timer,
+    settings::{Rewrite, Timer, TriggerRequest},
 };
 use serde::Deserialize;
 

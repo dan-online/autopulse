@@ -2,3 +2,5 @@
 /config.toml
 .envrc
 data
+.direnv
+autopulse.log
