@@ -2,7 +2,6 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json .
 COPY yarn.lock .
-COPY .yarn .
 
 RUN corepack enable
 RUN yarn config set nodeLinker node-modules
