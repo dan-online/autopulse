@@ -23,6 +23,7 @@ use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use std::sync::Arc;
 use tracing::info;
+use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
 use utils::settings::Settings;
@@ -46,18 +47,7 @@ pub mod utils;
 
 #[doc(hidden)]
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-
-    let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
-
-    let _guard = setup_logs(
-        settings.app.log_level.clone(),
-        settings.opts.log_file.clone(),
-    )?;
-
-    info!("💫 autopulse starting up...");
-
+async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<()> {
     let hostname = settings.app.hostname.clone();
     let port = settings.app.port;
     let database_url = settings.app.database_url.clone();
@@ -102,4 +92,20 @@ async fn main() -> anyhow::Result<()> {
     notify_task.abort();
 
     Ok(())
+}
+
+#[doc(hidden)]
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
+
+    let guard = setup_logs(
+        settings.app.log_level.clone(),
+        settings.opts.log_file.clone(),
+    )?;
+
+    info!("💫 autopulse starting up...");
+
+    run(settings, guard)
 }
