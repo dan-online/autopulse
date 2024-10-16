@@ -42,6 +42,7 @@ pub mod status;
 pub mod stats;
 
 pub mod list;
+pub mod login;
 /// GET/POST `/trigger/{name}`
 ///
 /// Triggers a new scan event. Where name is as defined in the settings file.
@@ -75,4 +76,3 @@ pub mod list;
 /// }
 /// ```
 pub mod triggers;
-pub mod ui;

@@ -98,7 +98,7 @@ impl PulseManager {
         &self,
         limit: i64,
         page: i64,
-        sort: Option<String>,
+        _sort: Option<String>,
         status: Option<String>,
     ) -> Vec<ScanEvent> {
         let mut conn = get_conn(&self.pool);

@@ -13,5 +13,5 @@ pub async fn login(manager: Data<Arc<PulseManager>>, auth: BasicAuth) -> Result<
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    return Ok(HttpResponse::Ok().json(json!({"status": "ok"})));
+    Ok(HttpResponse::Ok().json(json!({"status": "ok"})))
 }
