@@ -32,17 +32,42 @@ pub mod status;
 
 /// GET `/stats`
 ///
-/// This asynchronous function is triggered when a GET request is made to the `/stats` endpoint.
-/// It retrieves the current service statistics and measures the response time.
+/// Retrieve the current service statistics and measures the database response time.
 ///
 /// # Responses
 ///
 /// - **200 OK**: Returns a [StatsResponse](stats::StatsResponse) object containing the service statistics and response time.
-/// - **500 Internal Server Error**: Returned if there is an issue retrieving the statistics.
 pub mod stats;
 
+/// GET `/list?status={status}&page={page}&limit={limit}&sort={sort}`
+///
+/// Returns a list of scan events from the database.
+///
+/// # Query Parameters
+///
+/// - `status`: Filter the scan events by process status. Can be one of `pending`, `complete`, `retry`, or `failed`.
+/// - `page`: The page number to retrieve.
+/// - `limit`: The number of items to retrieve per page.
+/// - `sort`: The field to sort the results by. Can be one of `id`, `file_path`, `process_status`, `event_source`, `created_at`, or `updated_at`.
+///
+/// See [ListQuery](list::ListQuery) for more information.
+///
+/// # Responses
+///
+/// - **200 OK**: Returns a [ListResponse](list::ListResponse) object containing the list of scan events.
+/// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod list;
+
+/// POST `/login`
+///
+/// Authenticates the user with the provided credentials and returns ok if successful.
+///
+/// # Responses
+///
+/// - **200 OK**: Returns a JSON object with the field `status` set to `"ok"`.
+/// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod login;
+
 /// GET/POST `/trigger/{name}`
 ///
 /// Triggers a new scan event. Where name is as defined in the settings file.
