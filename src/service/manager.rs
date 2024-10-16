@@ -94,6 +94,32 @@ impl PulseManager {
         scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
     }
 
+    pub fn get_events(
+        &self,
+        limit: i64,
+        page: i64,
+        sort: Option<String>,
+        status: Option<String>,
+    ) -> Vec<ScanEvent> {
+        let mut conn = get_conn(&self.pool);
+
+        let mut query = scan_events.into_boxed();
+
+        if let Some(status) = status {
+            query = query.filter(process_status.eq(status));
+        }
+
+        // if let Some(sort) = sort {
+        //     query = query.order(sort);
+        // }
+
+        query
+            .limit(limit)
+            .offset((page - 1) * limit)
+            .load::<ScanEvent>(&mut conn)
+            .expect("unable to load events")
+    }
+
     pub fn start(&self) -> tokio::task::JoinHandle<()> {
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();

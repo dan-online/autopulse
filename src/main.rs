@@ -16,9 +16,11 @@ use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use clap::Parser;
 use db::conn::{get_conn, get_pool, AnyConnection};
+use routes::list::list;
 use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
+use routes::ui::login;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use std::sync::Arc;
@@ -87,6 +89,8 @@ async fn main() -> anyhow::Result<()> {
             .service(trigger_post)
             .service(status)
             .service(stats)
+            .service(login)
+            .service(list)
             .app_data(basic::Config::default().realm("Restricted area"))
             .app_data(Data::new(manager.clone()))
     })

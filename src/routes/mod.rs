@@ -41,6 +41,7 @@ pub mod status;
 /// - **500 Internal Server Error**: Returned if there is an issue retrieving the statistics.
 pub mod stats;
 
+pub mod list;
 /// GET/POST `/trigger/{name}`
 ///
 /// Triggers a new scan event. Where name is as defined in the settings file.
@@ -74,3 +75,4 @@ pub mod stats;
 /// }
 /// ```
 pub mod triggers;
+pub mod ui;
