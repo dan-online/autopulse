@@ -6,7 +6,6 @@ use actix_web_httpauth::extractors::basic::BasicAuth;
 use serde_json::json;
 use std::sync::Arc;
 
-// TODO: Ratelimit this endpoint
 #[post("/login")]
 pub async fn login(manager: Data<Arc<PulseManager>>, auth: BasicAuth) -> Result<impl Responder> {
     if !check_auth(&auth, &manager.settings) {

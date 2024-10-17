@@ -1,8 +1,10 @@
-<script setup lang="ts">
+<script lang="ts">
   import { browser } from "$app/environment";
   import { replaceState } from "$app/navigation";
   import { page } from "$app/stores";
   import icon from "$lib/assets/images/logo-tiny.webp";
+  import MaterialSymbolsLightNightsStay from "~icons/material-symbols-light/nights-stay";
+  import IcBaselineWbSunny from "~icons/ic/baseline-wb-sunny";
 
   $: path = $page.url.pathname;
   $: colorMode = $page.data.colorMode;
@@ -43,11 +45,15 @@
             >
           </div>
         </div>
-        <div class="ml-auto">
+        <div class="flex items-center pt-1 ml-auto">
           {#if colorMode === "dark"}
-            <a class="btn btn-ghost btn-sm" href="?colorMode=light"> Light </a>
+            <a class="btn btn-ghost btn-sm" href="?colorMode=light">
+              <IcBaselineWbSunny class="w-6 h-6" />
+            </a>
           {:else}
-            <a class="btn btn-ghost btn-sm" href="?colorMode=dark"> Dark </a>
+            <a class="btn btn-ghost btn-sm" href="?colorMode=dark">
+              <MaterialSymbolsLightNightsStay class="w-6 h-6" />
+            </a>
           {/if}
         </div>
       </div>

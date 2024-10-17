@@ -43,5 +43,9 @@ pub async fn list(
         query.status.clone(),
     );
 
-    Ok(HttpResponse::Ok().json(scan_evs))
+    if let Err(e) = scan_evs {
+        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+    }
+
+    Ok(HttpResponse::Ok().json(scan_evs.unwrap()))
 }

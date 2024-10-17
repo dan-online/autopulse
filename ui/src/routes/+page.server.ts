@@ -25,11 +25,21 @@ export const load: PageServerLoad = async (event) => {
     });
 
     if (!stats.ok) {
-        return redirect(302, "/login");
+        if(stats.status === 401){
+            return redirect(302, "/login");
+        }
+
+        return {
+            error: stats.statusText + ": " + await stats.text(),
+        }
     }
 
     const eventsUrl = new URL(serverUrl);
     eventsUrl.pathname = "/list"
+
+    if (event.url.searchParams.has("sort") ){
+        eventsUrl.searchParams.set("sort", event.url.searchParams.get("sort")!);
+    }
 
     const events = await fetch(
         eventsUrl, {
@@ -46,7 +56,13 @@ export const load: PageServerLoad = async (event) => {
     });
 
     if (!events.ok) {
-        return redirect(302, "/login");
+        if(events.status === 401){
+            return redirect(302, "/login");
+        }
+        
+        return {
+            error: events.statusText + ": " + await events.text(),
+        }
     }
 
     return {stats: await stats.json(), events: await events.json()};
