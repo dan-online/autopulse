@@ -1,4 +1,4 @@
-use std::{fmt::Display, io::Cursor};
+use std::{collections::HashMap, fmt::Display, io::Cursor};
 
 use crate::{
     db::models::ScanEvent,
@@ -61,7 +61,7 @@ impl Default for EmbyMetadataRefreshMode {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "PascalCase")]
 #[doc(hidden)]
 struct Library {
@@ -128,7 +128,7 @@ impl Emby {
             .cloned()
     }
 
-    async fn get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
+    async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
@@ -171,6 +171,63 @@ impl Emby {
         }
 
         Ok(None)
+    }
+
+    async fn get_items<'a>(
+        &self,
+        library: &Library,
+        events: Vec<&'a ScanEvent>,
+    ) -> anyhow::Result<(Vec<(&'a ScanEvent, Item)>, Vec<&'a ScanEvent>)> {
+        let client = self.get_client()?;
+        let mut url = url::Url::parse(&self.url)?.join("/Items")?;
+
+        url.query_pairs_mut().append_pair("Recursive", "true");
+        url.query_pairs_mut().append_pair("Fields", "Path");
+        url.query_pairs_mut().append_pair("EnableImages", "false");
+        if let Some(collection_type) = &library.collection_type {
+            url.query_pairs_mut().append_pair(
+                "IncludeItemTypes",
+                match collection_type.as_str() {
+                    "tvshows" => "Episode",
+                    "books" => "Book",
+                    "music" => "Audio",
+                    "movie" => "VideoFile,Movie",
+                    _ => "",
+                },
+            );
+        }
+        url.query_pairs_mut()
+            .append_pair("ParentId", &library.item_id);
+        url.query_pairs_mut()
+            .append_pair("EnableTotalRecordCount", "false");
+
+        let res = client.get(url.to_string()).send().await?;
+
+        // Possibly uneeded unless we can use streams
+        let bytes = res.bytes().await?;
+
+        let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
+
+        json_reader.seek_to(&json_path!["Items"])?;
+        json_reader.begin_array()?;
+
+        let mut found_in_library = Vec::new();
+        let mut not_found_in_library = events.to_vec();
+
+        while json_reader.has_next()? {
+            let item: Item = json_reader.deserialize_next()?;
+
+            if let Some(ev) = events
+                .iter()
+                .find(|ev| item.path == Some(ev.file_path.clone()))
+            {
+                found_in_library.push((*ev, item.clone()));
+
+                not_found_in_library.retain(|&e| e.id != ev.id);
+            }
+        }
+
+        Ok((found_in_library, not_found_in_library))
     }
 
     // not as effective as refreshing the item, but good enough
@@ -231,22 +288,25 @@ impl TargetProcess for Emby {
 
         let mut succeded = Vec::new();
 
+        let mut to_find = HashMap::new();
         let mut to_refresh = Vec::new();
         let mut to_scan = Vec::new();
 
         if self.refresh_metadata {
             for ev in evs {
                 if let Some(library) = self.get_library(&libraries, &ev.file_path) {
-                    let item = self.get_item(&library, &ev.file_path).await?;
-
-                    if let Some(item) = item {
-                        to_refresh.push((*ev, item));
-                    } else {
-                        to_scan.push(*ev);
-                    }
+                    to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 } else {
                     error!("unable to find library for file: {}", ev.file_path);
                 }
+            }
+
+            for (library, library_events) in to_find {
+                let (found_in_library, not_found_in_library) =
+                    self.get_items(&library, library_events.clone()).await?;
+
+                to_refresh.extend(found_in_library);
+                to_scan.extend(not_found_in_library);
             }
 
             for (ev, item) in to_refresh {
