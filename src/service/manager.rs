@@ -98,8 +98,8 @@ impl PulseManager {
 
     pub fn get_events(
         &self,
-        limit: i64,
-        page: i64,
+        mut limit: u8,
+        page: u64,
         sort: Option<String>,
         status: Option<String>,
         search: Option<String>,
@@ -110,6 +110,10 @@ impl PulseManager {
 
         if let Some(status) = status {
             query = query.filter(process_status.eq(status));
+        }
+
+        if limit > 100 {
+            limit = 100;
         }
 
         if let Some(mut sort) = sort {
@@ -154,8 +158,8 @@ impl PulseManager {
         }
 
         query
-            .limit(limit)
-            .offset((page - 1) * limit)
+            .limit(limit.into())
+            .offset(((page - 1) * (limit as u64)) as i64)
             .load::<ScanEvent>(&mut conn)
             .map_err(Into::into)
     }

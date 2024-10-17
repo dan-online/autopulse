@@ -9,8 +9,8 @@ use std::sync::Arc;
 #[derive(Deserialize)]
 #[serde(default)]
 struct ListQuery {
-    limit: i64,
-    page: i64,
+    limit: u8,
+    page: u64,
     sort: Option<String>,
     status: Option<String>,
     search: Option<String>,

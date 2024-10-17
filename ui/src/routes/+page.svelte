@@ -13,6 +13,8 @@
     import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
 
     let searchLoading = false;
+    // if anyone clicks the magnifying glass, let them bypass the search limit
+    let limiter = true;
 
     const iconMap: Record<string, ComponentType> = {
         total: MaterialSymbolsFileCopyOutlineRounded,
@@ -33,8 +35,15 @@
     $: stats = $page.data.stats;
     $: events = $page.data.events;
     $: error = $page.data.error;
+
     $: sortBy = $page.url.searchParams.get("sort") || "created_at";
     $: searchBy = $page.url.searchParams.get("search") || "";
+    $: pageBy = $page.url.searchParams.get("page")
+        ? parseInt($page.url.searchParams.get("page") as string)
+        : 1;
+    $: limitBy = $page.url.searchParams.get("limit")
+        ? parseInt($page.url.searchParams.get("limit") as string)
+        : 10;
 
     const fields = [
         {
@@ -74,11 +83,16 @@
     let updateTimeout: number;
     let updateUrl: string;
 
-    const updateBasedOn = (key: "search" | "sort", e: Event | string) => {
+    const updateBasedOn = (
+        key: "search" | "sort" | "page" | "limit",
+        e: Event | string | number,
+    ) => {
         const url = new URL(window.location.href);
 
         let search = "";
         let sort = "";
+        let page = 1;
+        let limit = 10;
 
         if (key === "search" && e instanceof Event) {
             const val = (e.target as HTMLInputElement).value;
@@ -87,10 +101,23 @@
             search = searchBy;
         }
 
-        if (key === "sort" && typeof e === "string") {
-            sort = e;
+        if (key === "sort") {
+            sort = e as string;
         } else {
             sort = sortBy;
+        }
+
+        if (key === "page") {
+            page = e as number;
+        } else {
+            page = pageBy;
+        }
+
+        if (key === "limit" && e instanceof Event) {
+            limit = parseInt((e.target as HTMLInputElement).value);
+            page = 1;
+        } else {
+            limit = limitBy;
         }
 
         if (search) {
@@ -113,22 +140,37 @@
             url.searchParams.delete("sort");
         }
 
+        if (pageBy) {
+            url.searchParams.set("page", page.toString());
+        } else {
+            url.searchParams.delete("page");
+        }
+
+        if (limitBy) {
+            url.searchParams.set("limit", limit.toString());
+        } else {
+            url.searchParams.delete("limit");
+        }
+
         searchLoading = true;
 
         updateUrl = url.search || "?";
         clearTimeout(updateTimeout);
 
-        updateTimeout = setTimeout(async () => {
-            clearTimeout(updateTimeout);
+        updateTimeout = setTimeout(
+            async () => {
+                clearTimeout(updateTimeout);
 
-            await goto(updateUrl, {
-                invalidateAll: true,
-                keepFocus: true,
-                noScroll: true,
-            });
+                await goto(updateUrl, {
+                    invalidateAll: true,
+                    keepFocus: true,
+                    noScroll: true,
+                });
 
-            searchLoading = false;
-        }, 500);
+                searchLoading = false;
+            },
+            limiter ? 200 : 1,
+        );
     };
 </script>
 
@@ -165,15 +207,23 @@
                 <h2 class="card-title">
                     Events
                     <div class="flex relative items-center ml-auto gap-2">
-                        <div
-                            class="transition absolute left-3.5 opacity-80 -mt-0.25"
+                        <button
+                            title={limiter
+                                ? "Disable Limiter"
+                                : "Enable Limiter"}
+                            on:click={() => {
+                                limiter = !limiter;
+                            }}
+                            class="transition bg-transparent absolute left-3.5 opacity-80 -mt-0.25"
                         >
                             {#if searchLoading}
                                 <SvgSpinners90RingWithBg class="w-4 h-4" />
                             {:else}
-                                <PhMagnifyingGlassBold class="w-4 h-4" />
+                                <span class:text-primary={!limiter}>
+                                    <PhMagnifyingGlassBold class="w-4 h-4" />
+                                </span>
                             {/if}
-                        </div>
+                        </button>
                         <input
                             type="text"
                             class="input input-bordered pl-10 input-sm"
@@ -252,6 +302,39 @@
                             {/each}
                         </tbody>
                     </table>
+                </div>
+
+                <div class="card-actions justify-between">
+                    <div>
+                        <input
+                            type="number"
+                            value={limitBy}
+                            class="input input-bordered input-sm"
+                            max={100}
+                            min={1}
+                            on:change={(e) => updateBasedOn("limit", e)}
+                        />
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            class="btn btn-sm"
+                            disabled={pageBy <= 1}
+                            on:click={() => {
+                                updateBasedOn("page", Math.max(1, pageBy - 1));
+                            }}
+                        >
+                            Previous
+                        </button>
+                        <button
+                            class="btn btn-sm"
+                            disabled={events.length < limitBy}
+                            on:click={() => {
+                                updateBasedOn("page", pageBy + 1);
+                            }}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

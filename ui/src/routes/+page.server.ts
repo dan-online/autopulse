@@ -45,6 +45,14 @@ export const load: PageServerLoad = async (event) => {
         eventsUrl.searchParams.set("search", event.url.searchParams.get("search")!);
     }
 
+    if (event.url.searchParams.has("limit") ){
+        eventsUrl.searchParams.set("limit", event.url.searchParams.get("limit")!);
+    }
+
+    if (event.url.searchParams.has("page") ){
+        eventsUrl.searchParams.set("page", event.url.searchParams.get("page")!);
+    }
+
     const events = await fetch(
         eventsUrl, {
         headers: {
