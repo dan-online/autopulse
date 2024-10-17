@@ -44,6 +44,7 @@
     $: limitBy = $page.url.searchParams.get("limit")
         ? parseInt($page.url.searchParams.get("limit") as string)
         : 10;
+    $: statusBy = $page.url.searchParams.get("status") || "";
 
     const fields = [
         {
@@ -84,7 +85,7 @@
     let updateUrl: string;
 
     const updateBasedOn = (
-        key: "search" | "sort" | "page" | "limit",
+        key: "search" | "sort" | "page" | "limit" | "status",
         e: Event | string | number,
     ) => {
         const url = new URL(window.location.href);
@@ -93,6 +94,7 @@
         let sort = "";
         let page = 1;
         let limit = 10;
+        let status = "";
 
         if (key === "search" && e instanceof Event) {
             const val = (e.target as HTMLInputElement).value;
@@ -118,6 +120,12 @@
             page = 1;
         } else {
             limit = limitBy;
+        }
+
+        if (key === "status" && e instanceof Event) {
+            status = (e.target as HTMLSelectElement).value;
+        } else {
+            status = statusBy;
         }
 
         if (search) {
@@ -152,6 +160,12 @@
             url.searchParams.delete("limit");
         }
 
+        if (status) {
+            url.searchParams.set("status", status);
+        } else {
+            url.searchParams.delete("status");
+        }
+
         searchLoading = true;
 
         updateUrl = url.search || "?";
@@ -169,7 +183,7 @@
 
                 searchLoading = false;
             },
-            limiter ? 200 : 1,
+            limiter ? 500 : 1,
         );
     };
 </script>
@@ -206,6 +220,16 @@
             <div class="card-body">
                 <h2 class="card-title">
                     Events
+                    <select
+                        on:input={(e) => updateBasedOn("status", e)}
+                        class="ml-4 select select-bordered select-sm"
+                    >
+                        <option value="">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="complete">Processed</option>
+                        <option value="retry">Retrying</option>
+                        <option value="failed">Failed</option>
+                    </select>
                     <div class="flex relative items-center ml-auto gap-2">
                         <button
                             title={limiter

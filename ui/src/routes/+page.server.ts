@@ -53,6 +53,10 @@ export const load: PageServerLoad = async (event) => {
         eventsUrl.searchParams.set("page", event.url.searchParams.get("page")!);
     }
 
+    if (event.url.searchParams.has("status") ){
+        eventsUrl.searchParams.set("status", event.url.searchParams.get("status")!);
+    }
+
     const events = await fetch(
         eventsUrl, {
         headers: {
