@@ -12,7 +12,7 @@ use crate::{
     },
     utils::settings::{Settings, Trigger},
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -102,6 +102,7 @@ impl PulseManager {
         page: i64,
         sort: Option<String>,
         status: Option<String>,
+        search: Option<String>,
     ) -> anyhow::Result<Vec<ScanEvent>> {
         let mut conn = get_conn(&self.pool);
 
@@ -146,6 +147,10 @@ impl PulseManager {
             }
         } else {
             query = query.order(created_at.desc());
+        }
+
+        if let Some(search) = search {
+            query = query.filter(file_path.like(format!("%{}%", search)));
         }
 
         query

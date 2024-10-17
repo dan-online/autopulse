@@ -9,6 +9,10 @@
     import PajamasRetry from "~icons/pajamas/retry";
     import MaterialSymbolsError from "~icons/material-symbols/error";
     import LineMdChevronDown from "~icons/line-md/chevron-down";
+    import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
+    import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
+
+    let searchLoading = false;
 
     const iconMap: Record<string, ComponentType> = {
         total: MaterialSymbolsFileCopyOutlineRounded,
@@ -67,6 +71,9 @@
         return () => clearInterval(interval);
     });
 
+    let updateTimeout: number;
+    let updateUrl: string;
+
     const updateBasedOn = (key: "search" | "sort", e: Event | string) => {
         const url = new URL(window.location.href);
 
@@ -106,11 +113,22 @@
             url.searchParams.delete("sort");
         }
 
-        goto(url.search || "?", {
-            invalidateAll: true,
-            keepFocus: true,
-            noScroll: true,
-        });
+        searchLoading = true;
+
+        updateUrl = url.search || "?";
+        clearTimeout(updateTimeout);
+
+        updateTimeout = setTimeout(async () => {
+            clearTimeout(updateTimeout);
+
+            await goto(updateUrl, {
+                invalidateAll: true,
+                keepFocus: true,
+                noScroll: true,
+            });
+
+            searchLoading = false;
+        }, 500);
     };
 </script>
 
@@ -142,15 +160,25 @@
 
 {#if events}
     <div class="flex flex-col md:flex-row mt-4">
-        <div class="card bg-base-200 shadow-xl">
+        <div class="card bg-base-200 shadow-xl w-full">
             <div class="card-body">
                 <h2 class="card-title">
                     Events
-                    <div class="flex ml-auto gap-2">
+                    <div class="flex relative items-center ml-auto gap-2">
+                        <div
+                            class="transition absolute left-3.5 opacity-80 -mt-0.25"
+                        >
+                            {#if searchLoading}
+                                <SvgSpinners90RingWithBg class="w-4 h-4" />
+                            {:else}
+                                <PhMagnifyingGlassBold class="w-4 h-4" />
+                            {/if}
+                        </div>
                         <input
                             type="text"
-                            class="input input-bordered input-sm"
+                            class="input input-bordered pl-10 input-sm"
                             placeholder="Search..."
+                            value={searchBy}
                             on:input={(e) => updateBasedOn("search", e)}
                         />
                     </div>

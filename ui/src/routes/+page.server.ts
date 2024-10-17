@@ -41,6 +41,10 @@ export const load: PageServerLoad = async (event) => {
         eventsUrl.searchParams.set("sort", event.url.searchParams.get("sort")!);
     }
 
+    if (event.url.searchParams.has("search") ){
+        eventsUrl.searchParams.set("search", event.url.searchParams.get("search")!);
+    }
+
     const events = await fetch(
         eventsUrl, {
         headers: {

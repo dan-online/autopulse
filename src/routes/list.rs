@@ -13,6 +13,7 @@ struct ListQuery {
     page: i64,
     sort: Option<String>,
     status: Option<String>,
+    search: Option<String>,
 }
 
 impl Default for ListQuery {
@@ -22,6 +23,7 @@ impl Default for ListQuery {
             page: 1,
             sort: None,
             status: None,
+            search: None,
         }
     }
 }
@@ -41,6 +43,7 @@ pub async fn list(
         query.page,
         query.sort.clone(),
         query.status.clone(),
+        query.search.clone(),
     );
 
     if let Err(e) = scan_evs {
