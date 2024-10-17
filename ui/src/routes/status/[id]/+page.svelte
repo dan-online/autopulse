@@ -1,11 +1,22 @@
 <script lang="ts">
+    import { invalidateAll } from "$app/navigation";
     import { page } from "$app/stores";
-    import TimeAgo from "$lib/components/core/TimeAgo.svelte";
+    import { onMount } from "svelte";
 
     import IcBaselineInsertDriveFile from "~icons/ic/baseline-insert-drive-file";
     import IcRoundFolder from "~icons/ic/round-folder";
 
+    import TimeAgo from "$lib/components/core/TimeAgo.svelte";
+
     $: ev = $page.data.ev;
+
+    onMount(() => {
+        const interval = setInterval(() => {
+            invalidateAll();
+        }, 2000);
+
+        return () => clearInterval(interval);
+    });
 </script>
 
 <div class="flex flex-col mt-6 gap-6">
@@ -42,19 +53,57 @@
                         <div class="text-primary">File Path</div>
                         <div>{ev.file_path}</div>
                     </div>
+                    {#if ev.file_hash}
+                        <div class="col-span-2">
+                            <div class="text-primary">File Hash</div>
+                            <div>{ev.file_hash}</div>
+                        </div>
+                    {/if}
                     <div>
                         <div class="text-primary">Timer</div>
                         <div>
                             <TimeAgo date={new Date(ev.can_process + "Z")} />
                         </div>
                     </div>
+                    <div class:opacity-60={!ev.next_retry_at}>
+                        <div class="text-primary">Next Retry</div>
+                        <div>
+                            {#if ev.next_retry_at}
+                                <TimeAgo
+                                    date={new Date(ev.next_retry_at + "Z")}
+                                />
+                            {:else}
+                                N/A
+                            {/if}
+                        </div>
+                    </div>
                     <div>
                         <div class="text-primary">Found Status</div>
                         <div>{ev.found_status}</div>
                     </div>
+                    <div class:opacity-60={!ev.found_at}>
+                        <div class="text-primary">Found Time</div>
+                        <div>
+                            {ev.found_at
+                                ? new Date(ev.found_at + "Z").toLocaleString(
+                                      "en-UK",
+                                  )
+                                : "N/A"}
+                        </div>
+                    </div>
                     <div>
                         <div class="text-primary">Process Status</div>
                         <div>{ev.process_status}</div>
+                    </div>
+                    <div class:opacity-60={!ev.processed_at}>
+                        <div class="text-primary">Process Time</div>
+                        <div>
+                            {ev.processed_at
+                                ? new Date(
+                                      ev.processed_at + "Z",
+                                  ).toLocaleString("en-UK")
+                                : "N/A"}
+                        </div>
                     </div>
                     <div>
                         <div class="text-primary">Created At</div>
