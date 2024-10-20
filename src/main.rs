@@ -16,6 +16,8 @@ use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
 use clap::Parser;
 use db::conn::{get_conn, get_pool, AnyConnection};
+use routes::list::list;
+use routes::login::login;
 use routes::stats::stats;
 use routes::status::status;
 use routes::triggers::trigger_post;
@@ -77,6 +79,8 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             .service(trigger_post)
             .service(status)
             .service(stats)
+            .service(login)
+            .service(list)
             .app_data(basic::Config::default().realm("Restricted area"))
             .app_data(Data::new(manager.clone()))
     })

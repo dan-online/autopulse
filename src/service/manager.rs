@@ -1,6 +1,8 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
-use crate::db::schema::scan_events::{can_process, event_source, file_path, updated_at};
+use crate::db::schema::scan_events::{
+    can_process, created_at, event_source, file_path, id, updated_at,
+};
 use crate::routes::stats::Stats;
 use crate::{
     db::{
@@ -10,7 +12,7 @@ use crate::{
     },
     utils::settings::{Settings, Trigger},
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -88,10 +90,78 @@ impl PulseManager {
         conn.insert_and_return(ev)
     }
 
-    pub fn get_event(&self, id: &String) -> Option<ScanEvent> {
+    pub fn get_event(&self, ev_id: &String) -> Option<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
-        scan_events.find(id).first::<ScanEvent>(&mut conn).ok()
+        scan_events.find(ev_id).first::<ScanEvent>(&mut conn).ok()
+    }
+
+    pub fn get_events(
+        &self,
+        mut limit: u8,
+        page: u64,
+        sort: Option<String>,
+        status: Option<String>,
+        search: Option<String>,
+    ) -> anyhow::Result<Vec<ScanEvent>> {
+        let mut conn = get_conn(&self.pool);
+
+        let mut query = scan_events.into_boxed();
+
+        if let Some(status) = status {
+            query = query.filter(process_status.eq(status));
+        }
+
+        if limit > 100 {
+            limit = 100;
+        }
+
+        if let Some(mut sort) = sort {
+            let mut direction = "desc";
+
+            if sort.starts_with("-") {
+                direction = "asc";
+                sort = sort[1..].to_string();
+            }
+
+            if direction == "asc" {
+                query = match sort.as_str() {
+                    "id" => query.order(id.asc()),
+                    "file_path" => query.order(file_path.asc()),
+                    "process_status" => query.order(process_status.asc()),
+                    "event_source" => query.order(event_source.asc()),
+                    "created_at" => query.order(created_at.asc()),
+                    "updated_at" => query.order(updated_at.asc()),
+                    _ => {
+                        return Err(anyhow::anyhow!("invalid sort field"));
+                    }
+                }
+            } else {
+                query = match sort.as_str() {
+                    "id" => query.order(id.desc()),
+                    "file_path" => query.order(file_path.desc()),
+                    "process_status" => query.order(process_status.desc()),
+                    "event_source" => query.order(event_source.desc()),
+                    "created_at" => query.order(created_at.desc()),
+                    "updated_at" => query.order(updated_at.desc()),
+                    _ => {
+                        return Err(anyhow::anyhow!("invalid sort field"));
+                    }
+                }
+            }
+        } else {
+            query = query.order(created_at.desc());
+        }
+
+        if let Some(search) = search {
+            query = query.filter(file_path.like(format!("%{}%", search)));
+        }
+
+        query
+            .limit(limit.into())
+            .offset(((page - 1) * (limit as u64)) as i64)
+            .load::<ScanEvent>(&mut conn)
+            .map_err(Into::into)
     }
 
     pub fn start(&self) -> tokio::task::JoinHandle<()> {
