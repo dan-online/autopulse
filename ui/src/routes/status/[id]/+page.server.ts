@@ -13,7 +13,7 @@ export const load: PageServerLoad = async (event) => {
 
 	const ev = await fetch(statsUrl, {
 		headers: {
-			Authorization: `Basic ${btoa(`${username}:${password})`)}`,
+			Authorization: `Basic ${btoa(`${username}:${password}`)}`,
 		},
 	}).catch((err) => {
 		return {

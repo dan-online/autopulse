@@ -30,7 +30,7 @@ export const actions: Actions = {
 		const response = await fetch(postUrl.href, {
 			method: "POST",
 			headers: {
-				Authorization: `Basic ${btoa(`${username}:${password})`)}`,
+				Authorization: `Basic ${btoa(`${username}:${password}`)}`,
 			},
 		}).catch((err) => {
 			return {

@@ -20,7 +20,7 @@
     .
     <a href="https://autopulse.pages.dev/">Documentation</a>
     .
-    <a href="https://autoui.pages.dev/">AutoUI</a>
+    <a href="https://autopulseui.pages.dev/">autopulseUI</a>
   </p>
 </div>
 
