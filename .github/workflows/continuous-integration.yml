@@ -26,6 +26,7 @@ jobs:
       with:
         node-version: 'lts/*'
         cache: 'yarn'
+        cache-dependency-path: 'ui'
 
     - name: Install
       run: yarn install --immutable
