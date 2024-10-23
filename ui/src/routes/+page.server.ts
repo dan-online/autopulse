@@ -37,6 +37,7 @@ export const load: PageServerLoad = async (event) => {
     const eventsUrl = new URL(serverUrl);
     eventsUrl.pathname = "/list"
 
+
     if (event.url.searchParams.has("sort") ){
         eventsUrl.searchParams.set("sort", event.url.searchParams.get("sort")!);
     }

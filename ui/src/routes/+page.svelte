@@ -218,11 +218,11 @@
     <div class="flex flex-col md:flex-row mt-4">
         <div class="card bg-base-200 shadow-xl w-full">
             <div class="card-body">
-                <h2 class="card-title">
-                    Events
+                <div class="flex md:flex-row flex-col gap-x-2 gap-y-3">
+                    <h2 class="card-title">Events</h2>
                     <select
                         on:input={(e) => updateBasedOn("status", e)}
-                        class="ml-4 select select-bordered select-sm"
+                        class="md:ml-4 select select-bordered select-sm"
                     >
                         <option value="">All</option>
                         <option value="pending">Pending</option>
@@ -230,7 +230,7 @@
                         <option value="retry">Retrying</option>
                         <option value="failed">Failed</option>
                     </select>
-                    <div class="flex relative items-center ml-auto gap-2">
+                    <div class="flex relative items-center md:ml-auto gap-2">
                         <button
                             title={limiter
                                 ? "Disable Limiter"
@@ -250,13 +250,14 @@
                         </button>
                         <input
                             type="text"
-                            class="input input-bordered pl-10 input-sm"
+                            class="input input-bordered pl-10 w-full input-sm"
                             placeholder="Search..."
                             value={searchBy}
                             on:input={(e) => updateBasedOn("search", e)}
                         />
                     </div>
-                </h2>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="table text-left">
                         <thead>

@@ -1,4 +1,4 @@
-import { redirect } from "@sveltejs/kit";
+import { fail, redirect, type Actions } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -30,3 +30,7 @@ export const load: PageServerLoad = async (event) => {
 
     return {ev: await ev.json()};
 }
+
+// export const actions: Actions = {
+  
+// }

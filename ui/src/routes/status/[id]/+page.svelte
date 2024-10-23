@@ -7,6 +7,7 @@
     import IcRoundFolder from "~icons/ic/round-folder";
 
     import TimeAgo from "$lib/components/core/TimeAgo.svelte";
+    import { enhance } from "$app/forms";
 
     $: ev = $page.data.ev;
 
@@ -51,12 +52,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="col-span-2">
                         <div class="text-primary">File Path</div>
-                        <div>{ev.file_path}</div>
+                        <div class="break-all">{ev.file_path}</div>
                     </div>
                     {#if ev.file_hash}
                         <div class="col-span-2">
                             <div class="text-primary">File Hash</div>
-                            <div>{ev.file_hash}</div>
+                            <div class="break-all">{ev.file_hash}</div>
                         </div>
                     {/if}
                     <div>
@@ -121,6 +122,25 @@
                             )}
                         </div>
                     </div>
+                </div>
+                <div class="card-actions justify-between mt-4">
+                    <form action="/add?/add" method="post" use:enhance>
+                        <input type="hidden" name="path" value={ev.file_path} />
+                        <input type="hidden" name="hash" value={ev.file_hash} />
+                        <input type="hidden" name="redirect" value="true" />
+                        <button
+                            type="submit"
+                            class="btn btn-primary disabled:pointer-events-none"
+                            disabled={ev.process_status !== "complete"}
+                        >
+                            Retry
+                        </button>
+                    </form>
+                    <!-- <form method="post">
+                        <button type="submit" class="btn btn-error">
+                            Delete
+                        </button>
+                    </form> -->
                 </div>
             </div>
         </div>

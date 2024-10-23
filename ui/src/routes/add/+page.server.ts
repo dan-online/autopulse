@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-    add: async ({ request, cookies, url, locals }) => {
+    add: async ({ request,  locals, url }) => {
         if (!locals.auth) {
             return redirect(302, "/login");
         }
@@ -22,6 +22,7 @@ export const actions: Actions = {
         
         const path = formData.get('path') as string;
         const hash = formData.get('hash') as string | null;
+        const goafter = formData.get('redirect') as string | null;
 
         const postUrl = new URL(serverUrl);
 
@@ -47,9 +48,15 @@ export const actions: Actions = {
         });
 
         if (response.ok) {
+            const json = await response.json();
+
+            if (goafter == "true") {
+                return redirect(302, `/status/${json.id}`);
+            }
+
             return {
                 success: true,
-                event: await response.json()
+                event: json
             }
         } else {
             return fail(response.status, {

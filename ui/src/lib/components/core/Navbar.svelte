@@ -25,7 +25,7 @@
 <nav class="bg-base-300">
   <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
     <div class="relative flex h-16 items-center justify-between">
-      <div class="flex flex-1 gap-6">
+      <div class="flex items-center flex-1 gap-6">
         <div class="flex flex-shrink-0 items-center">
           <a href="/">
             <img class="h-8 w-8" src={icon} alt="autopulse" />
@@ -45,13 +45,14 @@
             >
           </div>
         </div>
-        <div class="flex items-center pt-1 ml-auto">
+        <div class="flex gap-2 items-center pt-1 ml-auto">
+          <a href="/login" class="btn btn-secondary btn-sm">Logout</a>
           {#if colorMode === "dark"}
-            <a class="btn btn-ghost btn-sm" href="?colorMode=light">
+            <a class="btn btn-ghost btn-circle" href="?colorMode=light">
               <IcBaselineWbSunny class="w-6 h-6" />
             </a>
           {:else}
-            <a class="btn btn-ghost btn-sm" href="?colorMode=dark">
+            <a class="btn btn-ghost btn-circle" href="?colorMode=dark">
               <MaterialSymbolsLightNightsStay class="w-6 h-6" />
             </a>
           {/if}
