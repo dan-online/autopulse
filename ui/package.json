@@ -26,7 +26,8 @@
 		"typescript": "^5.0.0",
 		"unocss": "^0.63.4",
 		"unplugin-icons": "^0.19.3",
-		"vite": "^5.0.3"
+		"vite": "^5.0.3",
+		"wrangler": "^3.82.0"
 	},
 	"type": "module",
 	"packageManager": "yarn@4.5.0"
