@@ -123,6 +123,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cloudflare/workers-types@npm:^4.20231121.0":
+  version: 4.20241022.0
+  resolution: "@cloudflare/workers-types@npm:4.20241022.0"
+  checksum: 10c0/1ed42846adab00f5a5d8c215e1b7d5c287e1fe374cab6da169438772a73fd4382c24ac2f838f0663243fa557d4428a5592b18efc646c2a13a7f8f731600572c4
+  languageName: node
+  linkType: hard
+
 "@esbuild/aix-ppc64@npm:0.21.5":
   version: 0.21.5
   resolution: "@esbuild/aix-ppc64@npm:0.21.5"
@@ -780,6 +787,20 @@ __metadata:
   peerDependencies:
     "@sveltejs/kit": ^2.0.0
   checksum: 10c0/154f4688025ce03a647986469cea30564a93d3f8f05820da8b7324eb9c4d2cdf5bf5bdc2ba36fc7c7f449e229ae0e8756666530565899025d9a765587ac98dd4
+  languageName: node
+  linkType: hard
+
+"@sveltejs/adapter-cloudflare@npm:^4.7.3":
+  version: 4.7.3
+  resolution: "@sveltejs/adapter-cloudflare@npm:4.7.3"
+  dependencies:
+    "@cloudflare/workers-types": "npm:^4.20231121.0"
+    esbuild: "npm:^0.21.5"
+    worktop: "npm:0.8.0-next.18"
+  peerDependencies:
+    "@sveltejs/kit": ^2.0.0
+    wrangler: ^3.28.4
+  checksum: 10c0/c40137a104f70e3795a9104d453df3705529f17a9eb280ad2fe6356d9b9ac774dd35809115611ad248277c30a0df46c76bfd19e1313dd2195cf25c28778a6fe3
   languageName: node
   linkType: hard
 
@@ -1699,7 +1720,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.21.3":
+"esbuild@npm:^0.21.3, esbuild@npm:^0.21.5":
   version: 0.21.5
   resolution: "esbuild@npm:0.21.5"
   dependencies:
@@ -2674,6 +2695,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"regexparam@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "regexparam@npm:3.0.0"
+  checksum: 10c0/a6430d7b97d5a7d5518f37a850b6b73aab479029d02f46af4fa0e8e4a1d7aad05b7a0d2d10c86ded21a14d5f0fa4c68525f873a5fca2efeefcccd93c36627459
+  languageName: node
+  linkType: hard
+
 "resolve-pkg-maps@npm:^1.0.0":
   version: 1.0.0
   resolution: "resolve-pkg-maps@npm:1.0.0"
@@ -3109,6 +3137,7 @@ __metadata:
     "@iconify/json": "npm:^2.2.260"
     "@matthiesenxyz/unocss-preset-daisyui": "npm:^0.1.2"
     "@sveltejs/adapter-auto": "npm:^3.0.0"
+    "@sveltejs/adapter-cloudflare": "npm:^4.7.3"
     "@sveltejs/adapter-node": "npm:^5.2.7"
     "@sveltejs/kit": "npm:^2.0.0"
     "@sveltejs/vite-plugin-svelte": "npm:^3.0.0"
@@ -3328,6 +3357,16 @@ __metadata:
   bin:
     node-which: bin/which.js
   checksum: 10c0/449fa5c44ed120ccecfe18c433296a4978a7583bf2391c50abce13f76878d2476defde04d0f79db8165bdf432853c1f8389d0485ca6e8ebce3bbcded513d5e6a
+  languageName: node
+  linkType: hard
+
+"worktop@npm:0.8.0-next.18":
+  version: 0.8.0-next.18
+  resolution: "worktop@npm:0.8.0-next.18"
+  dependencies:
+    mrmime: "npm:^2.0.0"
+    regexparam: "npm:^3.0.0"
+  checksum: 10c0/b15e9efd140dcaa158fc59316ae4f174489b8f4b03d92db68aa1a3282fc60d47d4e2376411136647f5c12aa0dc25d4a0f1b23725ac483ca39046789edd3e2395
   languageName: node
   linkType: hard
 
