@@ -19,6 +19,8 @@
     <a href="https://github.com/dan-online/autopulse/issues">Request Feature</a>
     .
     <a href="https://autopulse.pages.dev/">Documentation</a>
+    .
+    <a href="https://autoui.pages.dev/">AutoUI</a>
   </p>
 </div>
 
@@ -57,6 +59,7 @@ Following autoscan, we use the following terminology:
 - **Checks**: checks the file exists before updating the target and optionally waits for the file to match a provided hash
 - **Reliability**: uses a database to store the state of the scan requests
 - **Webhooks**: allow for notifications to be sent when a file is ready to be processed with webhooks such as Discord
+- **User-Interface**: provides a simple web interface to view/add scan requests
 
 ## Getting Started
 
