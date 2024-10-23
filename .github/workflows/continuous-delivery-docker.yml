@@ -47,9 +47,11 @@ jobs:
           if [ -n "${{ github.event.number }}" ]; then
             echo "PR number: ${{ github.event.number }}"
             echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+            echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
         id: tag
 
@@ -59,6 +61,15 @@ jobs:
           push: true
           tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
           file: Dockerfile.alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push (ui)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+          context: ui/
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

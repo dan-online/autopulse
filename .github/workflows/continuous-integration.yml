@@ -9,8 +9,39 @@ on:
       - main
 
 jobs:
-  test:
-    name: Build and Check
+  ui:
+    name: UI Build and Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ui
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
+    - name: Enable Corepack
+      run: corepack enable
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+        cache: 'yarn'
+        cache-dependency-path: 'ui'
+
+    - name: Install
+      run: yarn install --immutable
+
+    - name: Biome Check
+      run: yarn biome ci
+
+    - name: Typecheck
+      run: yarn check
+
+    - name: Build
+      run: yarn build
+
+  server:
+    name: Server Build and Check
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Project
