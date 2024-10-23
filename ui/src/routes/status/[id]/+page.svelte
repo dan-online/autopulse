@@ -1,23 +1,23 @@
 <script lang="ts">
-    import { invalidateAll } from "$app/navigation";
-    import { page } from "$app/stores";
-    import { onMount } from "svelte";
+import { invalidateAll } from "$app/navigation";
+import { page } from "$app/stores";
+import { onMount } from "svelte";
 
-    import IcBaselineInsertDriveFile from "~icons/ic/baseline-insert-drive-file";
-    import IcRoundFolder from "~icons/ic/round-folder";
+import IcBaselineInsertDriveFile from "~icons/ic/baseline-insert-drive-file";
+import IcRoundFolder from "~icons/ic/round-folder";
 
-    import TimeAgo from "$lib/components/core/TimeAgo.svelte";
-    import { enhance } from "$app/forms";
+import { enhance } from "$app/forms";
+import TimeAgo from "$lib/components/core/TimeAgo.svelte";
 
-    $: ev = $page.data.ev;
+$: ev = $page.data.ev;
 
-    onMount(() => {
-        const interval = setInterval(() => {
-            invalidateAll();
-        }, 2000);
+onMount(() => {
+	const interval = setInterval(() => {
+		invalidateAll();
+	}, 2000);
 
-        return () => clearInterval(interval);
-    });
+	return () => clearInterval(interval);
+});
 </script>
 
 <div class="flex flex-col mt-6 gap-6">

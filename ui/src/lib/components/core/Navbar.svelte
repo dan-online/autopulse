@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import { replaceState } from "$app/navigation";
-  import { page } from "$app/stores";
-  import icon from "$lib/assets/images/logo-tiny.webp";
-  import MaterialSymbolsLightNightsStay from "~icons/material-symbols-light/nights-stay";
-  import IcBaselineWbSunny from "~icons/ic/baseline-wb-sunny";
+import { browser } from "$app/environment";
+import { replaceState } from "$app/navigation";
+import { page } from "$app/stores";
+import icon from "$lib/assets/images/logo-tiny.webp";
+import IcBaselineWbSunny from "~icons/ic/baseline-wb-sunny";
+import MaterialSymbolsLightNightsStay from "~icons/material-symbols-light/nights-stay";
 
-  $: path = $page.url.pathname;
-  $: colorMode = $page.data.colorMode;
+$: path = $page.url.pathname;
+$: colorMode = $page.data.colorMode;
 
-  $: {
-    if (browser) {
-      if (window.location.search.includes("colorMode")) {
-        const url = new URL(window.location.href);
+$: {
+	if (browser) {
+		if (window.location.search.includes("colorMode")) {
+			const url = new URL(window.location.href);
 
-        url.searchParams.delete("colorMode");
+			url.searchParams.delete("colorMode");
 
-        replaceState(url.toString(), $page.state);
-      }
-    }
-  }
+			replaceState(url.toString(), $page.state);
+		}
+	}
+}
 </script>
 
 <nav class="bg-base-300">

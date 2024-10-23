@@ -1,4 +1,4 @@
-import 'unplugin-icons/types/svelte'
+import "unplugin-icons/types/svelte";
 
 declare global {
 	namespace App {
@@ -8,12 +8,10 @@ declare global {
 				serverUrl: string;
 				username: string;
 				password: string;
-			}
+			};
 		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
 	}
 }
-
-export {};

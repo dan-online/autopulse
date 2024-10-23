@@ -1,191 +1,191 @@
 <script lang="ts">
-    import { page } from "$app/stores";
-    import { onMount, type ComponentType } from "svelte";
-    import { goto, invalidateAll } from "$app/navigation";
+import { goto, invalidateAll } from "$app/navigation";
+import { page } from "$app/stores";
+import { type ComponentType, onMount } from "svelte";
 
-    import MaterialSymbolsFileCopyOutlineRounded from "~icons/material-symbols/file-copy-outline-rounded";
-    import CiSearchMagnifyingGlass from "~icons/ci/search-magnifying-glass";
-    import HugeiconsPackageDelivered from "~icons/hugeicons/package-delivered";
-    import PajamasRetry from "~icons/pajamas/retry";
-    import MaterialSymbolsError from "~icons/material-symbols/error";
-    import LineMdChevronDown from "~icons/line-md/chevron-down";
-    import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
-    import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
+import CiSearchMagnifyingGlass from "~icons/ci/search-magnifying-glass";
+import HugeiconsPackageDelivered from "~icons/hugeicons/package-delivered";
+import LineMdChevronDown from "~icons/line-md/chevron-down";
+import MaterialSymbolsError from "~icons/material-symbols/error";
+import MaterialSymbolsFileCopyOutlineRounded from "~icons/material-symbols/file-copy-outline-rounded";
+import PajamasRetry from "~icons/pajamas/retry";
+import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
+import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
 
-    let searchLoading = false;
-    // if anyone clicks the magnifying glass, let them bypass the search limit
-    let limiter = true;
+let searchLoading = false;
+// if anyone clicks the magnifying glass, let them bypass the search limit
+let limiter = true;
 
-    const iconMap: Record<string, ComponentType> = {
-        total: MaterialSymbolsFileCopyOutlineRounded,
-        found: CiSearchMagnifyingGlass,
-        processed: HugeiconsPackageDelivered,
-        retrying: PajamasRetry,
-        failed: MaterialSymbolsError,
-    };
+const iconMap: Record<string, ComponentType> = {
+	total: MaterialSymbolsFileCopyOutlineRounded,
+	found: CiSearchMagnifyingGlass,
+	processed: HugeiconsPackageDelivered,
+	retrying: PajamasRetry,
+	failed: MaterialSymbolsError,
+};
 
-    const descMap: Record<string, string> = {
-        total: "Total scan events",
-        found: "Found + Matched Hash",
-        processed: "Sent to processors",
-        retrying: "Failed 1/+ processors",
-        failed: "Failed to process",
-    };
+const descMap: Record<string, string> = {
+	total: "Total scan events",
+	found: "Found + Matched Hash",
+	processed: "Sent to processors",
+	retrying: "Failed 1/+ processors",
+	failed: "Failed to process",
+};
 
-    $: stats = $page.data.stats;
-    $: events = $page.data.events;
-    $: error = $page.data.error;
+$: stats = $page.data.stats;
+$: events = $page.data.events;
+$: error = $page.data.error;
 
-    $: sortBy = $page.url.searchParams.get("sort") || "created_at";
-    $: searchBy = $page.url.searchParams.get("search") || "";
-    $: pageBy = $page.url.searchParams.get("page")
-        ? parseInt($page.url.searchParams.get("page") as string)
-        : 1;
-    $: limitBy = $page.url.searchParams.get("limit")
-        ? parseInt($page.url.searchParams.get("limit") as string)
-        : 10;
-    $: statusBy = $page.url.searchParams.get("status") || "";
+$: sortBy = $page.url.searchParams.get("sort") || "created_at";
+$: searchBy = $page.url.searchParams.get("search") || "";
+$: pageBy = $page.url.searchParams.get("page")
+	? Number.parseInt($page.url.searchParams.get("page") as string)
+	: 1;
+$: limitBy = $page.url.searchParams.get("limit")
+	? Number.parseInt($page.url.searchParams.get("limit") as string)
+	: 10;
+$: statusBy = $page.url.searchParams.get("status") || "";
 
-    const fields = [
-        {
-            key: "id",
-            label: "",
-        },
-        {
-            key: "file_path",
-            label: "Path",
-        },
-        {
-            key: "process_status",
-            label: "Status",
-        },
-        {
-            key: "event_source",
-            label: "Trigger",
-        },
-        {
-            key: "created_at",
-            label: "Created At",
-        },
-        {
-            key: "updated_at",
-            label: "Updated At",
-        },
-    ];
+const fields = [
+	{
+		key: "id",
+		label: "",
+	},
+	{
+		key: "file_path",
+		label: "Path",
+	},
+	{
+		key: "process_status",
+		label: "Status",
+	},
+	{
+		key: "event_source",
+		label: "Trigger",
+	},
+	{
+		key: "created_at",
+		label: "Created At",
+	},
+	{
+		key: "updated_at",
+		label: "Updated At",
+	},
+];
 
-    onMount(() => {
-        const interval = setInterval(() => {
-            invalidateAll();
-        }, 5000);
+onMount(() => {
+	const interval = setInterval(() => {
+		invalidateAll();
+	}, 5000);
 
-        return () => clearInterval(interval);
-    });
+	return () => clearInterval(interval);
+});
 
-    let updateTimeout: number;
-    let updateUrl: string;
+let updateTimeout: number;
+let updateUrl: string;
 
-    const updateBasedOn = (
-        key: "search" | "sort" | "page" | "limit" | "status",
-        e: Event | string | number,
-    ) => {
-        const url = new URL(window.location.href);
+const updateBasedOn = (
+	key: "search" | "sort" | "page" | "limit" | "status",
+	e: Event | string | number,
+) => {
+	const url = new URL(window.location.href);
 
-        let search = "";
-        let sort = "";
-        let page = 1;
-        let limit = 10;
-        let status = "";
+	let search = "";
+	let sort = "";
+	let page = 1;
+	let limit = 10;
+	let status = "";
 
-        if (key === "search" && e instanceof Event) {
-            const val = (e.target as HTMLInputElement).value;
-            search = val;
-        } else {
-            search = searchBy;
-        }
+	if (key === "search" && e instanceof Event) {
+		const val = (e.target as HTMLInputElement).value;
+		search = val;
+	} else {
+		search = searchBy;
+	}
 
-        if (key === "sort") {
-            sort = e as string;
-        } else {
-            sort = sortBy;
-        }
+	if (key === "sort") {
+		sort = e as string;
+	} else {
+		sort = sortBy;
+	}
 
-        if (key === "page") {
-            page = e as number;
-        } else {
-            page = pageBy;
-        }
+	if (key === "page") {
+		page = e as number;
+	} else {
+		page = pageBy;
+	}
 
-        if (key === "limit" && e instanceof Event) {
-            limit = parseInt((e.target as HTMLInputElement).value);
-            page = 1;
-        } else {
-            limit = limitBy;
-        }
+	if (key === "limit" && e instanceof Event) {
+		limit = Number.parseInt((e.target as HTMLInputElement).value);
+		page = 1;
+	} else {
+		limit = limitBy;
+	}
 
-        if (key === "status" && e instanceof Event) {
-            status = (e.target as HTMLSelectElement).value;
-        } else {
-            status = statusBy;
-        }
+	if (key === "status" && e instanceof Event) {
+		status = (e.target as HTMLSelectElement).value;
+	} else {
+		status = statusBy;
+	}
 
-        if (search) {
-            url.searchParams.set("search", search);
-        } else {
-            url.searchParams.delete("search");
-        }
+	if (search) {
+		url.searchParams.set("search", search);
+	} else {
+		url.searchParams.delete("search");
+	}
 
-        if (sort) {
-            if (key === "sort") {
-                if (sort !== sortBy) {
-                    sort = sort.split("-").join("");
-                } else {
-                    sort = sort.startsWith("-") ? sort.slice(1) : `-${sort}`;
-                }
-            }
+	if (sort) {
+		if (key === "sort") {
+			if (sort !== sortBy) {
+				sort = sort.split("-").join("");
+			} else {
+				sort = sort.startsWith("-") ? sort.slice(1) : `-${sort}`;
+			}
+		}
 
-            url.searchParams.set("sort", sort);
-        } else {
-            url.searchParams.delete("sort");
-        }
+		url.searchParams.set("sort", sort);
+	} else {
+		url.searchParams.delete("sort");
+	}
 
-        if (pageBy) {
-            url.searchParams.set("page", page.toString());
-        } else {
-            url.searchParams.delete("page");
-        }
+	if (pageBy) {
+		url.searchParams.set("page", page.toString());
+	} else {
+		url.searchParams.delete("page");
+	}
 
-        if (limitBy) {
-            url.searchParams.set("limit", limit.toString());
-        } else {
-            url.searchParams.delete("limit");
-        }
+	if (limitBy) {
+		url.searchParams.set("limit", limit.toString());
+	} else {
+		url.searchParams.delete("limit");
+	}
 
-        if (status) {
-            url.searchParams.set("status", status);
-        } else {
-            url.searchParams.delete("status");
-        }
+	if (status) {
+		url.searchParams.set("status", status);
+	} else {
+		url.searchParams.delete("status");
+	}
 
-        searchLoading = true;
+	searchLoading = true;
 
-        updateUrl = url.search || "?";
-        clearTimeout(updateTimeout);
+	updateUrl = url.search || "?";
+	clearTimeout(updateTimeout);
 
-        updateTimeout = setTimeout(
-            async () => {
-                clearTimeout(updateTimeout);
+	updateTimeout = setTimeout(
+		async () => {
+			clearTimeout(updateTimeout);
 
-                await goto(updateUrl, {
-                    invalidateAll: true,
-                    keepFocus: true,
-                    noScroll: true,
-                });
+			await goto(updateUrl, {
+				invalidateAll: true,
+				keepFocus: true,
+				noScroll: true,
+			});
 
-                searchLoading = false;
-            },
-            limiter ? 500 : 1,
-        );
-    };
+			searchLoading = false;
+		},
+		limiter ? 500 : 1,
+	);
+};
 </script>
 
 {#if error}

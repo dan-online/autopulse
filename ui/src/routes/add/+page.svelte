@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { enhance } from "$app/forms";
-    import { page } from "$app/stores";
-    import type { ActionData } from "./$types";
+import { enhance } from "$app/forms";
+import { page } from "$app/stores";
+import type { ActionData } from "./$types";
 
-    export let form: ActionData;
-    let loading = false;
+export let form: ActionData;
+let loading = false;
 
-    $: error = form?.error;
+$: error = form?.error;
 </script>
 
 <div

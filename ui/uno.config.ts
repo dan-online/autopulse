@@ -1,11 +1,11 @@
+import { presetDaisy } from "@matthiesenxyz/unocss-preset-daisyui";
+import extractorSvelte from "@unocss/extractor-svelte";
 import {
 	defineConfig,
+	presetTypography,
 	presetUno,
 	presetWebFonts,
-	presetTypography,
 } from "unocss";
-import extractorSvelte from "@unocss/extractor-svelte";
-import { presetDaisy } from "@matthiesenxyz/unocss-preset-daisyui";
 
 export default defineConfig({
 	extractors: [extractorSvelte()],
@@ -19,7 +19,7 @@ export default defineConfig({
 			},
 		}),
 		presetDaisy({
-			themes: ["night", "winter"]
+			themes: ["night", "winter"],
 		}),
 		presetTypography(),
 	],
