@@ -53,7 +53,7 @@ $: {
             </a>
           {:else}
             <a class="btn btn-ghost btn-circle" href="?colorMode=dark">
-              <MaterialSymbolsLightNightsStay class="w-6 h-6" />
+              <MaterialSymbolsLightNightsStay class="w-6 h-6 -mt-0.25" />
             </a>
           {/if}
         </div>

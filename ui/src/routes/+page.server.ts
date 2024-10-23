@@ -80,5 +80,8 @@ export const load: PageServerLoad = async (event) => {
 		};
 	}
 
-	return { stats: await stats.json(), events: await events.json() };
+	const statsJson = await stats.json();
+	const eventsJson = await events.json();
+
+	return { stats: statsJson, events: eventsJson };
 };

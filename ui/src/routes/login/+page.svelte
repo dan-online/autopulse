@@ -1,7 +1,10 @@
 <script lang="ts">
-import { enhance } from "$app/forms";
+import { applyAction, enhance } from "$app/forms";
+import { goto } from "$app/navigation";
 import { page } from "$app/stores";
 import type { ActionData } from "./$types";
+
+import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
 
 export let form: ActionData;
 let loading = false;
@@ -26,7 +29,24 @@ $: error = form?.error;
     {/if}
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form class="space-y-6" method="POST" action="?/check" use:enhance>
+        <form
+            class="space-y-6"
+            method="POST"
+            action="?/check"
+            use:enhance={() => {
+                loading = true;
+
+                return async ({ result }) => {
+                    if (result.type === "redirect") {
+                        await goto(result.location);
+                    } else {
+                        await applyAction(result);
+                    }
+
+                    loading = false;
+                };
+            }}
+        >
             <div>
                 <label for="server-url">Server URL</label>
                 <div class="mt-2">
@@ -73,9 +93,14 @@ $: error = form?.error;
                 <button
                     type="submit"
                     disabled={loading}
-                    class="btn btn-primary disabled:pointer-events-none disabled:grayscale"
-                    >Sign in</button
+                    class="btn w-32 btn-primary disabled:pointer-events-none disabled:grayscale"
                 >
+                    {#if !loading}
+                        <span>Sign in</span>
+                    {:else}
+                        <SvgSpinners90RingWithBg class="w-6 h-6" />
+                    {/if}
+                </button>
             </div>
         </form>
     </div>
