@@ -80,4 +80,4 @@ async function aesGcmDecrypt(
 	}
 }
 
-export { aesGcmEncrypt, aesGcmDecrypt };
+export { aesGcmDecrypt, aesGcmEncrypt };

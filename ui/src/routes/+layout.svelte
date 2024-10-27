@@ -1,6 +1,6 @@
 <script lang="ts">
-import "virtual:uno.css";
 import "@unocss/reset/tailwind-compat.css";
+import "virtual:uno.css";
 
 import { page } from "$app/stores";
 import Navbar from "$lib/components/core/Navbar.svelte";

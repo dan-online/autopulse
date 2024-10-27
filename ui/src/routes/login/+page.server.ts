@@ -1,5 +1,5 @@
 import { sign } from "$lib/auth";
-import { type Actions, error, fail, redirect } from "@sveltejs/kit";
+import { type Actions, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
