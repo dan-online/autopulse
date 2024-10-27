@@ -46,7 +46,9 @@ $: {
           </div>
         </div>
         <div class="flex gap-2 items-center pt-1 ml-auto">
-          <a href="/login" class="btn btn-secondary btn-sm">Logout</a>
+          {#if path !== "/login"}
+            <a href="/login" class="btn btn-secondary btn-sm">Logout</a>
+          {/if}
           {#if colorMode === "dark"}
             <a class="btn btn-ghost btn-circle" href="?colorMode=light">
               <IcBaselineWbSunny class="w-6 h-6" />
