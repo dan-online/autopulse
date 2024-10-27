@@ -30,6 +30,9 @@ use utils::cli::Args;
 use utils::logs::setup_logs;
 use utils::settings::Settings;
 
+#[doc(hidden)]
+mod tests;
+
 /// Web server routes
 pub mod routes;
 
