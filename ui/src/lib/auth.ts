@@ -4,9 +4,9 @@ import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt";
 let secret = env.SECRET;
 
 if (!secret) {
-    secret = crypto.randomUUID();
-    
-    console.log("Generated new secret:", secret);
+	secret = crypto.randomUUID();
+
+	console.log("Generated new secret:", secret);
 }
 
 export interface Payload {
