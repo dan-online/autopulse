@@ -17,13 +17,13 @@ export interface Payload {
 
 export const sign = async (payload: Payload) => {
 	const data = JSON.stringify(payload);
-	const encrypted = aesGcmEncrypt(data, secret);
+	const encrypted = aesGcmEncrypt(data, secret!);
 
 	return encrypted;
 };
 
 export const verify = async (jwt: string) => {
-	const decrypted = await aesGcmDecrypt(jwt, secret);
+	const decrypted = await aesGcmDecrypt(jwt, secret!);
 
 	return JSON.parse(decrypted) as Payload;
 };
