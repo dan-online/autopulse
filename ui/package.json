@@ -17,7 +17,7 @@
 		"@sveltejs/adapter-cloudflare": "^4.7.4",
 		"@sveltejs/adapter-node": "^5.2.9",
 		"@sveltejs/kit": "^2.7.3",
-		"@sveltejs/vite-plugin-svelte": "^3.1.2",
+		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@unocss/extractor-svelte": "^0.63.6",
 		"@unocss/reset": "^0.63.6",
 		"daisyui": "^4.12.13",
