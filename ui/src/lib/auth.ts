@@ -2,10 +2,12 @@ import { building } from "$app/environment";
 import { env } from "$env/dynamic/private";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt";
 
-const secret = env.SECRET;
+let secret = env.SECRET;
 
-if (!secret && !building) {
-	throw new Error("SECRET must be defined");
+if (!secret) {
+    secret = crypto.randomUUID();
+    
+    console.log("Generated new secret:", secret);
 }
 
 export interface Payload {
