@@ -47,14 +47,14 @@ $: {
         </div>
         <div class="flex gap-2 items-center pt-1 ml-auto">
           {#if path !== "/login"}
-            <a href="/login" class="btn btn-secondary btn-sm">Logout</a>
+            <a href="/login" class="btn btn-secondary btn-sm" data-sveltekit-preload-data="off">Logout</a>
           {/if}
           {#if colorMode === "dark"}
-            <a class="btn btn-ghost btn-circle" href="?colorMode=light">
+            <a class="btn btn-ghost btn-circle" href="?colorMode=light" data-sveltekit-preload-data="off">
               <IcBaselineWbSunny class="w-6 h-6" />
             </a>
           {:else}
-            <a class="btn btn-ghost btn-circle" href="?colorMode=dark">
+            <a class="btn btn-ghost btn-circle" href="?colorMode=dark" data-sveltekit-preload-data="off">
               <MaterialSymbolsLightNightsStay class="w-6 h-6 -mt-0.25" />
             </a>
           {/if}
