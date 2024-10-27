@@ -65,13 +65,14 @@ Following autoscan, we use the following terminology:
 
 ### Docker
 
-The easiest way to get started with autopulse is to use the provided [Docker image](https://hub.docker.com/r/danonline/autopulse)
+The easiest way to get started with autopulse is to use the provided [docker image](https://hub.docker.com/r/danonline/autopulse)
 
 #### Tags
 
 - `latest` - full image with support for postgres/sqlite
 - `latest-postgres` - smaller image that only supports Postgres
 - `latest-sqlite` - smaller image that only supports SQLite
+- `ui` - self-hostable UI for autopulse
 
 #### Compose
 
@@ -196,6 +197,10 @@ $ curl -u 'admin:password' 'http://localhost:8080/manual?path=/path/to/file&hash
 $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890'
 ```
 
+#### UI
+
+The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI.
+
 ## To-do
 
 - [x] Add more triggers
@@ -211,13 +216,18 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
   - [x] Emby
 - [ ] Add more webhooks
   - [ ] Generic JSON
-- [ ] Add more options
+- [x] Add more options
   - [x] Cleanup duration (currently 10 days)
   - [x] Jellyfin `metadataRefreshMode` currently set to `FullRefresh`
-  - [ ] Plex refresh
+  - [x] Plex refresh
 - [x] Databases
   - [x] SQLite
   - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
+- [x] UI
+  - [x] Add/View scan requests
+  - [ ] Add/View triggers
+  - [ ] Add/View targets
+  - [ ] Add/View webhooks
 
 ## Contributing
 

@@ -15,7 +15,17 @@ services:
       - /etc/localtime:/etc/localtime:ro # for correct timezone in timestamps
     environment:
        AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
-      
+
+  # Optional self-hosted UI
+  # ui:
+  #   image: danonline/autopulse:ui
+  #   container_name: autopulse-ui
+  #   restart: always
+  #   ports:
+  #     - 2880:2880
+  #   # networks: # If you want to use an internal autopulse network, ex. http://autopulse:2875
+  #   #   - db
+
   postgres:
     image: postgres:alpine
     container_name: autopulse-postgres
