@@ -1,4 +1,3 @@
-import { building } from "$app/environment";
 import { env } from "$env/dynamic/private";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt";
 
