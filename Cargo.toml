@@ -69,7 +69,7 @@ url = "2.5.2"
 uuid = { version = "1.10.0", features = ["v4"] }
 
 # File system notifications
-notify = "6.1.1"
+notify = "7.0.0"
 
 # Other
 struson = { version = "0.5.0", features = ["experimental", "serde"] }
