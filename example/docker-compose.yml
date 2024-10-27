@@ -23,6 +23,8 @@ services:
   #   restart: always
   #   ports:
   #     - 2880:2880
+  #   environment:
+  #     SECRET: your_secret_here # Required, encrypts cookies
   #   # networks: # If you want to use an internal autopulse network, ex. http://autopulse:2875
   #   #   - db
 

@@ -1,5 +1,6 @@
 import { type Actions, error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
+import { sign } from "$lib/auth";
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
 	const defaultURL = new URL(url);
@@ -44,7 +45,7 @@ export const actions: Actions = {
 		if (response.ok) {
 			cookies.set(
 				"auth",
-				JSON.stringify({
+				await sign({
 					serverUrl,
 					username,
 					password,

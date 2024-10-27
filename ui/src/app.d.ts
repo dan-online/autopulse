@@ -1,14 +1,11 @@
+import type { Payload } from "$lib/auth";
 import "unplugin-icons/types/svelte";
 
 declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			auth: {
-				serverUrl: string;
-				username: string;
-				password: string;
-			};
+			auth: Payload | null;
 		}
 		// interface PageData {}
 		// interface PageState {}
