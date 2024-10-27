@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "dustypomerleau.rust-syntax",
+        "rust-lang.rust-analyzer",
+        "fill-labs.dependi",
+        "biomejs.biome",
+        "1yib.svelte-bundle"
+    ]
+}
