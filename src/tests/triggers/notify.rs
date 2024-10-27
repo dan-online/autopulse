@@ -25,7 +25,7 @@ mod tests {
         std::fs::File::create(&file)?;
 
         let _ = timeout(Duration::from_secs(3), async {
-            while let Some(event) = rx.recv().await {
+            if let Some(event) = rx.recv().await {
                 let event = event?;
                 assert!(event.kind == EventKind::Create(CreateKind::File));
                 return Ok(());
