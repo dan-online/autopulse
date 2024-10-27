@@ -264,7 +264,13 @@ impl TargetProcess for Emby {
             to_scan.extend(evs.iter().copied());
         }
 
-        self.scan(&to_scan).await?;
+        if !to_scan.is_empty() {
+            self.scan(&to_scan).await?;
+
+            for file in to_scan.iter() {
+                debug!("scanned file: {}", file.file_path);
+            }
+        }
 
         succeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
 
