@@ -1,28 +1,27 @@
-import { env } from "$env/dynamic/private"
-import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt"
+import { env } from "$env/dynamic/private";
+import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt";
 
-const secret = env.SECRET
+const secret = env.SECRET;
 
 if (!secret) {
-    throw new Error("JWT_SECRET must be defined")
+	throw new Error("JWT_SECRET must be defined");
 }
 
 export interface Payload {
-    serverUrl: string
-    username: string
-    password: string
+	serverUrl: string;
+	username: string;
+	password: string;
 }
-
 
 export const sign = async (payload: Payload) => {
-    const data = JSON.stringify(payload);
-    const encrypted = aesGcmEncrypt(data, secret)
+	const data = JSON.stringify(payload);
+	const encrypted = aesGcmEncrypt(data, secret);
 
-    return encrypted
-}
+	return encrypted;
+};
 
 export const verify = async (jwt: string) => {
-    const decrypted = await aesGcmDecrypt(jwt, secret);
+	const decrypted = await aesGcmDecrypt(jwt, secret);
 
-    return JSON.parse(decrypted) as Payload
-}
+	return JSON.parse(decrypted) as Payload;
+};
