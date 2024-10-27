@@ -31,7 +31,12 @@ serde_json = "1.0.128"
 
 # Tracing
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt", "local-time", "time"] }
+tracing-subscriber = { version = "0.3.18", features = [
+    "env-filter",
+    "fmt",
+    "local-time",
+    "time",
+] }
 tracing-appender = "0.2.3"
 
 # Database
@@ -78,3 +83,7 @@ regex = "1.10.6"
 # Command-line arguments
 clap = { version = "4.5.18", features = ["derive"] }
 clap_derive = { version = "4.5.18" }
+
+[dev-dependencies]
+# Standardize logging output
+tracing-test = "0.2.5"

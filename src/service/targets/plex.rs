@@ -1,7 +1,7 @@
 use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
 use reqwest::header;
 use serde::Deserialize;
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
 pub struct Plex {
@@ -235,7 +235,7 @@ impl TargetProcess for Plex {
             if let Some(library) = self.in_library(&libraries, ev)? {
                 match self.scan(ev, &library).await {
                     Ok(_) => {
-                        trace!("scanned file '{}'", ev.file_path);
+                        debug!("scanned file '{}'", ev.file_path);
 
                         if self.analyze || self.refresh {
                             match self.get_item(&library, &ev.file_path).await {
@@ -247,7 +247,7 @@ impl TargetProcess for Plex {
                                     if self.analyze {
                                         match self.analyze_item(&item.key).await {
                                             Ok(_) => {
-                                                trace!("analyzed metadata '{}'", item.key);
+                                                debug!("analyzed metadata '{}'", item.key);
                                             }
                                             Err(e) => {
                                                 error!(
@@ -263,7 +263,7 @@ impl TargetProcess for Plex {
                                     if self.refresh {
                                         match self.refresh_item(&item.key).await {
                                             Ok(_) => {
-                                                trace!("refreshed metadata '{}'", item.key);
+                                                debug!("refreshed metadata '{}'", item.key);
                                             }
                                             Err(e) => {
                                                 error!(

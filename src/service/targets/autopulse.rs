@@ -4,7 +4,7 @@ use crate::{
 };
 use reqwest::header;
 use serde::Deserialize;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 #[derive(Clone, Deserialize)]
 pub struct Autopulse {
@@ -44,9 +44,7 @@ impl Autopulse {
 
         let res = client.get(url.to_string()).send().await?;
 
-        if res.status().is_success() {
-            trace!("scanned file: {}", ev.file_path);
-        } else {
+        if !res.status().is_success() {
             let body = res.text().await?;
             return Err(anyhow::anyhow!("unable to scan file: {}", body));
         }
@@ -63,6 +61,7 @@ impl TargetProcess for Autopulse {
             match self.scan(ev).await {
                 Ok(_) => {
                     succeded.push(ev.id.clone());
+                    debug!("file scanned: {}", ev.file_path);
                 }
                 Err(e) => {
                     error!("error scanning file: {}", e);

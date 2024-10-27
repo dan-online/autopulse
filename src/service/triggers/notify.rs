@@ -45,7 +45,7 @@ impl Notify {
         tx.send(path).map_err(|e| anyhow::anyhow!(e))
     }
 
-    fn async_watcher(
+    pub fn async_watcher(
         &self,
     ) -> notify::Result<(RecommendedWatcher, UnboundedReceiver<notify::Result<Event>>)> {
         let (tx, rx) = unbounded_channel();

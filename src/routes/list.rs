@@ -18,7 +18,7 @@ struct ListQuery {
 
 impl Default for ListQuery {
     fn default() -> Self {
-        ListQuery {
+        Self {
             limit: 10,
             page: 1,
             sort: None,
