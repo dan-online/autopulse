@@ -1,10 +1,11 @@
+import { building } from "$app/environment";
 import { env } from "$env/dynamic/private";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./encrypt";
 
 const secret = env.SECRET;
 
-if (!secret) {
-	throw new Error("JWT_SECRET must be defined");
+if (!secret && !building) {
+	throw new Error("SECRET must be defined");
 }
 
 export interface Payload {
