@@ -6,5 +6,7 @@
       pkgs.libmysqlclient
 
       pkgs.ncurses # - required for mysql
+
+      pkgs.biome # - optional for formatting UI
     ];
 }
