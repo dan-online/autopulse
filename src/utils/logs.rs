@@ -1,3 +1,4 @@
+use crate::settings::app::LogLevel;
 use anyhow::{Context, Ok};
 use std::{io, path::PathBuf};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -5,16 +6,16 @@ use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub fn setup_logs(
-    log_level: String,
+    log_level: LogLevel,
     log_file: Option<PathBuf>,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = OffsetTime::local_rfc_3339()?;
 
     let collector = tracing_subscriber::registry()
         .with(
-            EnvFilter::default()
+            EnvFilter::from_default_env()
                 .add_directive(format!("autopulse={log_level}").parse()?)
-                .add_directive("actix_web=info".parse()?),
+                .add_directive("actix_web=trace".parse()?), // TODO: find a fix for this
         )
         .with(
             fmt::Layer::new()

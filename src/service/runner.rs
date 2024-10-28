@@ -8,7 +8,8 @@ use crate::{
         },
     },
     service::webhooks::WebhookManager,
-    utils::{settings::Settings, sify::sify},
+    settings::Settings,
+    utils::sify::sify,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::{path::PathBuf, sync::Arc};

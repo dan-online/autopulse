@@ -1,6 +1,6 @@
 use crate::{
     db::models::ScanEvent,
-    utils::settings::{Auth, TargetProcess},
+    settings::{auth::Auth, target::TargetProcess},
 };
 use reqwest::header;
 use serde::Deserialize;

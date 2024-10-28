@@ -1,7 +1,4 @@
-use crate::utils::{
-    rewrite::rewrite_path,
-    settings::{Rewrite, Timer},
-};
+use crate::settings::{rewrite::Rewrite, timer::Timer};
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
@@ -39,7 +36,7 @@ impl Notify {
         let mut path = path.unwrap().to_string_lossy().to_string();
 
         if let Some(rewrite) = &self.rewrite {
-            path = rewrite_path(path, rewrite);
+            path = rewrite.rewrite_path(path);
         }
 
         tx.send(path).map_err(|e| anyhow::anyhow!(e))

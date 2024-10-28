@@ -1,4 +1,4 @@
-use crate::utils::settings::Settings;
+use crate::settings::Settings;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 use tokio::sync::RwLock;
 use tracing::error;

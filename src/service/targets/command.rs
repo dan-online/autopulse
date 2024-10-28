@@ -1,4 +1,4 @@
-use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use serde::Deserialize;
 use tracing::{debug, error};
 

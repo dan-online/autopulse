@@ -16,7 +16,7 @@ pub enum ProcessStatus {
 
 /// Whether a file was found or not.
 ///
-/// Note: only used if [opts.check_path](crate::utils::settings::Opts::check_path) is set.
+/// Note: only used if [opts.check_path](crate::settings::Opts::check_path) is set.
 #[derive(Serialize)]
 pub enum FoundStatus {
     Found,
@@ -77,7 +77,7 @@ pub struct ScanEvent {
     /// The status of the file being found.
     pub found_status: String,
 
-    /// The number of times the scan event has failed. Used for retries and is limited to [opts.max_retries](crate::utils::settings::Opts::max_retries).
+    /// The number of times the scan event has failed. Used for retries and is limited to [opts.max_retries](crate::settings::Opts::max_retries).
     pub failed_times: i32,
     /// The time the scan event will be retried.
     pub next_retry_at: Option<chrono::NaiveDateTime>,

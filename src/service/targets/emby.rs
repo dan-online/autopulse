@@ -1,9 +1,6 @@
 use std::{collections::HashMap, fmt::Display, io::Cursor};
 
-use crate::{
-    db::models::ScanEvent,
-    utils::{default_true::default_true, settings::TargetProcess},
-};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use struson::{
@@ -11,6 +8,11 @@ use struson::{
     reader::{JsonReader, JsonStreamReader},
 };
 use tracing::{debug, error};
+
+#[doc(hidden)]
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Clone, Deserialize)]
 pub struct Emby {
