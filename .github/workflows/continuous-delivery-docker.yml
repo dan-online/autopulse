@@ -86,7 +86,9 @@ jobs:
           push: true
           tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
           file: Dockerfile.alpine
-          cache-from: type=gha
+          cache-from: |
+            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
+            type=gha
           cache-to: type=gha,mode=max
           build-args: |
             ENABLED_FEATURES=postgres
@@ -97,7 +99,9 @@ jobs:
           push: true
           tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
           file: Dockerfile.alpine
-          cache-from: type=gha
+          cache-from: |
+            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
+            type=gha
           cache-to: type=gha,mode=max
           build-args: |
             ENABLED_FEATURES=sqlite
