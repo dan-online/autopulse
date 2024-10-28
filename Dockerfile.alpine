@@ -6,8 +6,7 @@ WORKDIR /app
 
 # Plan out the build
 FROM chef AS planner
-COPY Cargo.toml .
-RUN mkdir -p src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs
+COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
