@@ -50,7 +50,7 @@ jobs:
             echo "PR number: ${{ github.event.number }}"
             echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
             echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          else if [ -n "${{ github.event.release.tag_name }}" ]; then
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Release tag: ${{ github.event.release.tag_name }}"
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
@@ -59,6 +59,7 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
             echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
+
         id: tag
 
       - name: Build and push (full)
