@@ -27,7 +27,7 @@ jobs:
           readme_file: 'README.md'
   
   build:
-    name: Docker Build & Push
+    name: Build & Push
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
