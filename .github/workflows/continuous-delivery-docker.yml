@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+  release:
+    types: [published]
 
 jobs:
   push_readme:
@@ -48,6 +50,10 @@ jobs:
             echo "PR number: ${{ github.event.number }}"
             echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
             echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          else if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Release tag: ${{ github.event.release.tag_name }}"
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
