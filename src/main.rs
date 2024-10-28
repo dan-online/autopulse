@@ -46,7 +46,7 @@ pub mod routes;
 /// - Environment variables
 ///   - `AUTOPULSE__{SECTION}__{KEY}` (e.g. `AUTOPULSE__APP__DATABASE_URL`)
 ///
-/// See [Settings](settings::Settings) for all options
+/// See [Settings] for all options
 pub mod settings;
 
 /// Database handler
