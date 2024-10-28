@@ -50,7 +50,7 @@ pub mod stats;
 /// - `limit`: The number of items to retrieve per page.
 /// - `sort`: The field to sort the results by. Can be one of `id`, `file_path`, `process_status`, `event_source`, `created_at`, or `updated_at`.
 ///
-/// See [ListQuery] for more information.
+/// See [list::ListQuery] for more information.
 ///
 /// # Responses
 ///
