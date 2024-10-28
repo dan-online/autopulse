@@ -6,8 +6,7 @@ WORKDIR /app
 
 # Plan out the build
 FROM chef AS planner
-COPY Cargo.toml .
-RUN mkdir -p src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs
+COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
@@ -41,9 +40,6 @@ COPY README.md README.md
 
 # Database support: postgres, sqlite
 ARG ENABLED_FEATURES="postgres,sqlite"
-
-# Add file to include
-ADD default.toml default.toml
 
 RUN cargo build --release --target x86_64-unknown-linux-musl --no-default-features --features ${ENABLED_FEATURES}
 

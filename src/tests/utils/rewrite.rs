@@ -1,19 +1,6 @@
-use super::settings::Rewrite;
-use regex::Regex;
-
-pub fn rewrite_path(path: String, rewrite: &Rewrite) -> String {
-    let from = &rewrite.from;
-    let to = &rewrite.to;
-
-    let from_regex = Regex::new(from).expect("Invalid regex in 'from' field");
-    let result = from_regex.replace(&path, to as &str).to_string();
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::settings::rewrite::Rewrite;
 
     #[test]
     fn test_rewrite_path_same() {
@@ -23,7 +10,7 @@ mod tests {
             to: "/testing".to_string(),
         };
 
-        let result = rewrite_path(path.clone(), &rewrite);
+        let result = rewrite.rewrite_path(path.clone());
 
         assert_eq!(result, path);
     }
@@ -36,7 +23,7 @@ mod tests {
             to: "/movies".to_string(),
         };
 
-        let result = rewrite_path(path, &rewrite);
+        let result = rewrite.rewrite_path(path);
 
         assert_eq!(result, "/movies/movie.mkv");
     }
@@ -49,7 +36,7 @@ mod tests {
             to: "/movies/".to_string(),
         };
 
-        let result = rewrite_path(path, &rewrite);
+        let result = rewrite.rewrite_path(path);
 
         assert_eq!(result, "/movies/movie.mkv");
     }
@@ -62,14 +49,14 @@ mod tests {
             to: "/movies/".to_string(),
         };
 
-        let result_1 = rewrite_path(path.clone(), &rewrite);
+        let result_1 = rewrite.rewrite_path(path.clone());
 
         let rewrite = Rewrite {
             from: "/testing/".to_string(),
             to: "/movies".to_string(),
         };
 
-        let result_2 = rewrite_path(path, &rewrite);
+        let result_2 = rewrite.rewrite_path(path);
 
         assert_eq!(result_1, "/movies//movie.mkv");
         assert_eq!(result_2, "/moviesmovie.mkv");
@@ -83,7 +70,7 @@ mod tests {
             to: "/movies/film$1".to_string(),
         };
 
-        let result = rewrite_path(path, &rewrite);
+        let result = rewrite.rewrite_path(path);
 
         assert_eq!(result, "/movies/film123.mkv");
     }

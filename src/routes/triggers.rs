@@ -1,7 +1,8 @@
 use crate::{
     db::models::{FoundStatus, NewScanEvent},
     service::{manager::PulseManager, triggers::manual::ManualQueryParams, webhooks::EventType},
-    utils::{check_auth::check_auth, rewrite::rewrite_path, settings::Trigger, sify::sify},
+    settings::trigger::Trigger,
+    utils::{check_auth::check_auth, sify::sify},
 };
 use actix_web::{
     get, post,
@@ -52,7 +53,7 @@ pub async fn trigger_post(
                 let (mut path, search) = path.clone();
 
                 if let Some(rewrite) = &rewrite {
-                    path = rewrite_path(path, rewrite);
+                    path = rewrite.rewrite_path(path);
                 }
 
                 let new_scan_event = NewScanEvent {
@@ -135,7 +136,8 @@ pub async fn trigger_get(
             let mut file_path = query.path.clone();
 
             if let Some(rewrite) = &trigger_settings.rewrite {
-                file_path = rewrite_path(file_path, rewrite);
+                // file_path = rewrite_path(file_path, rewrite);
+                file_path = rewrite.rewrite_path(file_path);
             }
 
             let new_scan_event = NewScanEvent {

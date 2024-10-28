@@ -5,7 +5,7 @@
 //! - **[Triggers](service::triggers)**: Create triggers that will be executed by a service when a certain event occurs
 //! - **[Targets](service::targets)**: Create targets that will be scanned by a service
 //! - **[Webhooks](service::webhooks)**: Send webhooks to services to notify them of an event
-//! - **[Settings](utils::settings)**: Settings handler
+//! - **[Settings](settings)**: Settings handler
 //! - **[Database](db::conn::AnyConnection)**: Database handler
 //!
 //! ## About
@@ -23,18 +23,31 @@ use routes::status::status;
 use routes::triggers::trigger_post;
 use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
+use settings::Settings;
 use std::sync::Arc;
 use tracing::info;
 use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
-use utils::settings::Settings;
 
 #[doc(hidden)]
 mod tests;
 
 /// Web server routes
 pub mod routes;
+
+/// Settings configuration
+///
+/// Used to configure the service.
+///
+/// Can be defined in 2 ways:
+/// - Config file
+///   - `config.{json,toml,yaml,json5,ron,ini}` in the current directory
+/// - Environment variables
+///   - `AUTOPULSE__{SECTION}__{KEY}` (e.g. `AUTOPULSE__APP__DATABASE_URL`)
+///
+/// See [Settings] for all options
+pub mod settings;
 
 /// Database handler
 pub mod db;
@@ -102,7 +115,7 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 }
 
 #[doc(hidden)]
-fn main() -> anyhow::Result<()> {
+pub fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;

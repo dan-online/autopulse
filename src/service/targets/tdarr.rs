@@ -1,7 +1,7 @@
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 
-use crate::{db::models::ScanEvent, utils::settings::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 
 #[derive(Deserialize, Clone)]
 pub struct Tdarr {

@@ -10,7 +10,7 @@ use crate::{
         models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
         schema::scan_events::{dsl::scan_events, found_status, process_status},
     },
-    utils::settings::{Settings, Trigger},
+    settings::{trigger::Trigger, Settings},
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use std::sync::Arc;

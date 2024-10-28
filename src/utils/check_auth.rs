@@ -1,4 +1,4 @@
-use super::settings::Settings;
+use crate::settings::Settings;
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
 pub fn check_auth(auth: &BasicAuth, settings: &Settings) -> bool {

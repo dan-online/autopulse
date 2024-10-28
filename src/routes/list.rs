@@ -8,11 +8,16 @@ use std::sync::Arc;
 
 #[derive(Deserialize)]
 #[serde(default)]
-struct ListQuery {
+pub struct ListQuery {
+    /// The number of items to retrieve per page. (default: 10)
     limit: u8,
+    /// The page number to retrieve. (default: 1)
     page: u64,
+    /// The field to sort the results by. Can be one of `id`, `file_path`, `process_status`, `event_source`, `created_at`, or `updated_at`.
     sort: Option<String>,
+    /// Filter the scan events by process status. Can be one of `pending`, `complete`, `retry`, or `failed`.
     status: Option<String>,
+    /// Filter the scan events by a search query.
     search: Option<String>,
 }
 

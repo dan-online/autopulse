@@ -84,6 +84,6 @@ regex = "1.10.6"
 clap = { version = "4.5.18", features = ["derive"] }
 clap_derive = { version = "4.5.18" }
 
-[dev-dependencies]
-# Standardize logging output
-tracing-test = "0.2.5"
+# [dev-dependencies]
+# # Standardize logging output
+# tracing-test = "0.2.5"

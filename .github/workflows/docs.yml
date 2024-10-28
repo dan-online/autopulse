@@ -35,13 +35,13 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Clean docs folder
         run: cargo clean --doc
 
       - name: Build docs
-        run: cargo doc --no-deps
+        run: cargo doc --no-deps --release
 
       - name: Add redirect
         run: |
@@ -59,3 +59,6 @@ jobs:
           directory: target/doc
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           productionBranch: main
+      
+      - name: Clean docs folder
+        run: cargo clean --doc

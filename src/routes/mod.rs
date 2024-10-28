@@ -50,11 +50,11 @@ pub mod stats;
 /// - `limit`: The number of items to retrieve per page.
 /// - `sort`: The field to sort the results by. Can be one of `id`, `file_path`, `process_status`, `event_source`, `created_at`, or `updated_at`.
 ///
-/// See [ListQuery](list::ListQuery) for more information.
+/// See [list::ListQuery] for more information.
 ///
 /// # Responses
 ///
-/// - **200 OK**: Returns a [ListResponse](list::ListResponse) object containing the list of scan events.
+/// - **200 OK**: Returns a list of [ScanEvent](crate::db::models::ScanEvent) objects.
 /// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod list;
 
