@@ -9,27 +9,81 @@ use trigger::Trigger;
 use webhook::Webhook;
 
 /// App-specific settings
+///
+/// Example:
+///
+/// ```yml
+/// app:
+///   hostname: 0.0.0.0
+///   port: 1234
+///   database_url: sqlite://autopulse.db
+///   log_level: debug
+/// ```
 pub mod app;
 
 /// Authentication settings
+///
+/// Example:
+///
+/// ```yml
+/// auth:
+///   username: terry
+///   password: yogurt
+/// ```
 pub mod auth;
 
 /// Global settings
+///
+/// Example:
+///
+/// ```yml
+/// opts:
+///   check_path: true
+///   max_retries: 10
+///   default_timer_wait: 300
+///   cleanup_days: 7
+/// ```
 pub mod opts;
 
-/// Rewrite structure
+/// Rewrite structure for triggers
+///
+/// Example:
+///
+/// ```yml
+/// triggers:
+///   sonarr:
+///     type: sonarr
+///     rewrite:
+///       from: /tv
+///       to: /media/tv
 pub mod rewrite;
 
-/// Timer structure
+/// Timer structure for triggers
+///
+/// Example:
+///
+/// ```yml
+/// triggers:
+///  sonarr:
+///   type: sonarr
+///   timer:
+///    wait: 300 # wait 5 minutes before processing
+/// ```
 pub mod timer;
 
 /// Trigger structure
+///
+/// [Triggers](crate::service::triggers) for the service
 pub mod trigger;
 
 /// Target structure
+///
+/// [Targets](crate::service::targets) for the service
 pub mod target;
 
 /// Webhook structure
+///
+/// [Webhooks](crate::service::webhooks) for the service
 pub mod webhook;
 
 /// autopulse settings

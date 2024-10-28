@@ -15,7 +15,6 @@ pub trait TargetProcess {
     ) -> impl std::future::Future<Output = anyhow::Result<Vec<String>>> + Send;
 }
 
-/// [Targets](crate::service::targets) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {

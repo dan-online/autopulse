@@ -18,7 +18,6 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
-/// [Triggers](crate::service::triggers) for the service
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {

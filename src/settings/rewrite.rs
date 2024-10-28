@@ -1,17 +1,6 @@
 use regex::Regex;
 use serde::Deserialize;
 
-/// Rewrite structure for triggers
-///
-/// Example:
-///
-/// ```yml
-/// triggers:
-///   sonarr:
-///     type: sonarr
-///     rewrite:
-///       from: /tv
-///       to: /media/tv
 #[derive(Deserialize, Clone)]
 pub struct Rewrite {
     /// Path to rewrite from

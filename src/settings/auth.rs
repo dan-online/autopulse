@@ -11,15 +11,6 @@ fn default_password() -> String {
     "password".to_string()
 }
 
-/// Authentication settings
-///
-/// Example:
-///
-/// ```yml
-/// auth:
-///   username: terry
-///   password: yogurt
-/// ```
 #[derive(Deserialize, Clone, Debug)]
 pub struct Auth {
     /// Username for basic auth (default: admin)

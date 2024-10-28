@@ -21,17 +21,6 @@ fn default_cleanup_days() -> u64 {
     10
 }
 
-/// Global settings
-///
-/// Example:
-///
-/// ```yml
-/// opts:
-///   check_path: true
-///   max_retries: 10
-///   default_timer_wait: 300
-///   cleanup_days: 7
-/// ```
 #[derive(Deserialize, Clone)]
 pub struct Opts {
     /// Check if the path exists before processing (default: false)

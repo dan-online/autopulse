@@ -36,7 +36,7 @@ mod tests;
 /// Web server routes
 pub mod routes;
 
-/// Settings
+/// Settings configuration
 ///
 /// Used to configure the service.
 ///

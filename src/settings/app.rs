@@ -20,11 +20,12 @@ fn default_log_level() -> LogLevel {
     LogLevel::default()
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Trace,
     Debug,
+    #[default]
     Info,
     Warn,
     Error,
@@ -57,23 +58,6 @@ impl std::str::FromStr for LogLevel {
     }
 }
 
-impl Default for LogLevel {
-    fn default() -> Self {
-        LogLevel::Info
-    }
-}
-
-/// App-specific settings
-///
-/// Example:
-///
-/// ```yml
-/// app:
-///   hostname: 0.0.0.0
-///   port: 1234
-///   database_url: sqlite://autopulse.db
-///   log_level: debug
-/// ```
 #[derive(Deserialize, Clone)]
 pub struct App {
     /// Hostname to bind to, (default: 0.0.0.0)
