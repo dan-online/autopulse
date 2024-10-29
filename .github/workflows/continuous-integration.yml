@@ -63,6 +63,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-x86_64-unknown-linux-musl-
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run: cargo build --release
