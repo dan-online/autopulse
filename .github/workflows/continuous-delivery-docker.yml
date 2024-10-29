@@ -56,6 +56,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-release-delivery-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Pull Request suffix
         run: |
           if [ -n "${{ github.event.number }}" ]; then
@@ -93,7 +103,7 @@ jobs:
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
-        if: matrix.feature == 'full'
+        if: matrix.feature != 'full'
         with:
           command: build
           target: ${{ matrix.platform.target }}
