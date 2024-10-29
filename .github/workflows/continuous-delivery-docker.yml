@@ -148,7 +148,15 @@ jobs:
           args: "--locked --release --features vendored"
           strip: true
 
-      - name: Build binary
+      - name: Test
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature != 'full'
+        with:
+          command: test
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+
+      - name: Build
         uses: houseabsolute/actions-rust-cross@v0
         if: matrix.feature != 'full'
         with:
