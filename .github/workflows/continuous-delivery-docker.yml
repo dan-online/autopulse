@@ -26,6 +26,33 @@ jobs:
           short_description: '💫 bridge your media server'
           readme_file: 'README.md'
   
+  build_ui:
+    name: Build UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull Request suffix
+        run: |
+          if [ -n "${{ github.event.number }}" ]; then
+            echo "PR number: ${{ github.event.number }}"
+            echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Release tag: ${{ github.event.release.tag_name }}"
+            echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a PR branch"
+            echo "uitag=ui" >> "$GITHUB_OUTPUT"
+          fi
+        id: tag
+      - name: Build and push (ui)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+          context: ui/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
     runs-on: ubuntu-latest
@@ -64,33 +91,22 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-release-delivery-${{ hashFiles('**/Cargo.lock') }}
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Pull Request suffix
         run: |
           if [ -n "${{ github.event.number }}" ]; then
             echo "PR number: ${{ github.event.number }}"
             echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-            echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Release tag: ${{ github.event.release.tag_name }}"
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
-            echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
         id: tag
-
-      - name: Build and push (ui)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
-          context: ui/
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
@@ -107,7 +123,7 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored,${{ matrix.feature }}"
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
           strip: true
 
       # "latest-platform?" tag, full feature-set
