@@ -157,6 +157,10 @@ jobs:
           args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}"
           strip: true
 
+      - name: Copy binary
+        run: |
+          cp target/${{ matrix.platform.target }}/release/autopulse ./autopulse
+
       # "latest-platform?" tag, full feature-set
       - name: Create Docker Image
         uses: docker/build-push-action@v6
@@ -165,8 +169,6 @@ jobs:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-          build-args: |
-            TARGET=${{ matrix.platform.target }}
           platforms: ${{ matrix.platform.name }}
 
       # "feature-platform?" tag, selected feature-set
@@ -177,6 +179,4 @@ jobs:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
-          build-args: |
-            TARGET=${{ matrix.platform.target }}
           platforms: ${{ matrix.platform.name }}
