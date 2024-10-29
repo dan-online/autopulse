@@ -151,7 +151,9 @@ jobs:
           push: true
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-          cache-to: type=gha,mode=max
+          build-args: |
+            TARGET=${{ matrix.platform.target }}
+          platforms: ${{ matrix.platform.name }}
 
       # "feature-platform?" tag, selected feature-set
       - name: Build and push
@@ -162,7 +164,5 @@ jobs:
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           build-args: |
-            ENABLED_FEATURES=${{ matrix.feature }}
             TARGET=${{ matrix.platform.target }}
-            BUILD_IMAGE=${{ matrix.platform.build_image }}
           platforms: ${{ matrix.platform.name }}
