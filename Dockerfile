@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM alpine AS runtime
 
-ARG TARGET "x86_64-unknown-linux-musl"
+ARG TARGET="x86_64-unknown-linux-musl"
 
 WORKDIR /app
 

@@ -57,7 +57,7 @@ jobs:
             echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
         id: tag
-        
+
       - name: Build and push (ui)
         uses: docker/build-push-action@v6
         with:
@@ -145,7 +145,7 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored"
+          args: "--locked --release --features vendored --target ${{ matrix.platform.target }}"
           strip: true
 
       - name: Build binary
@@ -154,7 +154,7 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}"
           strip: true
 
       # "latest-platform?" tag, full feature-set
