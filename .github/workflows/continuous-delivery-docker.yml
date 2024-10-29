@@ -38,11 +38,9 @@ jobs:
         platform:
           - name: linux/amd64
             target: x86_64-unknown-linux-musl
-            build_image: clux/muslrust:stable
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
-            build_image: clux/muslrust:arm64-1.81.0-stable-2024-10-09
     steps:
       - uses: actions/checkout@v4
 
@@ -73,66 +71,55 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
             echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
-
         id: tag
 
-      # - name: Build and push
-      #   uses: docker/build-push-action@v6
-      #   if: matrix.feature == 'full' && matrix.arch.build == 'clux/muslrust:stable'
-      #   with:
-      #     push: true
-      #     tags: |
-      #       danonline/autopulse:${{ steps.tag.outputs.tag }}
-      #     file: Dockerfile.alpine
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
-
-      # - name: Build and push (ui)
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: true
-      #     tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
-      #     context: ui/
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max)
-        
-      # - name: Build and push
-      #   uses: docker/build-push-action@v6
-      #   if: matrix.feature == 'full'
-      #   with:
-      #     push: true
-      #     tags: |
-      #       danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-      #     file: Dockerfile.alpine
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
-      #     platforms: ${{ matrix.platform.name }}
-      #     build-args: |
-      #       TARGET=${{ matrix.platform.target }}
-      #       BUILD_IMAGE=${{ matrix.platform.build_image }}
-
-      # - name: Build and push
-      #   uses: docker/build-push-action@v6
-      #   if: matrix.feature != 'full'
-      #   with:
-      #     push: true
-      #     tags: |
-      #       danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
-      #     file: Dockerfile.alpine
-      #     cache-from: |
-      #       type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
-      #       type=gha
-      #     # cache-to: type=gha,mode=max
-      #     build-args: |
-      #       ENABLED_FEATURES=${{ matrix.feature }}
-      #       TARGET=${{ matrix.platform.target }}
-      #       BUILD_IMAGE=${{ matrix.platform.build_image }}
-      #     platforms: ${{ matrix.platform.name }}
+      - name: Build and push (ui)
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+          context: ui/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature == 'full'
         with:
           command: build
           target: ${{ matrix.platform.target }}
           args: "--locked --release --features vendored"
           strip: true
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature == 'full'
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --features vendored,${{ matrix.feature }}"
+          strip: true
+
+      # "latest-platform?" tag, full feature-set
+      - name: Create Docker Image
+        uses: docker/build-push-action@v6
+        if: matrix.feature == 'full'
+        with:
+          push: true
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+          cache-to: type=gha,mode=max
+
+      # "feature-platform?" tag, selected feature-set
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        if: matrix.feature != 'full'
+        with:
+          push: true
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+          build-args: |
+            ENABLED_FEATURES=${{ matrix.feature }}
+            TARGET=${{ matrix.platform.target }}
+            BUILD_IMAGE=${{ matrix.platform.build_image }}
+          platforms: ${{ matrix.platform.name }}
