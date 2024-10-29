@@ -170,6 +170,7 @@ jobs:
         if: matrix.feature == 'full'
         with:
           push: true
+          context: .
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
@@ -180,6 +181,7 @@ jobs:
         if: matrix.feature != 'full'
         with:
           push: true
+          context: .
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
