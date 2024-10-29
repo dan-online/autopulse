@@ -145,7 +145,7 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored --target ${{ matrix.platform.target }}"
+          args: "--locked --release --features vendored"
           strip: true
 
       - name: Build binary
@@ -154,12 +154,15 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}"
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
           strip: true
 
       - name: Copy binary
         run: |
           cp target/${{ matrix.platform.target }}/release/autopulse ./autopulse
+
+          file ./autopulse
+          ls target/${{ matrix.platform.target }}/release/
 
       # "latest-platform?" tag, full feature-set
       - name: Create Docker Image
