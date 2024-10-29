@@ -76,63 +76,63 @@ jobs:
 
         id: tag
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        if: matrix.feature == 'full' && matrix.arch.build == 'clux/muslrust:stable'
-        with:
-          push: true
-          tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push (ui)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
-          context: ui/
-          cache-from: type=gha
-          cache-to: type=gha,mode=max)
-        
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        if: matrix.feature == 'full'
-        with:
-          push: true
-          tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: ${{ matrix.platform.name }}
-          build-args: |
-            TARGET=${{ matrix.platform.target }}
-            BUILD_IMAGE=${{ matrix.platform.build_image }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        if: matrix.feature != 'full'
-        with:
-          push: true
-          tags: |
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
-          file: Dockerfile.alpine
-          cache-from: |
-            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
-            type=gha
-          # cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=${{ matrix.feature }}
-            TARGET=${{ matrix.platform.target }}
-            BUILD_IMAGE=${{ matrix.platform.build_image }}
-          platforms: ${{ matrix.platform.name }}
-
-      # - name: Build binary
-      #   uses: houseabsolute/actions-rust-cross@v0
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   if: matrix.feature == 'full' && matrix.arch.build == 'clux/muslrust:stable'
       #   with:
-      #     command: build
-      #     target: ${{ matrix.platform.target }}
-      #     args: "--locked --release"
-      #     strip: true
+      #     push: true
+      #     tags: |
+      #       danonline/autopulse:${{ steps.tag.outputs.tag }}
+      #     file: Dockerfile.alpine
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+
+      # - name: Build and push (ui)
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     push: true
+      #     tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+      #     context: ui/
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max)
+        
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   if: matrix.feature == 'full'
+      #   with:
+      #     push: true
+      #     tags: |
+      #       danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+      #     file: Dockerfile.alpine
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+      #     platforms: ${{ matrix.platform.name }}
+      #     build-args: |
+      #       TARGET=${{ matrix.platform.target }}
+      #       BUILD_IMAGE=${{ matrix.platform.build_image }}
+
+      # - name: Build and push
+      #   uses: docker/build-push-action@v6
+      #   if: matrix.feature != 'full'
+      #   with:
+      #     push: true
+      #     tags: |
+      #       danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+      #     file: Dockerfile.alpine
+      #     cache-from: |
+      #       type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
+      #       type=gha
+      #     # cache-to: type=gha,mode=max
+      #     build-args: |
+      #       ENABLED_FEATURES=${{ matrix.feature }}
+      #       TARGET=${{ matrix.platform.target }}
+      #       BUILD_IMAGE=${{ matrix.platform.build_image }}
+      #     platforms: ${{ matrix.platform.name }}
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --features vendored"
+          strip: true
