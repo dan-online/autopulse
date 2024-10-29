@@ -12,11 +12,12 @@ vendored = [
     "pq-sys/bundled",
     "libsqlite3-sys/bundled",
 ]
-default = ["postgres", "sqlite"] # disable actix-web's zstd feature
+default = ["postgres", "sqlite"]
 
 [dependencies]
 # Web framework
 actix-web = { version = "4.9.0", default-features = false, features = [
+    # disable actix-web's zstd feature because it can't be vendored yet
     "compat",
     "compress-brotli",
     "compress-gzip",
