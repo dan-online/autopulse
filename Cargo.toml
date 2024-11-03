@@ -16,7 +16,16 @@ default = ["postgres", "sqlite"]
 
 [dependencies]
 # Web framework
-actix-web = "4.9.0"
+actix-web = { version = "4.9.0", default-features = false, features = [
+    # disable actix-web's zstd feature because it can't be vendored yet
+    "compat",
+    "compress-brotli",
+    "compress-gzip",
+    "cookies",
+    "http2",
+    "macros",
+    "unicode",
+] }
 actix-web-httpauth = "0.8.2"
 
 # Error handling

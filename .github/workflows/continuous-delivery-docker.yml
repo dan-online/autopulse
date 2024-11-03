@@ -10,12 +10,12 @@ on:
 
 jobs:
   push_readme:
-    name: Push README to Docker hub
+    name: Push README to Docker Hub
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - name: push README to Dockerhub
+      - name: Push README to Docker Hub
         uses: christian-korneck/update-container-description-action@v1
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -26,8 +26,8 @@ jobs:
           short_description: '💫 bridge your media server'
           readme_file: 'README.md'
   
-  build:
-    name: Build & Push
+  build_ui:
+    name: Build UI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,28 +48,15 @@ jobs:
         run: |
           if [ -n "${{ github.event.number }}" ]; then
             echo "PR number: ${{ github.event.number }}"
-            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
             echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Release tag: ${{ github.event.release.tag_name }}"
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
             echo "uitag=ui" >> "$GITHUB_OUTPUT"
           fi
-
         id: tag
-
-      - name: Build and push (full)
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}
-          file: Dockerfile.alpine
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build and push (ui)
         uses: docker/build-push-action@v6
@@ -80,37 +67,138 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push (postgres)
+  build:
+    name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - full
+          - postgres
+          - sqlite
+        platform:
+          - name: linux/amd64
+            target: x86_64-unknown-linux-musl
+          - name: linux/arm64
+            target: aarch64-unknown-linux-musl
+            tag: -arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Cargo Cache
+        if: matrix.feature == 'full'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-full-
+
+      - name: Cargo Cache
+        if: matrix.feature != 'full'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-full-
+
+      - name: Pull Request suffix
+        run: |
+          if [ -n "${{ github.event.number }}" ]; then
+            echo "PR number: ${{ github.event.number }}"
+            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Release tag: ${{ github.event.release.tag_name }}"
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a PR branch"
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+        id: tag
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature == 'full'
+        with:
+          command: test
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --features vendored"
+          strip: true
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature == 'full'
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --features vendored"
+          strip: true
+
+      - name: Test
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature != 'full'
+        with:
+          command: test
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+
+      - name: Build
+        uses: houseabsolute/actions-rust-cross@v0
+        if: matrix.feature != 'full'
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+          strip: true
+
+      - name: Copy binary
+        run: |
+          cp target/${{ matrix.platform.target }}/release/autopulse ./autopulse
+
+          file ./autopulse
+          ls target/${{ matrix.platform.target }}/release/
+
+      # "latest-platform?" tag, full feature-set
+      - name: Create Docker Image
         uses: docker/build-push-action@v6
+        if: matrix.feature == 'full'
         with:
           push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
-          file: Dockerfile.alpine
-          cache-from: |
-            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
-            type=gha
-          # cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=postgres
+          context: .
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+          platforms: ${{ matrix.platform.name }}
 
-      - name: Build and push (sqlite)
+      # "feature-platform?" tag, selected feature-set
+      - name: Build and push
         uses: docker/build-push-action@v6
+        if: matrix.feature != 'full'
         with:
           push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
-          file: Dockerfile.alpine
-          cache-from: |
-            type=registry,ref=danonline/autopulse:${{ steps.tag.outputs.tag }}
-            type=gha
-          # cache-to: type=gha,mode=max
-          build-args: |
-            ENABLED_FEATURES=sqlite
-
-      # - name: Build and push (latest-ubuntu)
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     push: true
-      #     tags: danonline/autopulse:latest-ubuntu
-      #     file: Dockerfile
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+          context: .
+          tags: |
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+          platforms: ${{ matrix.platform.name }}

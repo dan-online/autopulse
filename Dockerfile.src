@@ -1,0 +1,41 @@
+# Install cargo-chef for a base step
+ARG BUILD_IMAGE=clux/muslrust:stable
+FROM --platform=$BUILDPLATFORM ${BUILD_IMAGE} AS chef
+USER root
+RUN cargo install cargo-chef
+WORKDIR /app
+
+# Plan out the build
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+
+COPY --from=planner /app/recipe.json recipe.json
+
+# Database support: postgres, sqlite
+ARG ENABLED_FEATURES="postgres,sqlite"
+ARG TARGET="x86_64-unknown-linux-musl"
+
+RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
+
+# Compile dependencies
+COPY Cargo.toml Cargo.lock ./
+
+# Copy source and build
+COPY src src
+COPY migrations migrations
+COPY README.md README.md
+
+RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+
+RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
+
+FROM --platform=$BUILDPLATFORM alpine AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /tmp/autopulse /usr/local/bin/
+
+CMD ["/usr/local/bin/autopulse"]
