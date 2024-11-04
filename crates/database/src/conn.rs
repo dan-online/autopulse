@@ -49,6 +49,7 @@ pub enum AnyConnection {
     /// ```
     /// mysql://user:password@localhost:3306/database
     /// ```
+    #[cfg(feature = "mysql")]
     Mysql(diesel::MysqlConnection),
     /// A connection to a SQLite database.
     ///
