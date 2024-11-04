@@ -74,6 +74,18 @@ The easiest way to get started with autopulse is to use the provided [docker ima
 - `latest-sqlite` - smaller image that only supports SQLite
 - `ui` - self-hostable UI for autopulse
 
+##### arm64
+
+Append `-arm64` to the tag to get the arm64 image
+
+- `latest-arm64` - full image with support for postgres/sqlite
+- `latest-arm64-postgres` - smaller image that only supports Postgres
+- `latest-arm64-sqlite` - smaller image that only supports SQLite
+
+One exception is the `ui` tag which is a joint image for both architectures
+
+- `ui`
+
 #### Compose
 
 > Here is a sample [docker-compose.yml](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml)
