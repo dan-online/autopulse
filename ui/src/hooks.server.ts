@@ -9,12 +9,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		: null;
 
 	const start = performance.now();
-	
+
 	const result = await resolve(event);
 
 	const end = performance.now();
 
-	console.log(`${new Date().toISOString()} [${event.request.method}] - ${result.status} ${event.url.toString()} - ${(end - start).toFixed(3)}ms`);
+	console.log(
+		`${new Date().toISOString()} [${event.request.method}] - ${result.status} ${event.url.toString()} - ${(end - start).toFixed(3)}ms`,
+	);
 
 	return result;
 };
