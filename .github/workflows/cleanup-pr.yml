@@ -28,7 +28,7 @@ jobs:
             pr_number="${{ github.event.number }}"
           fi
 
-          features=(full postgres sqlite)
+          features=(full postgres sqlite mysql)
           tags=(none arm64)
 
           docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} \
