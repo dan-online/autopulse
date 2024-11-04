@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 };
 
 export const actions: Actions = {
-	check: async ({ request, cookies, url }) => {
+	default: async ({ request, cookies, url }) => {
 		const formData = await request.formData();
 
 		const serverUrl = formData.get("server-url") as string;

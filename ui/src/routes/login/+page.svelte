@@ -32,7 +32,6 @@ $: error = form?.error;
         <form
             class="space-y-6"
             method="POST"
-            action="?/check"
             use:enhance={() => {
                 loading = true;
 

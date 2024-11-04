@@ -8,5 +8,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		? await verify(authCookie).catch(() => null)
 		: null;
 
-	return resolve(event);
+	const start = performance.now();
+	
+	const result = await resolve(event);
+
+	const end = performance.now();
+
+	console.log(`${new Date().toISOString()} [${event.request.method}] - ${result.status} ${event.url.toString()} - ${(end - start).toFixed(3)}ms`);
+
+	return result;
 };
