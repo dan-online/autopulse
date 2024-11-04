@@ -74,6 +74,7 @@
             ++ pkgs.lib.optionals (pkgs.lib.elem "sqlite" features) [
               pkgs.libmysqlclient
               pkgs.ncurses
+              pkgs.cmake
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
