@@ -25,6 +25,7 @@ services:
   #     - 2880:2880
   #   environment:
   #     # SECRET: your_secret_here # Optional to prevent being logged out when the container restarts
+  #     # ORIGIN: http://localhost:2880 # Possibly required if you're accessing via ip, see: https://github.com/dan-online/autopulse/issues/85#issuecomment-2454446338
   #   # networks: # If you want to use an internal autopulse network, ex. http://autopulse:2875
   #   #   - db
 
