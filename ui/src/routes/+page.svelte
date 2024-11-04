@@ -1,7 +1,7 @@
 <script lang="ts">
 import { goto, invalidateAll } from "$app/navigation";
 import { page } from "$app/stores";
-import { type ComponentType, onMount } from "svelte";
+import { type Component, onMount } from "svelte";
 
 import CiSearchMagnifyingGlass from "~icons/ci/search-magnifying-glass";
 import HugeiconsPackageDelivered from "~icons/hugeicons/package-delivered";
@@ -16,7 +16,7 @@ let searchLoading = false;
 // if anyone clicks the magnifying glass, let them bypass the search limit
 let limiter = true;
 
-const iconMap: Record<string, ComponentType> = {
+const iconMap: Record<string, Component> = {
 	total: MaterialSymbolsFileCopyOutlineRounded,
 	found: CiSearchMagnifyingGlass,
 	processed: HugeiconsPackageDelivered,
