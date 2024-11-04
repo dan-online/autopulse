@@ -59,15 +59,10 @@ tracing-appender = "0.2.3"
 
 
 # Database
-diesel = { version = "2.2.4", features = [
-    "returning_clauses_for_sqlite_3_35",
-    "r2d2",
-    "chrono",
-] }
-diesel_migrations = { version = "2.2.0" }
-pq-sys = "0.6.3"
-mysqlclient-sys = "0.4.1"
-libsqlite3-sys = "0.30.1"
+pq-sys = { version = "0.6.3", optional = true }
+mysqlclient-sys = { version = "0.4.1", optional = true }
+libsqlite3-sys = { version = "0.30.1", optional = true }
+
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }
 

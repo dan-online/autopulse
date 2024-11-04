@@ -1,4 +1,0 @@
-[target.x86_64-unknown-linux-musl]
-pre-build = [
-    "apt update -y && apt install -y musl-tools && ln -s /usr/bin/x86_64-linux-musl-gcc /usr/bin/musl-gcc",
-]
