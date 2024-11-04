@@ -5,9 +5,9 @@ edition = "2021"
 build = "src/build.rs"
 
 [features]
-postgres = ["diesel/postgres", "diesel_migrations/postgres"]
-sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
-mysql = ["diesel/mysql", "diesel_migrations/mysql"]
+postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
+sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql", "dep:mysqlclient-sys"]
 vendored_postgres = ["pq-sys/bundled"]
 vendored_sqlite = ["libsqlite3-sys/bundled"]
 vendored_mysql = ["mysqlclient-sys/bundled"]
@@ -60,9 +60,11 @@ diesel = { version = "2.2.4", features = [
     "chrono",
 ] }
 diesel_migrations = { version = "2.2.0" }
-pq-sys = "0.6.3"
-mysqlclient-sys = "0.4.1"
-libsqlite3-sys = "0.30.1"
+
+# Database drivers
+pq-sys = { version = "0.6.3", optional = true }
+mysqlclient-sys = { version = "0.4.1", optional = true }
+libsqlite3-sys = { version = "0.30.1", optional = true }
 
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }
