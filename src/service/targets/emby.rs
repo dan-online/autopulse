@@ -10,7 +10,7 @@ use struson::{
 use tracing::{debug, error};
 
 #[doc(hidden)]
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 

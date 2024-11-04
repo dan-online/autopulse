@@ -48,7 +48,7 @@ pub fn setup_logs(
         let console_layer = fmt::layer()
             .with_writer(std::io::stdout)
             .with_ansi(true)
-            .with_timer(timer.clone());
+            .with_timer(timer);
 
         registry.with(console_layer).init();
     }

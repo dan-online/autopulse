@@ -6,7 +6,7 @@ fn default_hostname() -> String {
 }
 
 #[doc(hidden)]
-fn default_port() -> u16 {
+const fn default_port() -> u16 {
     2875
 }
 
@@ -34,11 +34,11 @@ pub enum LogLevel {
 impl std::fmt::Display for LogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            LogLevel::Trace => write!(f, "trace"),
-            LogLevel::Debug => write!(f, "debug"),
-            LogLevel::Info => write!(f, "info"),
-            LogLevel::Warn => write!(f, "warn"),
-            LogLevel::Error => write!(f, "error"),
+            Self::Trace => write!(f, "trace"),
+            Self::Debug => write!(f, "debug"),
+            Self::Info => write!(f, "info"),
+            Self::Warn => write!(f, "warn"),
+            Self::Error => write!(f, "error"),
         }
     }
 }
@@ -48,11 +48,11 @@ impl std::str::FromStr for LogLevel {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "trace" => Ok(LogLevel::Trace),
-            "debug" => Ok(LogLevel::Debug),
-            "info" => Ok(LogLevel::Info),
-            "warn" => Ok(LogLevel::Warn),
-            "error" => Ok(LogLevel::Error),
+            "trace" => Ok(Self::Trace),
+            "debug" => Ok(Self::Debug),
+            "info" => Ok(Self::Info),
+            "warn" => Ok(Self::Warn),
+            "error" => Ok(Self::Error),
             _ => Err("Invalid log level".to_string()),
         }
     }
@@ -76,7 +76,7 @@ pub struct App {
 
 impl Default for App {
     fn default() -> Self {
-        App {
+        Self {
             hostname: default_hostname(),
             port: default_port(),
             database_url: default_database_url(),

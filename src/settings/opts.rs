@@ -2,22 +2,22 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 #[doc(hidden)]
-fn default_check_path() -> bool {
+const fn default_check_path() -> bool {
     false
 }
 
 #[doc(hidden)]
-fn default_max_retries() -> i32 {
+const fn default_max_retries() -> i32 {
     5
 }
 
 #[doc(hidden)]
-fn default_default_timer_wait() -> u64 {
+const fn default_default_timer_wait() -> u64 {
     60
 }
 
 #[doc(hidden)]
-fn default_cleanup_days() -> u64 {
+const fn default_cleanup_days() -> u64 {
     10
 }
 
@@ -45,7 +45,7 @@ pub struct Opts {
 
 impl Default for Opts {
     fn default() -> Self {
-        Opts {
+        Self {
             check_path: default_check_path(),
             max_retries: default_max_retries(),
             default_timer_wait: default_default_timer_wait(),

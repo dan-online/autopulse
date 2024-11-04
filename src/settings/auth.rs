@@ -23,7 +23,7 @@ pub struct Auth {
 
 impl Default for Auth {
     fn default() -> Self {
-        Auth {
+        Self {
             username: default_username(),
             password: default_password(),
         }

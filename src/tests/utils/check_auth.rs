@@ -11,7 +11,7 @@ mod tests {
         ));
         let settings: Settings = serde_json::from_str("{}")?;
 
-        assert_eq!(check_auth(&auth, &settings), true);
+        assert!(check_auth(&auth, &settings));
 
         Ok(())
     }
@@ -21,7 +21,7 @@ mod tests {
         let auth = BasicAuth::from(Basic::new("username".to_string(), Some("".to_string())));
         let settings: Settings = serde_json::from_str("{}")?;
 
-        assert_eq!(check_auth(&auth, &settings), false);
+        assert!(!check_auth(&auth, &settings));
 
         Ok(())
     }
@@ -34,7 +34,7 @@ mod tests {
         ));
         let settings: Settings = serde_json::from_str("{\"auth\":{\"username\":\"username\"}}")?;
 
-        assert_eq!(check_auth(&auth, &settings), true);
+        assert!(check_auth(&auth, &settings));
 
         Ok(())
     }
@@ -44,7 +44,7 @@ mod tests {
         let auth = BasicAuth::from(Basic::new("admin".to_string(), Some("pass".to_string())));
         let settings: Settings = serde_json::from_str("{\"auth\":{\"password\":\"pass\"}}")?;
 
-        assert_eq!(check_auth(&auth, &settings), true);
+        assert!(check_auth(&auth, &settings));
 
         Ok(())
     }
