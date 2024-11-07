@@ -36,7 +36,7 @@ impl Default for ListQuery {
 #[get("/list")]
 pub async fn list(
     manager: Data<Arc<PulseManager>>,
-    auth: BasicAuth,
+    auth: Option<BasicAuth>,
     query: web::Query<ListQuery>,
 ) -> Result<impl Responder> {
     if !check_auth(&auth, &manager.settings) {

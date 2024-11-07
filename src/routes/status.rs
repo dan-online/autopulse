@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub async fn status(
     id: Path<String>,
     manager: Data<Arc<PulseManager>>,
-    auth: BasicAuth,
+    auth: Option<BasicAuth>,
 ) -> Result<impl Responder> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
