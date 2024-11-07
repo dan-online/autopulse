@@ -1,8 +1,6 @@
 use super::webhooks::WebhookManager;
 use super::{runner::PulseRunner, webhooks::EventType};
-use crate::db::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, updated_at,
-};
+use crate::db::schema::scan_events::{created_at, event_source, file_path, id, updated_at};
 use crate::routes::stats::Stats;
 use crate::{
     db::{
@@ -68,26 +66,21 @@ impl PulseManager {
         })
     }
 
-    pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
+    pub fn add_event(&self, to_set: &NewScanEvent) -> anyhow::Result<ScanEvent> {
         let mut conn = get_conn(&self.pool);
 
+        // if sqlite or/and postgres but not mysql
         if let Ok(existing) = scan_events
-            .filter(file_path.eq(&ev.file_path))
+            .filter(file_path.eq(&to_set.file_path))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
             .first::<ScanEvent>(&mut conn)
         {
-            let updated = diesel::update(&existing)
-                .set((
-                    event_source.eq(&ev.event_source),
-                    updated_at.eq(chrono::Utc::now().naive_utc()),
-                    can_process.eq(ev.can_process),
-                ))
-                .get_result::<ScanEvent>(&mut conn)?;
+            let updated = conn.update_and_return(&existing, to_set)?;
 
             return Ok(updated);
         }
 
-        conn.insert_and_return(ev)
+        conn.insert_and_return(to_set)
     }
 
     pub fn get_event(&self, ev_id: &String) -> Option<ScanEvent> {
