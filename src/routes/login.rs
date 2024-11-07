@@ -7,7 +7,10 @@ use serde_json::json;
 use std::sync::Arc;
 
 #[post("/login")]
-pub async fn login(manager: Data<Arc<PulseManager>>, auth: BasicAuth) -> Result<impl Responder> {
+pub async fn login(
+    manager: Data<Arc<PulseManager>>,
+    auth: Option<BasicAuth>,
+) -> Result<impl Responder> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }

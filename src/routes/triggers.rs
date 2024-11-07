@@ -17,7 +17,7 @@ use tracing::debug;
 pub async fn trigger_post(
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
-    auth: BasicAuth,
+    auth: Option<BasicAuth>,
     body: Json<serde_json::Value>,
 ) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
@@ -115,7 +115,7 @@ pub async fn trigger_get(
     req: HttpRequest,
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
-    auth: BasicAuth,
+    auth: Option<BasicAuth>,
 ) -> Result<HttpResponse> {
     if !check_auth(&auth, &manager.settings) {
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));

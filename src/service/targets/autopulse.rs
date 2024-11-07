@@ -20,7 +20,9 @@ impl Autopulse {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
+        if self.auth.enabled {
+            headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
+        }
 
         println!("headers: {:?}", headers);
 

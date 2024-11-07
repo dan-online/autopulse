@@ -11,8 +11,16 @@ fn default_password() -> String {
     "password".to_string()
 }
 
+#[doc(hidden)]
+const fn default_enabled() -> bool {
+    true
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct Auth {
+    /// Whether authentication is enabled (default: true)
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
     /// Username for basic auth (default: admin)
     #[serde(default = "default_username")]
     pub username: String,
@@ -24,6 +32,7 @@ pub struct Auth {
 impl Default for Auth {
     fn default() -> Self {
         Self {
+            enabled: default_enabled(),
             username: default_username(),
             password: default_password(),
         }
