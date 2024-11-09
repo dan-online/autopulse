@@ -1,3 +1,4 @@
+use crate::service::triggers::manual::Manual;
 use app::App;
 use auth::Auth;
 use config::Config;
@@ -5,6 +6,7 @@ use opts::Opts;
 use serde::Deserialize;
 use std::collections::HashMap;
 use target::Target;
+use timer::Timer;
 use trigger::Trigger;
 use webhook::Webhook;
 
@@ -86,6 +88,22 @@ pub mod target;
 /// [Webhooks](crate::service::webhooks) for the service
 pub mod webhook;
 
+#[doc(hidden)]
+fn default_triggers() -> HashMap<String, Trigger> {
+    let mut triggers = HashMap::new();
+
+    triggers.insert(
+        "manual".to_string(),
+        Trigger::Manual(Manual {
+            rewrite: None,
+            timer: Timer::default(),
+            excludes: vec![],
+        }),
+    );
+
+    triggers
+}
+
 /// autopulse settings
 #[derive(Deserialize, Clone)]
 pub struct Settings {
@@ -98,7 +116,7 @@ pub struct Settings {
     #[serde(default)]
     pub opts: Opts,
 
-    #[serde(default)]
+    #[serde(default = "default_triggers")]
     pub triggers: HashMap<String, Trigger>,
     #[serde(default)]
     pub targets: HashMap<String, Target>,
