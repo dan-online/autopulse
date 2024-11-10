@@ -10,4 +10,7 @@ services:
       - ./data:/app/data
       - /etc/localtime:/etc/localtime:ro # for correct timezone in timestamps
     environment:
-       AUTOPULSE__APP__DATABASE_URL: sqlite://data/autopulse.db
+      AUTOPULSE__APP__DATABASE_URL: sqlite://data/autopulse.db
+      # PUID: 1000
+      # PGID: 1000
+      # TZ: America/New_York

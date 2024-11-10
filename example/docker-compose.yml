@@ -14,7 +14,10 @@ services:
       - ./config.yaml:/app/config.yaml
       - /etc/localtime:/etc/localtime:ro # for correct timezone in timestamps
     environment:
-       AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
+      AUTOPULSE__APP__DATABASE_URL: postgres://autopulse:autopulse@postgres/autopulse
+      # PUID: 1000
+      # PGID: 1000
+      # TZ: Europe/London
 
   # Optional self-hosted UI
   # ui:

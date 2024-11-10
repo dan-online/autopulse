@@ -69,14 +69,15 @@ impl AnyConnection {
                 })?;
             }
 
-            std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777)).with_context(
-                || {
-                    format!(
-                        "Failed to set permissions on database directory: {}",
-                        parent.display()
-                    )
-                },
-            )?;
+            if path.file_name().map(|x| x.to_str()) != Some(path.to_str()) {
+                std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777))
+                    .with_context(|| {
+                        format!(
+                            "Failed to set permissions on database directory: {}",
+                            parent.display()
+                        )
+                    })?;
+            }
         }
 
         Ok(())
