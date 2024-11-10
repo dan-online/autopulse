@@ -213,6 +213,35 @@ $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/
 
 The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI.
 
+##### Environment Variables
+
+<!-- table -->
+| Variable | Description | Example |
+| --- | --- | --- |
+| `FORCE_DEFAULT_SERVER_URL` | Forces the default server URL to be used | `true` |
+| `DEFAULT_SERVER_URL` | The default server URL to use | `http://localhost:2875` |
+| `FORCE_AUTH` | Forces the UI to use auth from env | `true` |
+| `FORCE_SERVER_URL` | Forces the server url | `true` |
+| `FORCE_USERNAME` | Forces the username | `true` |
+| `FORCE_PASSWORD` | Forces the password | `true` |
+
+###### Examples
+
+Force a default server URL
+
+```env
+FORCE_DEFAULT_SERVER_URL=true
+DEFAULT_SERVER_URL=http://localhost:2875
+```
+
+Force the UI to use the provided auth
+
+```env
+FORCE_AUTH=true
+FORCE_USERNAME=admin
+FORCE_PASSWORD=password
+```
+
 ## To-do
 
 - [x] Add more triggers
