@@ -10,7 +10,7 @@ const getAuthCookie = async (cookies: Cookies) => {
 		const serverUrl = env.FORCE_SERVER_URL;
 
 		if (!serverUrl) {
-			throw new Error("FORCE_SERVER_URL is required when FORCE_AUTH is \"true\"");
+			throw new Error('FORCE_SERVER_URL is required when FORCE_AUTH is "true"');
 		}
 
 		return {
