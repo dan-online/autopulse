@@ -8,6 +8,7 @@ import MaterialSymbolsLightNightsStay from "~icons/material-symbols-light/nights
 
 $: path = $page.url.pathname;
 $: colorMode = $page.data.colorMode;
+$: forceAuth = $page.data.forceAuth;
 
 $: {
 	if (browser) {
@@ -46,7 +47,7 @@ $: {
           </div>
         </div>
         <div class="flex gap-2 items-center pt-1 ml-auto">
-          {#if path !== "/login"}
+          {#if path !== "/login" && !forceAuth}
             <a href="/login" class="btn btn-secondary btn-sm" data-sveltekit-preload-data="off">Logout</a>
           {/if}
           {#if colorMode === "dark"}

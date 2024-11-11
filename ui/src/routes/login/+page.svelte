@@ -10,6 +10,7 @@ export let form: ActionData;
 let loading = false;
 
 $: defaultURL = $page.data.defaultURL;
+$: forceDefaultURL = $page.data.forceDefaultURL;
 $: error = form?.error;
 </script>
 
@@ -54,8 +55,9 @@ $: error = form?.error;
                         name="server-url"
                         type="url"
                         value={defaultURL}
+                        readonly={forceDefaultURL}
                         required
-                        class="input input-bordered w-full"
+                        class="input input-bordered w-full read-only:opacity-50 read-only:pointer-events-none"
                     />
                 </div>
             </div>

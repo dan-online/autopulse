@@ -1,12 +1,29 @@
+import { env } from "$env/dynamic/private";
 import { sign } from "$lib/auth";
+import { isForced } from "$lib/forced";
 import { type Actions, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ url, cookies }) => {
-	const defaultURL = new URL(url);
+const getURLOptions = (url: URL) => {
+	const currentDefaultURL = new URL(url);
 
-	defaultURL.pathname = "";
-	defaultURL.search = "";
+	currentDefaultURL.pathname = "";
+	currentDefaultURL.search = "";
+
+	const defaultURL = env.DEFAULT_SERVER_URL
+		? new URL(env.DEFAULT_SERVER_URL)
+		: currentDefaultURL;
+	const forceDefaultURL = env.FORCE_DEFAULT_SERVER_URL === "true";
+
+	return [defaultURL, forceDefaultURL] as const;
+};
+
+export const load: PageServerLoad = async ({ url, cookies }) => {
+	if (isForced) {
+		return redirect(302, "/");
+	}
+
+	const [defaultURL, forceDefaultURL] = getURLOptions(url);
 
 	cookies.delete("auth", {
 		path: "/",
@@ -14,6 +31,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
 	return {
 		defaultURL: defaultURL.href,
+		forceDefaultURL: forceDefaultURL,
 	};
 };
 
@@ -21,7 +39,12 @@ export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
 		const formData = await request.formData();
 
-		const serverUrl = formData.get("server-url") as string;
+		const [defaultURL, forceDefaultURL] = getURLOptions(url);
+
+		// Force default URL if the environment variable is set
+		const serverUrl = forceDefaultURL
+			? defaultURL
+			: (formData.get("server-url") as string);
 		const username = formData.get("username") as string;
 		const password = formData.get("password") as string;
 
@@ -46,7 +69,7 @@ export const actions: Actions = {
 			cookies.set(
 				"auth",
 				await sign({
-					serverUrl,
+					serverUrl: serverUrl.toString(),
 					username,
 					password,
 				}),
