@@ -215,7 +215,6 @@ The autopulse ui is a simple web interface that allows you to view and add scan 
 
 ##### Environment Variables
 
-<!-- table -->
 | Variable | Description | Example |
 | --- | --- | --- |
 | `FORCE_DEFAULT_SERVER_URL` | Forces the default server URL to be used | `true` |
