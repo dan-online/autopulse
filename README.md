@@ -237,6 +237,7 @@ Force the UI to use the provided auth
 
 ```env
 FORCE_AUTH=true
+FORCE_SERVER_URL=https://localhost:2875
 FORCE_USERNAME=admin
 FORCE_PASSWORD=password
 ```
