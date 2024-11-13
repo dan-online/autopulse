@@ -4,4 +4,4 @@ WORKDIR /app
 
 COPY ./autopulse /usr/local/bin/
 
-CMD ["/usr/local/bin/autopulse"]
+CMD ["with-contenv", "/usr/local/bin/autopulse"]
