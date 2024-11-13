@@ -11,4 +11,7 @@ RUN mkdir -p $S6_AUTOPULSE_DIR && \
     chmod +x $S6_AUTOPULSE_DIR/run && \
     echo "longrun" > $S6_AUTOPULSE_DIR/type && \
     echo "3" > $S6_AUTOPULSE_DIR/notification-fd && \
-    mkdir $S6_AUTOPULSE_DIR/dependencies.d/ && echo "" > $S6_AUTOPULSE_DIR/dependencies.d/init-services
+    mkdir $S6_AUTOPULSE_DIR/dependencies.d/ && \
+    echo "" > $S6_AUTOPULSE_DIR/dependencies.d/init-services && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d && \
+    echo "" > /etc/s6-overlay/s6-rc.d/user/contents.d/svc-autopulse
