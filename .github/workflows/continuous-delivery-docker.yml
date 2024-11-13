@@ -140,7 +140,7 @@ jobs:
           fi
         id: tag
 
-      - name: Build binary
+      - name: Test binary
         uses: houseabsolute/actions-rust-cross@v0
         if: matrix.feature == 'full'
         with:
