@@ -2,6 +2,11 @@ FROM --platform=$BUILDPLATFORM ghcr.io/linuxserver/baseimage-alpine:3.20 AS runt
 
 WORKDIR /app
 
-COPY ./autopulse /usr/local/bin/
+COPY ./autopulse /bin
 
-CMD ["with-contenv", "/usr/local/bin/autopulse"]
+ENV S6_AUTOPULSE_DIR=/etc/s6-overlay/s6-rc.d/svc-autopulse
+
+RUN mkdir -p $S6_AUTOPULSE_DIR
+RUN echo "#!/usr/bin/with-contenv sh\n# shellcheck shell=sh\n/bin/autopulse" > $S6_AUTOPULSE_DIR/run
+RUN chmod +x $S6_AUTOPULSE_DIR/run
+RUN echo "longrun" > $S6_AUTOPULSE_DIR/type
