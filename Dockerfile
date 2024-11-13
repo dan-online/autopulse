@@ -7,7 +7,10 @@ COPY ./autopulse /bin
 ENV S6_AUTOPULSE_DIR=/etc/s6-overlay/s6-rc.d/svc-autopulse
 
 RUN mkdir -p $S6_AUTOPULSE_DIR && \
-    echo "#\!/usr/bin/with-contenv bash\n# shellcheck shell=bash\n/bin/autopulse" > $S6_AUTOPULSE_DIR/run && \
+    echo '#!/usr/bin/with-contenv bash' >> $S6_AUTOPULSE_DIR/run && \
+    echo '# shellcheck shell=bash' >> $S6_AUTOPULSE_DIR/run && \
+    echo '' >> $S6_AUTOPULSE_DIR/run && \
+    echo 'cd /app && /bin/autopulse' >> $S6_AUTOPULSE_DIR/run && \
     chmod +x $S6_AUTOPULSE_DIR/run && \
     echo "longrun" > $S6_AUTOPULSE_DIR/type && \
     echo "3" > $S6_AUTOPULSE_DIR/notification-fd && \
