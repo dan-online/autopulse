@@ -1,4 +1,5 @@
-FROM --platform=$BUILDPLATFORM ghcr.io/linuxserver/baseimage-alpine:3.20 AS runtime
+ARG IMAGE_TAG=3.20
+FROM --platform=$BUILDPLATFORM ghcr.io/linuxserver/baseimage-alpine:${IMAGE_TAG} AS runtime
 
 WORKDIR /app
 

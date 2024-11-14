@@ -83,6 +83,8 @@ jobs:
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
+            build_args: |
+              IMAGE_TAG=arm64v8-3.20
     steps:
       - uses: actions/checkout@v4
 
@@ -192,6 +194,7 @@ jobs:
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
+          build-args: ${{ matrix.platform.build_args }}
 
       # "feature-platform?" tag, selected feature-set
       - name: Build and push
@@ -203,3 +206,4 @@ jobs:
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
+          build-args: ${{ matrix.platform.build_args }}
