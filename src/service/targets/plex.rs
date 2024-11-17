@@ -45,7 +45,7 @@ pub struct Part {
 pub struct Metadata {
     pub key: String,
     #[serde(rename = "Media")]
-    pub media: Vec<Media>,
+    pub media: Option<Vec<Media>>,
 }
 
 #[doc(hidden)]
@@ -131,6 +131,8 @@ impl Plex {
         for item in lib.media_container.metadata.unwrap_or_default() {
             if item
                 .media
+                .clone()
+                .unwrap_or_default()
                 .iter()
                 .any(|media| media.part.iter().any(|part| part.file == path))
             {
