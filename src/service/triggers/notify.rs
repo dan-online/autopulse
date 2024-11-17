@@ -20,6 +20,7 @@ pub struct Notify {
     #[serde(default)]
     pub excludes: Vec<String>,
     /// Timer
+    #[serde(default)]
     pub timer: Timer,
 }
 
