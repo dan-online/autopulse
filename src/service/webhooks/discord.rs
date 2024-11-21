@@ -150,7 +150,7 @@ impl DiscordWebhook {
 
                         tokio::time::sleep(tokio::time::Duration::from_secs(wait as u64)).await;
 
-                        self.send(&batch, retries - 1).await?;
+                        self.send(batch, retries - 1).await?;
                         continue;
                     }
                 }
