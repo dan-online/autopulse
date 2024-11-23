@@ -239,7 +239,10 @@ impl TargetProcess for Plex {
                     Ok(_) => {
                         debug!("scanned file '{}'", ev.file_path);
 
-                        if self.analyze || self.refresh {
+                        let is_dir = std::path::Path::new(&ev.file_path).is_dir();
+
+                        // Only analyze and refresh metadata for files
+                        if !is_dir && (self.analyze || self.refresh) {
                             match self.get_item(&library, &ev.file_path).await {
                                 Ok(Some(item)) => {
                                     trace!("found item for file '{}'", ev.file_path);
