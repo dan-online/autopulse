@@ -204,14 +204,14 @@ targets:
 By default a `manual` endpoint is provided which can be used to manually trigger a scan. This can be useful for testing or for when you want to trigger a scan without waiting for a file to be ready.
 
 ```bash
-$ curl -u 'admin:password' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890' 
+$ curl -u 'admin:password' 'http://localhost:2875/triggers/manual?path=/path/to/file&hash=1234567890' 
 # or
-$ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:8080/manual?path=/path/to/file&hash=1234567890'
+$ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:2875/triggers/manual?path=/path/to/file&hash=1234567890'
 ```
 
 #### UI
 
-The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI.
+The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI when self-hosting.
 
 ##### Environment Variables
 
