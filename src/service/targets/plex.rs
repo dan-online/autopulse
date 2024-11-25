@@ -286,7 +286,11 @@ impl TargetProcess for Plex {
                                     }
                                 }
                                 Ok(None) => {
-                                    error!("unable to find item for file: {}", ev.file_path);
+                                    trace!(
+                                        "unable to find item for file: {}, leaving at scan",
+                                        ev.file_path
+                                    );
+                                    succeeded.push(ev.id.clone());
                                 }
                                 Err(e) => {
                                     error!(
