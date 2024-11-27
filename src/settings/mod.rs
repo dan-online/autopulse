@@ -137,8 +137,27 @@ impl Settings {
 
         let settings = settings.build()?;
 
-        settings
+        let mut settings = settings
             .try_deserialize::<Self>()
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow::anyhow!(e))?;
+
+        settings.add_default_manual_trigger()?;
+
+        Ok(settings)
+    }
+
+    pub fn add_default_manual_trigger(&mut self) -> anyhow::Result<()> {
+        if !self.triggers.contains_key("manual") {
+            self.triggers.insert(
+                "manual".to_string(),
+                Trigger::Manual(Manual {
+                    rewrite: None,
+                    timer: Timer::default(),
+                    excludes: vec![],
+                }),
+            );
+        }
+
+        Ok(())
     }
 }
