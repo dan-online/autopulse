@@ -35,29 +35,29 @@ impl PulseManager {
     }
 
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
-        let mut conn = get_conn(&self.pool);
-
-        let total = scan_events.count().get_result::<i64>(&mut conn)?;
+        let total = scan_events
+            .count()
+            .get_result::<i64>(&mut get_conn(&self.pool))?;
 
         let found = scan_events
             .filter(found_status.eq::<String>(FoundStatus::Found.into()))
             .count()
-            .get_result::<i64>(&mut conn)?;
+            .get_result::<i64>(&mut get_conn(&self.pool))?;
 
         let processed = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Complete.into()))
             .count()
-            .get_result::<i64>(&mut conn)?;
+            .get_result::<i64>(&mut get_conn(&self.pool))?;
 
         let retrying = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Retry.into()))
             .count()
-            .get_result::<i64>(&mut conn)?;
+            .get_result::<i64>(&mut get_conn(&self.pool))?;
 
         let failed = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
             .count()
-            .get_result::<i64>(&mut conn)?;
+            .get_result::<i64>(&mut get_conn(&self.pool))?;
 
         Ok(Stats {
             total,
@@ -69,12 +69,10 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        let mut conn = get_conn(&self.pool);
-
         if let Ok(existing) = scan_events
             .filter(file_path.eq(&ev.file_path))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .first::<ScanEvent>(&mut conn)
+            .first::<ScanEvent>(&mut get_conn(&self.pool))
         {
             let updated = diesel::update(&existing)
                 .set((
@@ -82,18 +80,19 @@ impl PulseManager {
                     updated_at.eq(chrono::Utc::now().naive_utc()),
                     can_process.eq(ev.can_process),
                 ))
-                .get_result::<ScanEvent>(&mut conn)?;
+                .get_result::<ScanEvent>(&mut get_conn(&self.pool))?;
 
             return Ok(updated);
         }
 
-        conn.insert_and_return(ev)
+        get_conn(&self.pool).insert_and_return(ev)
     }
 
     pub fn get_event(&self, ev_id: &String) -> Option<ScanEvent> {
-        let mut conn = get_conn(&self.pool);
-
-        scan_events.find(ev_id).first::<ScanEvent>(&mut conn).ok()
+        scan_events
+            .find(ev_id)
+            .first::<ScanEvent>(&mut get_conn(&self.pool))
+            .ok()
     }
 
     pub fn get_events(
@@ -104,8 +103,6 @@ impl PulseManager {
         status: Option<String>,
         search: Option<String>,
     ) -> anyhow::Result<Vec<ScanEvent>> {
-        let mut conn = get_conn(&self.pool);
-
         let mut query = scan_events.into_boxed();
 
         if let Some(status) = status {
@@ -160,7 +157,7 @@ impl PulseManager {
         query
             .limit(limit.into())
             .offset(((page - 1) * (limit as u64)) as i64)
-            .load::<ScanEvent>(&mut conn)
+            .load::<ScanEvent>(&mut get_conn(&self.pool))
             .map_err(Into::into)
     }
 

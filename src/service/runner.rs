@@ -38,10 +38,9 @@ impl PulseRunner {
         let mut found_files = vec![];
         let mut mismatched_files = vec![];
 
-        let mut conn = get_conn(&self.pool);
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
-            .load::<ScanEvent>(&mut conn)?;
+            .load::<ScanEvent>(&mut get_conn(&self.pool))?;
 
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
@@ -70,7 +69,7 @@ impl PulseRunner {
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
-            conn.save_changes(ev)?;
+            get_conn(&self.pool).save_changes(ev)?;
         }
 
         if !found_files.is_empty() {
@@ -97,8 +96,6 @@ impl PulseRunner {
     }
 
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
-        let mut conn = get_conn(&self.pool);
-
         let base_query = scan_events
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
             .filter(process_status.ne::<String>(ProcessStatus::Failed.into()))
@@ -113,9 +110,9 @@ impl PulseRunner {
         let mut evs = if self.settings.opts.check_path {
             base_query
                 .filter(found_status.eq::<String>(FoundStatus::Found.into()))
-                .load::<ScanEvent>(&mut conn)?
+                .load::<ScanEvent>(&mut get_conn(&self.pool))?
         } else {
-            base_query.load::<ScanEvent>(&mut conn)?
+            base_query.load::<ScanEvent>(&mut get_conn(&self.pool))?
         };
 
         if evs.is_empty() {
@@ -208,10 +205,10 @@ impl PulseRunner {
         let mut retrying = vec![];
         let mut failed = vec![];
 
-        let mut conn = get_conn(&self.pool);
-
         for ev in evs.iter_mut() {
             ev.updated_at = chrono::Utc::now().naive_utc();
+
+            let mut conn = get_conn(&self.pool);
 
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
@@ -240,8 +237,6 @@ impl PulseRunner {
     }
 
     async fn cleanup(&self) -> anyhow::Result<()> {
-        let mut conn = get_conn(&self.pool);
-
         let time_before_cleanup = chrono::Utc::now().naive_utc()
             - chrono::Duration::days(self.settings.opts.cleanup_days as i64);
 
@@ -251,7 +246,7 @@ impl PulseRunner {
                 .filter(found_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_not_found.execute(&mut conn) {
+        if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)) {
             error!("unable to delete not found events: {:?}", e);
         }
 
@@ -261,7 +256,7 @@ impl PulseRunner {
                 .filter(found_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_failed.execute(&mut conn) {
+        if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)) {
             error!("unable to delete failed events: {:?}", e);
         }
 
