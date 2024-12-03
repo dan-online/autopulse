@@ -56,12 +56,10 @@ pub enum AnyConnection {
     Sqlite(diesel::SqliteConnection),
 }
 
-#[cfg(feature = "sqlite")]
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct AcquireHook {}
 
-#[cfg(feature = "sqlite")]
 impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for AcquireHook {
     fn on_acquire(&self, conn: &mut AnyConnection) -> Result<(), diesel::r2d2::Error> {
         (|| {
