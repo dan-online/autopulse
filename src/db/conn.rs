@@ -3,7 +3,7 @@ use crate::utils::sify::sify;
 use anyhow::Context;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, ConnectionError, QueryResult, RunQueryDsl};
+use diesel::{Connection, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::os::unix::fs::PermissionsExt;
@@ -56,6 +56,32 @@ pub enum AnyConnection {
     Sqlite(diesel::SqliteConnection),
 }
 
+#[cfg(feature = "sqlite")]
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct AcquireHook {}
+
+#[cfg(feature = "sqlite")]
+impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for AcquireHook {
+    fn on_acquire(&self, conn: &mut AnyConnection) -> Result<(), diesel::r2d2::Error> {
+        (|| {
+            match conn {
+                #[cfg(feature = "sqlite")]
+                AnyConnection::Sqlite(ref mut conn) => {
+                    conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
+                    conn.batch_execute("PRAGMA foreign_keys = ON;")?;
+                    conn.batch_execute("PRAGMA busy_timeout = 5000")?;
+                    // wal causes r2d2 multi-connections to lock the database so let's disable it
+                    conn.batch_execute("PRAGMA journal_mode = DELETE;")?;
+                }
+                _ => {}
+            }
+            Ok(())
+        })()
+        .map_err(diesel::r2d2::Error::QueryError)
+    }
+}
+
 impl AnyConnection {
     pub fn pre_init(database_url: &str) -> anyhow::Result<()> {
         if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
@@ -78,22 +104,6 @@ impl AnyConnection {
                         )
                     })?;
             }
-        }
-
-        Ok(())
-    }
-
-    pub fn init(&mut self) -> anyhow::Result<()> {
-        #[cfg(feature = "sqlite")]
-        if let Self::Sqlite(conn) = self {
-            conn.batch_execute("
-                PRAGMA journal_mode = WAL;          -- better write-concurrency
-                PRAGMA synchronous = NORMAL;        -- fsync only in critical moments
-                PRAGMA wal_autocheckpoint = 1000;   -- write WAL changes back every 1000 pages, for an in average 1MB WAL file. May affect readers if number is increased
-                PRAGMA wal_checkpoint(TRUNCATE);    -- free some space by truncating possibly massive WAL files from the last run.
-                PRAGMA busy_timeout = 30000;        -- sleep if the database is busy
-                PRAGMA foreign_keys = ON;           -- enforce foreign keys
-            ").map_err(ConnectionError::CouldntSetupConfiguration)?;
         }
 
         Ok(())
@@ -153,19 +163,48 @@ impl AnyConnection {
 #[doc(hidden)]
 pub type DbPool = Pool<ConnectionManager<AnyConnection>>;
 
+// #[doc(hidden)]
+// pub fn get_conn(
+//     pool: &Pool<ConnectionManager<AnyConnection>>,
+// ) -> anyhow::Result<PooledConnection<ConnectionManager<AnyConnection>>> {
+//     pool.get().context("Failed to get connection from pool")
+// }
 #[doc(hidden)]
 pub fn get_conn(
     pool: &Pool<ConnectionManager<AnyConnection>>,
 ) -> PooledConnection<ConnectionManager<AnyConnection>> {
-    pool.get()
-        .expect("Failed to get database connection from pool")
+    pool.get().unwrap()
 }
 
 #[doc(hidden)]
 pub fn get_pool(database_url: String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
-    let manager = ConnectionManager::<AnyConnection>::new(database_url);
+    let manager = ConnectionManager::<AnyConnection>::new(database_url.clone());
+    // let proto = database_url.split(':').collect::<Vec<&str>>()[0];
+
+    // match proto {
+    //     #[cfg(feature = "postgres")]
+    //     "postgres" => {
+    //         let pool = Pool::builder()
+    //             .build(manager)
+    //             .context("Failed to create pool")?;
+
+    //         Ok(pool)
+    //     }
+    //     #[cfg(feature = "sqlite")]
+    //     "sqlite" => {
+    //         let pool = Pool::builder()
+    //             .max_size(16)
+    //             .build(manager)
+    //             .context("Failed to create pool")?;
+
+    //         Ok(pool)
+    //     }
+    //     _ => Err(ConnectionError::InvalidConnectionUrl(database_url).into()),
+    // }
 
     Pool::builder()
+        .max_size(16)
+        .connection_customizer(Box::new(AcquireHook {}))
         .build(manager)
-        .with_context(|| "Failed to connect to database")
+        .context("Failed to create pool")
 }

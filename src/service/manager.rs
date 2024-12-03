@@ -19,18 +19,20 @@ use tracing::{debug, error};
 #[derive(Clone)]
 pub struct PulseManager {
     pub settings: Arc<Settings>,
-    pub pool: DbPool,
+    pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
 }
 
 impl PulseManager {
     pub fn new(settings: Settings, pool: DbPool) -> Self {
         let settings = Arc::new(settings);
+        let pool = Arc::new(pool);
+        let webhooks = Arc::new(WebhookManager::new(settings.clone()));
 
         Self {
-            settings: settings.clone(),
+            settings,
             pool,
-            webhooks: Arc::new(WebhookManager::new(settings)),
+            webhooks,
         }
     }
 

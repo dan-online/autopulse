@@ -18,11 +18,15 @@ use tracing::{error, info, warn};
 pub(super) struct PulseRunner {
     webhooks: Arc<WebhookManager>,
     settings: Arc<Settings>,
-    pool: DbPool,
+    pool: Arc<DbPool>,
 }
 
 impl PulseRunner {
-    pub const fn new(settings: Arc<Settings>, pool: DbPool, webhooks: Arc<WebhookManager>) -> Self {
+    pub const fn new(
+        settings: Arc<Settings>,
+        pool: Arc<DbPool>,
+        webhooks: Arc<WebhookManager>,
+    ) -> Self {
         Self {
             webhooks,
             settings,
