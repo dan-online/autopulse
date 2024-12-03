@@ -44,7 +44,7 @@ impl PulseRunner {
 
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
-            .load::<ScanEvent>(&mut get_conn(&self.pool))?;
+            .load::<ScanEvent>(&mut get_conn(&self.pool)?)?;
 
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
@@ -73,7 +73,7 @@ impl PulseRunner {
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
-            get_conn(&self.pool).save_changes(ev)?;
+            get_conn(&self.pool)?.save_changes(ev)?;
         }
 
         if !found_files.is_empty() {
@@ -114,9 +114,9 @@ impl PulseRunner {
         let mut evs = if self.settings.opts.check_path {
             base_query
                 .filter(found_status.eq::<String>(FoundStatus::Found.into()))
-                .load::<ScanEvent>(&mut get_conn(&self.pool))?
+                .load::<ScanEvent>(&mut get_conn(&self.pool)?)?
         } else {
-            base_query.load::<ScanEvent>(&mut get_conn(&self.pool))?
+            base_query.load::<ScanEvent>(&mut get_conn(&self.pool)?)?
         };
 
         if evs.is_empty() {
@@ -212,7 +212,7 @@ impl PulseRunner {
         for ev in evs.iter_mut() {
             ev.updated_at = chrono::Utc::now().naive_utc();
 
-            let mut conn = get_conn(&self.pool);
+            let mut conn = get_conn(&self.pool)?;
 
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
@@ -250,7 +250,7 @@ impl PulseRunner {
                 .filter(found_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)) {
+        if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)?) {
             error!("unable to delete not found events: {:?}", e);
         }
 
@@ -260,7 +260,7 @@ impl PulseRunner {
                 .filter(found_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)) {
+        if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)?) {
             error!("unable to delete failed events: {:?}", e);
         }
 

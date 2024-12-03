@@ -163,44 +163,16 @@ impl AnyConnection {
 #[doc(hidden)]
 pub type DbPool = Pool<ConnectionManager<AnyConnection>>;
 
-// #[doc(hidden)]
-// pub fn get_conn(
-//     pool: &Pool<ConnectionManager<AnyConnection>>,
-// ) -> anyhow::Result<PooledConnection<ConnectionManager<AnyConnection>>> {
-//     pool.get().context("Failed to get connection from pool")
-// }
 #[doc(hidden)]
 pub fn get_conn(
     pool: &Pool<ConnectionManager<AnyConnection>>,
-) -> PooledConnection<ConnectionManager<AnyConnection>> {
-    pool.get().unwrap()
+) -> anyhow::Result<PooledConnection<ConnectionManager<AnyConnection>>> {
+    pool.get().context("Failed to get connection from pool")
 }
 
 #[doc(hidden)]
 pub fn get_pool(database_url: String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
-    let manager = ConnectionManager::<AnyConnection>::new(database_url.clone());
-    // let proto = database_url.split(':').collect::<Vec<&str>>()[0];
-
-    // match proto {
-    //     #[cfg(feature = "postgres")]
-    //     "postgres" => {
-    //         let pool = Pool::builder()
-    //             .build(manager)
-    //             .context("Failed to create pool")?;
-
-    //         Ok(pool)
-    //     }
-    //     #[cfg(feature = "sqlite")]
-    //     "sqlite" => {
-    //         let pool = Pool::builder()
-    //             .max_size(16)
-    //             .build(manager)
-    //             .context("Failed to create pool")?;
-
-    //         Ok(pool)
-    //     }
-    //     _ => Err(ConnectionError::InvalidConnectionUrl(database_url).into()),
-    // }
+    let manager = ConnectionManager::<AnyConnection>::new(database_url);
 
     Pool::builder()
         .max_size(16)

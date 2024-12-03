@@ -20,5 +20,9 @@ pub async fn status(
 
     let scan_ev = manager.get_event(&id);
 
-    Ok(HttpResponse::Ok().json(scan_ev))
+    if let Err(e) = scan_ev {
+        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+    }
+
+    Ok(HttpResponse::Ok().json(scan_ev.unwrap()))
 }
