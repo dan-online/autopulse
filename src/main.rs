@@ -72,7 +72,7 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 
     AnyConnection::pre_init(&database_url)?;
 
-    let pool = get_pool(database_url)?;
+    let pool = get_pool(&database_url)?;
     let mut conn = get_conn(&pool)?;
 
     conn.migrate()?;

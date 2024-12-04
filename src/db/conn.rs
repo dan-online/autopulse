@@ -58,7 +58,9 @@ pub enum AnyConnection {
 
 #[doc(hidden)]
 #[derive(Debug)]
-pub struct AcquireHook {}
+pub struct AcquireHook {
+    pub enable_wal: bool,
+}
 
 impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for AcquireHook {
     fn on_acquire(&self, conn: &mut AnyConnection) -> Result<(), diesel::r2d2::Error> {
@@ -71,7 +73,11 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
                     conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
                     conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")?;
                     conn.batch_execute("PRAGMA foreign_keys = ON;")?;
-                    conn.batch_execute("PRAGMA journal_mode = WAL;")?;
+                    // conn.batch_execute("PRAGMA journal_mode = WAL;")?; // Persistent so set in a migration
+
+                    if self.enable_wal {
+                        conn.batch_execute("PRAGMA journal_mode = WAL;")?;
+                    }
                 }
                 _ => {}
             }
@@ -170,12 +176,21 @@ pub fn get_conn(
 }
 
 #[doc(hidden)]
-pub fn get_pool(database_url: String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
+pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
+    let manager = ConnectionManager::<AnyConnection>::new(database_url);
+
+    let pool = Pool::builder()
+        .max_size(1)
+        .connection_customizer(Box::new(AcquireHook { enable_wal: true }))
+        .build(manager)
+        .context("Failed to create pool");
+
+    drop(pool);
+
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 
     Pool::builder()
-        .max_size(16)
-        .connection_customizer(Box::new(AcquireHook {}))
+        .connection_customizer(Box::new(AcquireHook { enable_wal: false }))
         .build(manager)
         .context("Failed to create pool")
 }
