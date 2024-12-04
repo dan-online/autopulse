@@ -168,6 +168,18 @@ impl PulseManager {
         let webhooks = self.webhooks.clone();
         let settings = self.settings.clone();
 
+        // spawn a loop to log every 0.5s the pool.state()
+
+        // let pool_clone = pool.clone();
+        // tokio::spawn(async move {
+        //     let mut timer = tokio::time::interval(std::time::Duration::from_millis(500));
+
+        //     loop {
+        //         info!("pool state: {:?}", pool_clone.state());
+        //         timer.tick().await;
+        //     }
+        // });
+
         tokio::spawn(async move {
             let runner = PulseRunner::new(settings, pool, webhooks);
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
@@ -209,6 +221,7 @@ impl PulseManager {
                     .timer
                     .wait
                     .unwrap_or(settings.opts.default_timer_wait) as i64;
+
                 let global_tx = global_tx.clone();
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();

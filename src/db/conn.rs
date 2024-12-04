@@ -66,11 +66,12 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
             match conn {
                 #[cfg(feature = "sqlite")]
                 AnyConnection::Sqlite(ref mut conn) => {
-                    conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
-                    conn.batch_execute("PRAGMA foreign_keys = ON;")?;
+                    // This possibly needs to be ran first
                     conn.batch_execute("PRAGMA busy_timeout = 5000")?;
-                    // wal causes r2d2 multi-connections to lock the database so let's disable it
-                    conn.batch_execute("PRAGMA journal_mode = DELETE;")?;
+                    conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
+                    conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")?;
+                    conn.batch_execute("PRAGMA foreign_keys = ON;")?;
+                    conn.batch_execute("PRAGMA journal_mode = WAL;")?;
                 }
                 _ => {}
             }
