@@ -1,0 +1,2 @@
+DROP INDEX idx_scan_events_process_status_next_retry_at_can_process;
+DROP INDEX idx_scan_events_found_status;

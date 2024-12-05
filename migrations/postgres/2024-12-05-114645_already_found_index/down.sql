@@ -1,0 +1,1 @@
+DROP INDEX idx_scan_events_file_path_process_status;

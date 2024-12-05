@@ -57,9 +57,9 @@ pub enum AnyConnection {
 }
 
 #[doc(hidden)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AcquireHook {
-    pub enable_wal: bool,
+    pub setup: bool,
 }
 
 impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for AcquireHook {
@@ -68,18 +68,22 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
             match conn {
                 #[cfg(feature = "sqlite")]
                 AnyConnection::Sqlite(ref mut conn) => {
-                    // This possibly needs to be ran first
                     conn.batch_execute("PRAGMA busy_timeout = 5000")?;
                     conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
                     conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")?;
                     conn.batch_execute("PRAGMA foreign_keys = ON;")?;
-                    // conn.batch_execute("PRAGMA journal_mode = WAL;")?; // Persistent so set in a migration
 
-                    if self.enable_wal {
+                    if self.setup {
                         conn.batch_execute("PRAGMA journal_mode = WAL;")?;
+                        conn.batch_execute("VACUUM")?;
                     }
                 }
-                _ => {}
+                #[cfg(feature = "postgres")]
+                AnyConnection::Postgresql(ref mut conn) => {
+                    if self.setup {
+                        conn.batch_execute("VACUUM ANALYZE")?;
+                    }
+                }
             }
             Ok(())
         })()
@@ -181,7 +185,7 @@ pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<
 
     let pool = Pool::builder()
         .max_size(1)
-        .connection_customizer(Box::new(AcquireHook { enable_wal: true }))
+        .connection_customizer(Box::new(AcquireHook { setup: true }))
         .build(manager)
         .context("Failed to create pool");
 
@@ -190,7 +194,7 @@ pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 
     Pool::builder()
-        .connection_customizer(Box::new(AcquireHook { enable_wal: false }))
+        .connection_customizer(Box::new(AcquireHook::default()))
         .build(manager)
         .context("Failed to create pool")
 }
