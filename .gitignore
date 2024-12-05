@@ -1,6 +1,15 @@
-/target
-/config.toml
-.envrc
-data
+# direnv
 .direnv
+.envrc
+
+# Testing
+config.toml
 autopulse.log
+data
+/target
+
+# Debugging
+.vscode/launch.json
+
+# Random testing scripts
+*.sh

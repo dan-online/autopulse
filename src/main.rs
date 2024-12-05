@@ -72,11 +72,13 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 
     AnyConnection::pre_init(&database_url)?;
 
-    let pool = get_pool(database_url)?;
-    let conn = &mut get_conn(&pool);
+    let pool = get_pool(&database_url)?;
+    let mut conn = get_conn(&pool)?;
 
     conn.migrate()?;
-    conn.init()?;
+
+    // drop conn to prevent deadlocks
+    drop(conn);
 
     let manager = PulseManager::new(settings, pool.clone());
     let manager = Arc::new(manager);
