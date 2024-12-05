@@ -86,8 +86,12 @@ uuid = { version = "1.10.0", features = ["v4"] }
 notify = "7.0.0"
 
 # Other
-struson = { version = "0.5.0", features = ["experimental", "serde"] }
-regex = "1.10.6"
+struson = { version = "0.5.0", features = [
+    "experimental",
+    "serde",
+] } # Parse Jellyfin response as a stream
+regex = "1.10.6" # Rewrite using regex
+async-recursion = "1.1.1" # Retry requests for webhooks
 
 # Command-line arguments
 clap = { version = "4.5.18", features = ["derive"] }

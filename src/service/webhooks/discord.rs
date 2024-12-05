@@ -1,6 +1,7 @@
 use super::{EventType, WebhookBatch};
 use crate::utils::{get_timestamp::get_timestamp, sify::sify};
 use serde::{Deserialize, Serialize};
+use tracing::trace;
 
 #[derive(Serialize, Clone)]
 #[doc(hidden)]
@@ -112,7 +113,8 @@ impl DiscordWebhook {
         content
     }
 
-    pub async fn send(&self, batch: &WebhookBatch) -> anyhow::Result<()> {
+    #[async_recursion::async_recursion]
+    pub async fn send(&self, batch: &WebhookBatch, retries: u8) -> anyhow::Result<()> {
         let mut message_queue = vec![];
 
         for chunk in batch.chunks(10) {
@@ -130,7 +132,31 @@ impl DiscordWebhook {
                 .map_err(|e| anyhow::anyhow!(e))?;
 
             if !res.status().is_success() {
+                let reset = res.headers().get("X-RateLimit-Reset");
+
+                if let Some(reset) = reset {
+                    if retries == 0 {
+                        return Err(anyhow::anyhow!("failed to send webhook, retries exhausted"));
+                    }
+
+                    let reset = reset.to_str().unwrap_or_default();
+                    let reset = reset.parse::<i64>().unwrap_or_default();
+                    let now = chrono::Utc::now().timestamp();
+
+                    if reset > now {
+                        let wait = reset - now;
+
+                        trace!("rate limited, waiting for {} seconds", wait);
+
+                        tokio::time::sleep(tokio::time::Duration::from_secs(wait as u64)).await;
+
+                        self.send(batch, retries - 1).await?;
+                        continue;
+                    }
+                }
+
                 let body = res.text().await.unwrap_or_else(|_| "no body".to_string());
+
                 return Err(anyhow::anyhow!("failed to send webhook: {}", body));
             }
         }

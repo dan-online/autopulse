@@ -11,7 +11,7 @@ pub enum Webhook {
 impl Webhook {
     pub async fn send(&self, batch: &WebhookBatch) -> anyhow::Result<()> {
         match self {
-            Self::Discord(d) => d.send(batch).await,
+            Self::Discord(d) => d.send(batch, 3).await,
         }
     }
 }
