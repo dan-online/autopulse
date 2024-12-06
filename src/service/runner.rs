@@ -13,24 +13,24 @@ use crate::{
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use std::{path::PathBuf, sync::Arc};
+use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
 pub(super) struct PulseRunner {
     webhooks: Arc<WebhookManager>,
     settings: Arc<Settings>,
     pool: Arc<DbPool>,
+
+    anchors_available: Arc<Mutex<bool>>,
 }
 
 impl PulseRunner {
-    pub const fn new(
-        settings: Arc<Settings>,
-        pool: Arc<DbPool>,
-        webhooks: Arc<WebhookManager>,
-    ) -> Self {
+    pub fn new(settings: Arc<Settings>, pool: Arc<DbPool>, webhooks: Arc<WebhookManager>) -> Self {
         Self {
             webhooks,
             settings,
             pool,
+            anchors_available: Arc::new(Mutex::new(true)),
         }
     }
 
@@ -268,6 +268,24 @@ impl PulseRunner {
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
+        let set_anchors_available = self.settings.anchors.iter().all(|anchor| anchor.exists());
+
+        let mut anchors_available = self.anchors_available.lock().await;
+        if set_anchors_available != *anchors_available {
+            if set_anchors_available {
+                info!("anchors are available again, continuing");
+            } else {
+                warn!("anchors are not available, pausing");
+            }
+            *anchors_available = set_anchors_available;
+        }
+
+        if !*anchors_available {
+            return Ok(());
+        }
+
+        drop(anchors_available);
+
         self.update_found_status().await?;
         self.update_process_status().await?;
         self.cleanup().await?;

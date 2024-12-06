@@ -39,7 +39,7 @@ impl FileFlows {
 }
 
 impl TargetProcess for FileFlows {
-    async fn process<'a>(&self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
+    async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeeded = Vec::new();
 
         for ev in evs {

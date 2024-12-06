@@ -1,9 +1,9 @@
 # direnv
-.direnv
 .envrc
+.direnv
 
 # Testing
-config.toml
+/config.*
 autopulse.log
 data
 /target

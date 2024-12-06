@@ -56,7 +56,7 @@ impl Autopulse {
 }
 
 impl TargetProcess for Autopulse {
-    async fn process<'a>(&self, evs: &[&'a ScanEvent]) -> anyhow::Result<Vec<String>> {
+    async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeded = Vec::new();
 
         for ev in evs {

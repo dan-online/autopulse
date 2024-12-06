@@ -9,9 +9,9 @@ use crate::{
 };
 
 pub trait TargetProcess {
-    fn process<'a>(
+    fn process(
         &self,
-        evs: &[&'a ScanEvent],
+        evs: &[&ScanEvent],
     ) -> impl std::future::Future<Output = anyhow::Result<Vec<String>>> + Send;
 }
 

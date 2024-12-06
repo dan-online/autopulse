@@ -4,7 +4,7 @@ use auth::Auth;
 use config::Config;
 use opts::Opts;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use target::Target;
 use timer::Timer;
 use trigger::Trigger;
@@ -123,6 +123,20 @@ pub struct Settings {
 
     #[serde(default)]
     pub webhooks: HashMap<String, Webhook>,
+
+    /// List of paths to anchor the service to
+    ///
+    /// This is useful to prevent the service notifying a target when the drive is not mounted or visible
+    /// The contents of the file/directory are not tampered with, only the presence of the file/directory is checked
+    ///
+    /// Example:
+    /// ```yml
+    /// anchors:
+    ///  - /mnt/media/tv # Directory
+    ///  - /mnt/media/anchor # File
+    /// ```
+    #[serde(default)]
+    pub anchors: Vec<PathBuf>,
 }
 
 impl Settings {
