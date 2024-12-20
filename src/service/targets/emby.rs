@@ -7,6 +7,7 @@ use struson::{
     json_path,
     reader::{JsonReader, JsonStreamReader},
 };
+use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{debug, error};
 
 #[doc(hidden)]
@@ -175,17 +176,28 @@ impl Emby {
         Ok(None)
     }
 
-    async fn get_items<'a>(
+    async fn fetch_items(
         &self,
         library: &Library,
-        events: Vec<&'a ScanEvent>,
-    ) -> anyhow::Result<(Vec<(&'a ScanEvent, Item)>, Vec<&'a ScanEvent>)> {
+    ) -> anyhow::Result<(
+        UnboundedReceiver<Item>,
+        tokio::task::JoinHandle<anyhow::Result<()>>,
+    )> {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let limit = 1000;
+
         let client = self.get_client()?;
         let mut url = url::Url::parse(&self.url)?.join("/Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
         url.query_pairs_mut().append_pair("EnableImages", "false");
+        url.query_pairs_mut()
+            .append_pair("ParentId", &library.item_id);
+        url.query_pairs_mut()
+            .append_pair("EnableTotalRecordCount", "false");
+        url.query_pairs_mut()
+            .append_pair("Limit", &limit.to_string());
         if let Some(collection_type) = &library.collection_type {
             url.query_pairs_mut().append_pair(
                 "IncludeItemTypes",
@@ -198,36 +210,75 @@ impl Emby {
                 },
             );
         }
-        url.query_pairs_mut()
-            .append_pair("ParentId", &library.item_id);
-        url.query_pairs_mut()
-            .append_pair("EnableTotalRecordCount", "false");
 
-        let res = client.get(url.to_string()).send().await?;
+        let handle = tokio::spawn(async move {
+            let mut page = 0;
 
-        // Possibly uneeded unless we can use streams
-        let bytes = res.bytes().await?;
+            loop {
+                let mut page_url = url.clone();
+                page_url
+                    .query_pairs_mut()
+                    .append_pair("StartIndex", &(page * limit).to_string());
 
-        let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
+                let res = client.get(page_url.to_string()).send().await?;
 
-        json_reader.seek_to(&json_path!["Items"])?;
-        json_reader.begin_array()?;
+                let bytes = res.bytes().await?;
+
+                let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
+
+                json_reader.seek_to(&json_path!["Items"])?;
+                json_reader.begin_array()?;
+
+                let mut found_items_count = 0;
+
+                while json_reader.has_next()? {
+                    let item: Item = json_reader.deserialize_next()?;
+
+                    tx.send(item)?;
+
+                    found_items_count += 1;
+                }
+
+                if found_items_count < limit {
+                    break;
+                }
+
+                page += 1;
+            }
+
+            drop(tx);
+
+            Ok(())
+        });
+
+        Ok((rx, handle))
+    }
+
+    async fn get_items<'a>(
+        &self,
+        library: &Library,
+        events: Vec<&'a ScanEvent>,
+    ) -> anyhow::Result<(Vec<(&'a ScanEvent, Item)>, Vec<&'a ScanEvent>)> {
+        let (mut rx, handle) = self.fetch_items(library).await?;
 
         let mut found_in_library = Vec::new();
         let mut not_found_in_library = events.to_vec();
 
-        while json_reader.has_next()? {
-            let item: Item = json_reader.deserialize_next()?;
-
+        while let Some(item) = rx.recv().await {
             if let Some(ev) = events
                 .iter()
                 .find(|ev| item.path == Some(ev.file_path.clone()))
             {
                 found_in_library.push((*ev, item.clone()));
-
                 not_found_in_library.retain(|&e| e.id != ev.id);
+
+                if not_found_in_library.is_empty() {
+                    break;
+                }
             }
         }
+
+        handle.abort();
 
         Ok((found_in_library, not_found_in_library))
     }
