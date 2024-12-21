@@ -35,6 +35,7 @@ pub struct Artist {
     path: String,
 }
 
+// Based on https://github.com/Lidarr/Lidarr/blob/develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs
 #[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 #[doc(hidden)]

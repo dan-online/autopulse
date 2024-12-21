@@ -24,6 +24,7 @@ pub enum FoundStatus {
     HashMismatch,
 }
 
+
 impl Display for FoundStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let status = match self {
