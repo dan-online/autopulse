@@ -11,7 +11,7 @@
 
 <h3 align="center">autopulse</h3>
   <p align="center">
-    automated scanning tool that integrates widely-used media management<br /> services with various media servers for seamless media organization
+    💫 automated lightweight service that updates media servers like Plex and Jellyfin<br> based on notifications from media organizers like Sonarr and Radarr
     <br />
     <br />
     <a href="https://github.com/dan-online/autopulse/issues">Report Bug</a>
