@@ -21,12 +21,38 @@ pub struct TrackFile {
 }
 
 #[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[doc(hidden)]
+pub struct RenamedTrackFile {
+    path: String,
+    previous_path: String,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[doc(hidden)]
+pub struct Artist {
+    path: String,
+}
+
+#[derive(Deserialize, Clone)]
 #[serde(tag = "eventType")]
 #[doc(hidden)]
 pub enum LidarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
     Download { track_files: Vec<TrackFile> },
+    #[serde(rename = "Rename")]
+    #[serde(rename_all = "camelCase")]
+    Rename {
+        renamed_track_files: Vec<RenamedTrackFile>,
+    },
+    #[serde(rename = "ArtistDelete")]
+    #[serde(rename_all = "camelCase")]
+    ArtistDelete { artist: Artist },
+    #[serde(rename = "AlbumDelete")]
+    #[serde(rename_all = "camelCase")]
+    AlbumDelete { artist: Artist },
     #[serde(rename = "Test")]
     Test,
 }
@@ -41,6 +67,21 @@ impl TriggerRequest for LidarrRequest {
                 .iter()
                 .map(|track_file| (track_file.path.clone(), true))
                 .collect(),
+            Self::Rename {
+                renamed_track_files,
+            } => {
+                let mut paths = vec![];
+
+                for file in renamed_track_files {
+                    paths.push((file.previous_path.clone(), false));
+                    paths.push((file.path.clone(), true));
+                }
+
+                paths
+            }
+            Self::ArtistDelete { artist } | Self::AlbumDelete { artist } => {
+                vec![(artist.path.clone(), false)]
+            }
             Self::Test => vec![],
         }
     }
