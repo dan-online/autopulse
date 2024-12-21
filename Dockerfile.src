@@ -1,6 +1,6 @@
 # Install cargo-chef for a base step
 ARG BUILD_IMAGE=clux/muslrust:stable
-FROM --platform=$BUILDPLATFORM ${BUILD_IMAGE} AS chef
+FROM --platform=$TARGETPLATFORM ${BUILD_IMAGE} AS chef
 USER root
 RUN cargo install cargo-chef
 WORKDIR /app
@@ -32,7 +32,7 @@ RUN cargo build --release --target ${TARGET} --no-default-features --features ${
 
 RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
 
-FROM --platform=$BUILDPLATFORM alpine AS runtime
+FROM --platform=$TARGETPLATFORM alpine AS runtime
 
 WORKDIR /app
 
