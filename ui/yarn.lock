@@ -1433,9 +1433,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/kit@npm:^2.13.0":
-  version: 2.13.0
-  resolution: "@sveltejs/kit@npm:2.13.0"
+"@sveltejs/kit@npm:^2.14.1":
+  version: 2.14.1
+  resolution: "@sveltejs/kit@npm:2.14.1"
   dependencies:
     "@types/cookie": "npm:^0.6.0"
     cookie: "npm:^0.6.0"
@@ -1455,7 +1455,7 @@ __metadata:
     vite: ^5.0.3 || ^6.0.0
   bin:
     svelte-kit: svelte-kit.js
-  checksum: 10c0/634c46eccb9c23dc3f405236309fe680f124d36c48a5ef69b6fac3fe89daeb109b9195bafb8460f827ecc3c9704f8b25f0c4648e64bb1595d56977599e3b4e5e
+  checksum: 10c0/d8139f2de2ee3b838cffb75f853a1ca524dcc9088d2ed0722d8e26b7bff61f3d5fddc9e8e3bdf001c1f5a312a0f49b249b1704fc2045de2ba4918bc18ffb61a3
   languageName: node
   linkType: hard
 
@@ -4312,7 +4312,7 @@ __metadata:
     "@sveltejs/adapter-auto": "npm:^3.3.1"
     "@sveltejs/adapter-cloudflare": "npm:^4.9.0"
     "@sveltejs/adapter-node": "npm:^5.2.11"
-    "@sveltejs/kit": "npm:^2.13.0"
+    "@sveltejs/kit": "npm:^2.14.1"
     "@sveltejs/vite-plugin-svelte": "npm:^4.0.4"
     "@unocss/extractor-svelte": "npm:^0.65.2"
     "@unocss/reset": "npm:^0.65.2"
