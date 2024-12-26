@@ -103,7 +103,9 @@ impl TargetProcess for FileFlows {
 
         for ev in evs {
             let library = libraries.iter().find(|l| {
-                l.path.as_ref().map_or(false, |path| ev.file_path.starts_with(path))
+                l.path
+                    .as_ref()
+                    .map_or(false, |path| ev.file_path.starts_with(path))
             });
 
             if library.is_none() {
