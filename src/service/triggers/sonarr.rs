@@ -39,9 +39,9 @@ pub struct RenamedEpisodeFile {
 #[serde(tag = "eventType")]
 #[doc(hidden)]
 pub enum SonarrRequest {
-    #[serde(rename = "EpisodeFileDelete")]
+    #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
-    EpisodeFileDelete {
+    Download {
         episode_file: EpisodeFile,
         series: Series,
     },
@@ -54,9 +54,9 @@ pub enum SonarrRequest {
     #[serde(rename = "SeriesDelete")]
     #[serde(rename_all = "camelCase")]
     SeriesDelete { series: Series },
-    #[serde(rename = "Download")]
+    #[serde(rename = "EpisodeFileDelete")]
     #[serde(rename_all = "camelCase")]
-    Download {
+    EpisodeFileDelete {
         episode_file: EpisodeFile,
         series: Series,
     },

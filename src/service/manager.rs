@@ -71,11 +71,16 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        if let Ok(existing) = scan_events
+        let mut check = scan_events
             .filter(file_path.eq(&ev.file_path))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
-        {
+            .into_boxed();
+
+        if ev.found_status == FoundStatus::Found.to_string() {
+            check = check.filter(found_status.eq(&ev.found_status));
+        }
+
+        if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
             let updated = diesel::update(&existing)
                 .set((
                     event_source.eq(&ev.event_source),
