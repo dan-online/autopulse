@@ -57,7 +57,9 @@ impl From<ProcessStatus> for String {
 /// Represents a scan event.
 ///
 /// A scan event is created when a file is added by [Triggers](crate::service::triggers).
-#[derive(Queryable, Selectable, Serialize, Clone, Debug, AsChangeset, Identifiable)]
+#[derive(
+    Queryable, Selectable, Serialize, Clone, Debug, AsChangeset, Identifiable, Hash, Eq, PartialEq,
+)]
 #[diesel(table_name = crate::db::schema::scan_events)]
 pub struct ScanEvent {
     /// The [uuid](crate::utils::generate_uuid::generate_uuid) of the scan event.
