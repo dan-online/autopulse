@@ -14,7 +14,7 @@ import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
 import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
 
 let searchLoading = false;
-// if anyone clicks the magnifying glass, let them bypass the search limit
+// if anyone clicks the magnifying glass, let them bypass the search limit and reduce the delay
 let limiter = true;
 
 type StatNames =
@@ -105,7 +105,7 @@ let updateUrl: string;
 
 function autoReload() {
 	invalidateAll().then(() => {
-		updateTimeout = setTimeout(autoReload, 5000);
+		updateTimeout = setTimeout(autoReload, limiter ? 5000 : 500);
 	});
 }
 
