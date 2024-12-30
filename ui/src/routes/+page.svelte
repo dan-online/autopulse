@@ -101,18 +101,19 @@ const fields = [
 ];
 
 let updateTimeout: number;
+let reloadTimeout: number;
 let updateUrl: string;
 
 function autoReload() {
 	invalidateAll().then(() => {
-		updateTimeout = setTimeout(autoReload, limiter ? 5000 : 500);
+		reloadTimeout = setTimeout(autoReload, limiter ? 5000 : 500);
 	});
 }
 
 onMount(() => {
 	autoReload();
 
-	return () => clearTimeout(updateTimeout);
+	return () => [reloadTimeout, updateTimeout].forEach(clearTimeout);
 });
 
 const updateBasedOn = (
@@ -213,8 +214,6 @@ const updateBasedOn = (
 			});
 
 			searchLoading = false;
-
-			autoReload();
 		},
 		limiter ? 500 : 1,
 	);
