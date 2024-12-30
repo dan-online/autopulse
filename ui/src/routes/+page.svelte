@@ -73,16 +73,20 @@ const fields = [
 	},
 ];
 
-onMount(() => {
-	const interval = setInterval(() => {
-		invalidateAll();
-	}, 5000);
-
-	return () => clearInterval(interval);
-});
-
 let updateTimeout: number;
 let updateUrl: string;
+
+function autoReload() {
+	invalidateAll().then(() => {
+		updateTimeout = setTimeout(autoReload, 5000);
+	});
+}
+
+onMount(() => {
+	autoReload();
+
+	return () => clearTimeout(updateTimeout);
+});
 
 const updateBasedOn = (
 	key: "search" | "sort" | "page" | "limit" | "status",
@@ -182,6 +186,8 @@ const updateBasedOn = (
 			});
 
 			searchLoading = false;
+
+			autoReload();
 		},
 		limiter ? 500 : 1,
 	);

@@ -11,12 +11,20 @@ import TimeAgo from "$lib/components/core/TimeAgo.svelte";
 
 $: ev = $page.data.ev;
 
-onMount(() => {
-	const interval = setInterval(() => {
-		invalidateAll();
-	}, 2000);
+let updateTimeout: number;
 
-	return () => clearInterval(interval);
+function autoReload() {
+	updateTimeout = setTimeout(() => {
+		invalidateAll();
+	}, 5000);
+}
+
+onMount(() => {
+	autoReload();
+
+	return () => {
+		clearTimeout(updateTimeout);
+	};
 });
 </script>
 
