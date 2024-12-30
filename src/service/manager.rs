@@ -41,11 +41,6 @@ impl PulseManager {
             .count()
             .get_result::<i64>(&mut get_conn(&self.pool)?)?;
 
-        let found = scan_events
-            .filter(found_status.eq::<String>(FoundStatus::Found.into()))
-            .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
-
         let processed = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Complete.into()))
             .count()
@@ -61,12 +56,17 @@ impl PulseManager {
             .count()
             .get_result::<i64>(&mut get_conn(&self.pool)?)?;
 
+        let pending = scan_events
+            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
+            .count()
+            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+
         Ok(Stats {
             total,
-            found,
             processed,
             retrying,
             failed,
+            pending,
         })
     }
 

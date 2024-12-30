@@ -5,6 +5,7 @@ import { type Component, onMount } from "svelte";
 
 import CiSearchMagnifyingGlass from "~icons/ci/search-magnifying-glass";
 import HugeiconsPackageDelivered from "~icons/hugeicons/package-delivered";
+import HugeiconsQueue01 from "~icons/hugeicons/queue-01";
 import LineMdChevronDown from "~icons/line-md/chevron-down";
 import MaterialSymbolsError from "~icons/material-symbols/error";
 import MaterialSymbolsFileCopyOutlineRounded from "~icons/material-symbols/file-copy-outline-rounded";
@@ -16,7 +17,32 @@ let searchLoading = false;
 // if anyone clicks the magnifying glass, let them bypass the search limit
 let limiter = true;
 
-const iconMap: Record<string, Component> = {
+type StatNames =
+	| "pending"
+	| "total"
+	| "found"
+	| "processed"
+	| "retrying"
+	| "failed";
+
+const statNames: StatNames[] = [
+	"pending",
+	"retrying",
+	"found",
+	"processed",
+	"failed",
+	"total",
+];
+
+function correctSort(a: [string, unknown], b: [string, unknown]) {
+	const aIdx = statNames.indexOf(a[0] as StatNames);
+	const bIdx = statNames.indexOf(b[0] as StatNames);
+
+	return aIdx - bIdx;
+}
+
+const iconMap: Record<StatNames, Component> = {
+	pending: HugeiconsQueue01,
 	total: MaterialSymbolsFileCopyOutlineRounded,
 	found: CiSearchMagnifyingGlass,
 	processed: HugeiconsPackageDelivered,
@@ -24,12 +50,13 @@ const iconMap: Record<string, Component> = {
 	failed: MaterialSymbolsError,
 };
 
-const descMap: Record<string, string> = {
-	total: "Total scan events",
+const descMap: Record<StatNames, string> = {
+	pending: "Waiting in queue",
+	retrying: "Failed 1/+ processors",
 	found: "Found + Matched Hash",
 	processed: "Sent to processors",
-	retrying: "Failed 1/+ processors",
 	failed: "Failed to process",
+	total: "Total scan events",
 };
 
 $: stats = $page.data.stats;
@@ -199,12 +226,12 @@ const updateBasedOn = (
 {/if}
 
 {#if stats}
-    <div class="flex flex-col md:flex-row mt-4">
-        {#each Object.entries(stats.stats) as [key, val], idx}
+    <div class="flex flex-col lg:flex-row mt-4">
+        {#each Object.entries(stats.stats).sort(correctSort) as [key, val], idx}
             <div class="stat" class:md:border-l={idx !== 0}>
                 <div class="stat-figure text-primary">
                     <svelte:component
-                        this={iconMap[key]}
+                        this={iconMap[key as StatNames]}
                         class="mt-4 lg:mt-0 inline-block h-8 w-8"
                     />
                 </div>
@@ -213,7 +240,7 @@ const updateBasedOn = (
                 </div>
                 <div class="stat-value text-primary">{val}</div>
                 <div class="hidden lg:block stat-desc">
-                    {descMap[key] || ""}
+                    {descMap[key as StatNames] || ""}
                 </div>
             </div>
         {/each}

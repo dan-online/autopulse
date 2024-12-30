@@ -9,14 +9,14 @@ use tracing::error;
 pub struct Stats {
     /// The total number of events.
     pub total: i64,
-    /// The number of file events that have been found.
-    pub found: i64,
     /// The number of file events that have been processed.
     pub processed: i64,
     /// The number of file events that are being retried.
     pub retrying: i64,
     /// The number of file events that have failed.
     pub failed: i64,
+    /// The number of file events that are pending.
+    pub pending: i64,
 }
 
 /// Represents the response format for the `/stats` endpoint.
