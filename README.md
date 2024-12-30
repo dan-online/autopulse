@@ -18,7 +18,7 @@
     ·
     <a href="https://github.com/dan-online/autopulse/issues">Request Feature</a>
     .
-    <a href="https://autopulse.pages.dev/">Documentation</a>
+    <a href="https://autopulse.dancodes.online/">Documentation</a>
     .
     <a href="https://autopulseui.pages.dev/">autopulseUI</a>
   </p>
@@ -108,14 +108,14 @@ $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory
 
 ### Documentation
 
-All the documentation can be found [on the website](https://autopulse.pages.dev/)
+All the documentation can be found [on the website](https://autopulse.dancodes.online/)
 
 Here's some quick links:
 
-- [Settings](https://autopulse.pages.dev/autopulse/utils/settings/)
-- [Targets](https://autopulse.pages.dev/autopulse/service/targets/)
-- [Triggers](https://autopulse.pages.dev/autopulse/service/triggers/)
-- [Webhooks](https://autopulse.pages.dev/autopulse/service/webhooks/)
+- [Settings](https://autopulse.dancodes.online/autopulse/settings/)
+- [Targets](https://autopulse.dancodes.online/autopulse/service/targets/)
+- [Triggers](https://autopulse.dancodes.online/autopulse/service/triggers/)
+- [Webhooks](https://autopulse.dancodes.online/autopulse/service/webhooks/)
 
 ### Quick Start
 
