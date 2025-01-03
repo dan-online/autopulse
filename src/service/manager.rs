@@ -12,7 +12,9 @@ use crate::{
     },
     settings::{trigger::Trigger, Settings},
 };
+use anyhow::Context;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use futures_util::future::try_join_all;
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -214,10 +216,11 @@ impl PulseManager {
         })
     }
 
-    pub fn start_notify(&self) -> tokio::task::JoinHandle<()> {
+    pub fn start_notify(&self) -> anyhow::Result<tokio::task::JoinHandle<anyhow::Result<()>>> {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settings = self.settings.clone();
+        let mut spawners: Vec<tokio::task::JoinHandle<anyhow::Result<()>>> = vec![];
 
         for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
@@ -231,48 +234,81 @@ impl PulseManager {
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
-                tokio::spawn(async move {
-                    if let Err(e) = service.watcher(tx).await {
-                        error!("unable to start notify service '{}': {:?}", cloned_name, e);
-                    }
+                let handle = tokio::spawn(async move {
+                    service
+                        .watcher(tx)
+                        .await
+                        .context(format!("unable to start notify service '{}'", cloned_name))
                 });
 
                 tokio::spawn(async move {
-                    while let Some(path) = rx.recv().await {
+                    while let Some((path, reason)) = rx.recv().await {
                         if let Err(e) = global_tx.send((
                             name.clone(),
                             path,
+                            reason,
                             chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
                         )) {
                             error!("unable to send notify event: {:?}", e);
                         }
                     }
                 });
+
+                spawners.push(handle);
             }
         }
 
         let manager = Arc::new(self.clone());
 
-        tokio::spawn(async move {
-            while let Some((name, path, when_process)) = global_rx.recv().await {
-                let new_scan_event = NewScanEvent {
-                    event_source: name.clone(),
-                    file_path: path.clone(),
-                    can_process: when_process,
-                    ..Default::default()
-                };
+        let global_consumer: tokio::task::JoinHandle<anyhow::Result<()>> =
+            tokio::spawn(async move {
+                while let Some((name, path, reason, when_process)) = global_rx.recv().await {
+                    let new_scan_event = NewScanEvent {
+                        event_source: name.clone(),
+                        file_path: path.clone(),
+                        can_process: when_process,
+                        ..Default::default()
+                    };
 
-                if let Err(e) = manager.add_event(&new_scan_event) {
-                    error!("unable to add notify event: {:?}", e);
-                } else {
-                    debug!("added 1 file from {} trigger", name);
+                    if let Err(e) = manager.add_event(&new_scan_event) {
+                        error!("unable to add notify event: {:?}", e);
+                    } else {
+                        debug!(
+                            "added 1 file from {} trigger due to: {}",
+                            name,
+                            match reason {
+                                notify::EventKind::Create(_) => "create",
+                                notify::EventKind::Modify(_) => "modify",
+                                notify::EventKind::Remove(_) => "remove",
+                                notify::EventKind::Access(_) => "access",
+                                notify::EventKind::Any => "any",
+                                notify::EventKind::Other => "other",
+                            }
+                        );
+                    }
+
+                    manager
+                        .webhooks
+                        .add_event(EventType::New, Some(name.clone()), &[path])
+                        .await;
                 }
 
-                manager
-                    .webhooks
-                    .add_event(EventType::New, Some(name.clone()), &[path])
-                    .await;
+                Ok(())
+            });
+
+        Ok(tokio::spawn(async move {
+            tokio::select! {
+                res = global_consumer => {
+                    res??;
+                }
+                res = try_join_all(spawners) => {
+                    for r in res? {
+                        r?;
+                    }
+                }
             }
-        })
+
+            Ok(())
+        }))
     }
 }

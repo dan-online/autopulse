@@ -29,7 +29,7 @@ actix-web = { version = "4.9.0", default-features = false, features = [
 actix-web-httpauth = "0.8.2"
 
 # Error handling
-anyhow = "1.0.87"
+anyhow = { version = "1.0.87" }
 
 # Configuration
 config = "0.14.0"
@@ -96,6 +96,7 @@ async-recursion = "1.1.1" # Retry requests for webhooks
 # Command-line arguments
 clap = { version = "4.5.18", features = ["derive"] }
 clap_derive = { version = "4.5.18" }
+futures-util = "0.3.31"
 
 # [dev-dependencies]
 # # Standardize logging output
