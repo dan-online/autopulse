@@ -27,8 +27,9 @@ pub struct Notify {
 impl Notify {
     pub fn send_event(
         &self,
-        tx: UnboundedSender<String>,
+        tx: UnboundedSender<(String, EventKind)>,
         path: Option<&PathBuf>,
+        reason: EventKind,
     ) -> anyhow::Result<()> {
         if path.is_none() {
             return Ok(());
@@ -40,7 +41,7 @@ impl Notify {
             path = rewrite.rewrite_path(path);
         }
 
-        tx.send(path).map_err(|e| anyhow::anyhow!(e))
+        tx.send((path, reason)).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn async_watcher(
@@ -60,7 +61,7 @@ impl Notify {
         Ok((watcher, rx))
     }
 
-    pub async fn watcher(&self, tx: UnboundedSender<String>) -> anyhow::Result<()> {
+    pub async fn watcher(&self, tx: UnboundedSender<(String, EventKind)>) -> anyhow::Result<()> {
         let (mut watcher, mut rx) = self.async_watcher()?;
 
         for path in &self.paths {
@@ -83,7 +84,7 @@ impl Notify {
                     | EventKind::Create(_)
                     | EventKind::Remove(_) => {
                         for path in event.paths {
-                            self.send_event(tx.clone(), Some(&path))?;
+                            self.send_event(tx.clone(), Some(&path), event.kind)?;
                         }
                     }
                     _ => {}

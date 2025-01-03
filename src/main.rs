@@ -25,7 +25,8 @@ use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use settings::Settings;
 use std::sync::Arc;
-use tracing::info;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{debug, error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
@@ -85,11 +86,11 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 
     let manager_task = manager.start();
     let webhook_task = manager.start_webhooks();
-    let notify_task = manager.start_notify();
+    let notify_task = manager.start_notify()?;
 
     info!("🚀 Listening on {}:{}", hostname, port);
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             .service(hello)
@@ -103,15 +104,41 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             .app_data(Data::new(manager.clone()))
     })
     .bind((hostname, port))?
-    .run()
-    .await
-    .with_context(|| "Failed to start server")?;
+    .run();
+
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+
+    tokio::select! {
+        _ = sigterm.recv() => {
+            debug!("Received SIGTERM, shutting down...");
+        }
+
+        _ = sigint.recv() => {
+            debug!("Received SIGINT, shutting down...");
+        }
+
+        res = server => {
+            debug!("server stopped");
+            res?;
+        }
+        res = manager_task => {
+            debug!("manager stopped");
+            res?;
+        }
+        res = webhook_task => {
+            debug!("webhook stopped");
+            res?;
+        }
+        res = notify_task => {
+            debug!("notify stopped");
+            if let Err(e) = res? {
+                error!("notify error: {:?}", e);
+            }
+        }
+    }
 
     info!("Shutting down...");
-
-    manager_task.abort();
-    webhook_task.abort();
-    notify_task.abort();
 
     Ok(())
 }
