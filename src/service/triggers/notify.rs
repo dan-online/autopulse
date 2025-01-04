@@ -27,12 +27,8 @@ pub enum NotifyBackend {
 impl NotifyBackend {
     pub fn watch(&mut self, path: String, mode: RecursiveMode) -> anyhow::Result<()> {
         match self {
-            Self::Recommended(watcher) => {
-                watcher.watch(path.as_ref(), mode).map_err(|e| e.into())
-            }
-            Self::Polling(watcher) => {
-                watcher.watch(path.as_ref(), mode).map_err(|e| e.into())
-            }
+            Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
+            Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
         }
     }
 }
