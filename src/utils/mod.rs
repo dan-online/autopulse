@@ -12,6 +12,8 @@ pub mod join_path;
 pub mod logs;
 #[doc(hidden)]
 pub mod sify;
+#[doc(hidden)]
+pub mod task_manager;
 
 /// Arguments for CLI
 ///

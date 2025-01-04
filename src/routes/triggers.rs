@@ -7,7 +7,7 @@ use crate::{
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
-    HttpRequest, HttpResponse, Result,
+    HttpResponse, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use std::sync::Arc;
@@ -112,7 +112,7 @@ pub async fn trigger_post(
 
 #[get("/triggers/{trigger}")]
 pub async fn trigger_get(
-    req: HttpRequest,
+    query: Query<ManualQueryParams>,
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
     auth: Option<BasicAuth>,
@@ -131,8 +131,6 @@ pub async fn trigger_get(
 
     match &trigger_settings {
         Trigger::Manual(trigger_settings) => {
-            let query = Query::<ManualQueryParams>::from_query(req.query_string())?;
-
             let mut file_path = query.path.clone();
 
             if let Some(rewrite) = &trigger_settings.rewrite {

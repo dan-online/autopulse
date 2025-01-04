@@ -26,7 +26,7 @@ use service::manager::PulseManager;
 use settings::Settings;
 use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
@@ -84,11 +84,13 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let manager = PulseManager::new(settings, pool.clone());
     let manager = Arc::new(manager);
 
-    let manager_task = manager.start();
-    let webhook_task = manager.start_webhooks();
-    let notify_task = manager.start_notify()?;
+    manager.start().await;
+    manager.start_webhooks().await;
+    manager.start_notify().await;
 
-    info!("🚀 Listening on {}:{}", hostname, port);
+    let manager_clone = manager.clone();
+
+    info!("🚀 listening on {}:{}", hostname, port);
 
     let server = HttpServer::new(move || {
         App::new()
@@ -101,44 +103,36 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             .service(login)
             .service(list)
             .app_data(basic::Config::default().realm("Restricted area"))
-            .app_data(Data::new(manager.clone()))
+            .app_data(Data::new(manager_clone.clone()))
     })
+    .disable_signals()
     .bind((hostname, port))?
     .run();
 
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    let server_task = tokio::spawn(server);
 
-    tokio::select! {
-        _ = sigterm.recv() => {
-            debug!("Received SIGTERM, shutting down...");
-        }
+    let shutdown: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+        let mut sigterm = signal(SignalKind::terminate())?;
+        let mut sigint = signal(SignalKind::interrupt())?;
 
-        _ = sigint.recv() => {
-            debug!("Received SIGINT, shutting down...");
-        }
-
-        res = server => {
-            debug!("server stopped");
-            res?;
-        }
-        res = manager_task => {
-            debug!("manager stopped");
-            res?;
-        }
-        res = webhook_task => {
-            debug!("webhook stopped");
-            res?;
-        }
-        res = notify_task => {
-            debug!("notify stopped");
-            if let Err(e) = res? {
-                error!("notify error: {:?}", e);
+        tokio::select! {
+            _ = sigterm.recv() => {
+                debug!("Received SIGTERM");
+            }
+            _ = sigint.recv() => {
+                debug!("Received SIGINT");
             }
         }
-    }
 
-    info!("Shutting down...");
+        info!("💤 shutting down...");
+
+        Ok(())
+    });
+
+    shutdown.await??;
+
+    manager.shutdown().await?;
+    server_task.abort();
 
     Ok(())
 }

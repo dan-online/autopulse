@@ -4,6 +4,7 @@ use crate::db::schema::scan_events::{
     can_process, created_at, event_source, file_path, id, updated_at,
 };
 use crate::routes::stats::Stats;
+use crate::utils::task_manager::TaskManager;
 use crate::{
     db::{
         conn::{get_conn, DbPool},
@@ -14,8 +15,8 @@ use crate::{
 };
 use anyhow::Context;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
-use futures_util::future::try_join_all;
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
 #[derive(Clone)]
@@ -23,6 +24,7 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
+    pub task_manager: Arc<TaskManager>,
 }
 
 impl PulseManager {
@@ -30,12 +32,18 @@ impl PulseManager {
         let settings = Arc::new(settings);
         let pool = Arc::new(pool);
         let webhooks = Arc::new(WebhookManager::new(settings.clone()));
+        let task_manager = Arc::new(TaskManager::new());
 
         Self {
             settings,
             pool,
             webhooks,
+            task_manager,
         }
+    }
+
+    pub async fn shutdown(&self) -> anyhow::Result<()> {
+        self.task_manager.shutdown().await
     }
 
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
@@ -170,57 +178,48 @@ impl PulseManager {
             .map_err(Into::into)
     }
 
-    pub fn start(&self) -> tokio::task::JoinHandle<()> {
+    pub async fn start(&self) -> Arc<JoinHandle<()>> {
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();
         let settings = self.settings.clone();
 
-        // spawn a loop to log every 0.5s the pool.state()
+        self.task_manager
+            .spawn(async move {
+                let runner = PulseRunner::new(settings, pool, webhooks);
+                let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
-        // let pool_clone = pool.clone();
-        // tokio::spawn(async move {
-        //     let mut timer = tokio::time::interval(std::time::Duration::from_millis(500));
+                loop {
+                    if let Err(e) = runner.run().await {
+                        error!("unable to run pulse: {:?}", e);
+                    }
 
-        //     loop {
-        //         info!("pool state: {:?}", pool_clone.state());
-        //         timer.tick().await;
-        //     }
-        // });
-
-        tokio::spawn(async move {
-            let runner = PulseRunner::new(settings, pool, webhooks);
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
-
-            loop {
-                if let Err(e) = runner.run().await {
-                    error!("unable to run pulse: {:?}", e);
+                    timer.tick().await;
                 }
-
-                timer.tick().await;
-            }
-        })
+            })
+            .await
     }
 
-    pub fn start_webhooks(&self) -> tokio::task::JoinHandle<()> {
+    pub async fn start_webhooks(&self) -> Arc<JoinHandle<()>> {
         let webhooks = self.webhooks.clone();
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
-        tokio::spawn(async move {
-            loop {
-                if let Err(e) = webhooks.send().await {
-                    error!("unable to send webhooks: {:?}", e);
-                }
+        self.task_manager
+            .spawn(async move {
+                loop {
+                    if let Err(e) = webhooks.send().await {
+                        error!("unable to send webhooks: {:?}", e);
+                    }
 
-                timer.tick().await;
-            }
-        })
+                    timer.tick().await;
+                }
+            })
+            .await
     }
 
-    pub fn start_notify(&self) -> anyhow::Result<tokio::task::JoinHandle<anyhow::Result<()>>> {
+    pub async fn start_notify(&self) {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settings = self.settings.clone();
-        let mut spawners: Vec<tokio::task::JoinHandle<anyhow::Result<()>>> = vec![];
 
         for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
@@ -234,34 +233,36 @@ impl PulseManager {
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
-                let handle = tokio::spawn(async move {
-                    service
-                        .watcher(tx)
-                        .await
-                        .context(format!("unable to start notify service '{}'", cloned_name))
-                });
+                self.task_manager
+                    .spawn(async move {
+                        service
+                            .watcher(tx)
+                            .await
+                            .context(format!("unable to start notify service '{}'", cloned_name))
+                    })
+                    .await;
 
-                tokio::spawn(async move {
-                    while let Some((path, reason)) = rx.recv().await {
-                        if let Err(e) = global_tx.send((
-                            name.clone(),
-                            path,
-                            reason,
-                            chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
-                        )) {
-                            error!("unable to send notify event: {:?}", e);
+                self.task_manager
+                    .spawn(async move {
+                        while let Some((path, reason)) = rx.recv().await {
+                            if let Err(e) = global_tx.send((
+                                name.clone(),
+                                path,
+                                reason,
+                                chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
+                            )) {
+                                error!("unable to send notify event: {:?}", e);
+                            }
                         }
-                    }
-                });
-
-                spawners.push(handle);
+                    })
+                    .await;
             }
         }
 
         let manager = Arc::new(self.clone());
 
-        let global_consumer: tokio::task::JoinHandle<anyhow::Result<()>> =
-            tokio::spawn(async move {
+        self.task_manager
+            .spawn(async move {
                 while let Some((name, path, reason, when_process)) = global_rx.recv().await {
                     let new_scan_event = NewScanEvent {
                         event_source: name.clone(),
@@ -292,23 +293,8 @@ impl PulseManager {
                         .add_event(EventType::New, Some(name.clone()), &[path])
                         .await;
                 }
-
-                Ok(())
-            });
-
-        Ok(tokio::spawn(async move {
-            tokio::select! {
-                res = global_consumer => {
-                    res??;
-                }
-                res = try_join_all(spawners) => {
-                    for r in res? {
-                        r?;
-                    }
-                }
-            }
-
-            Ok(())
-        }))
+                // Ok(())
+            })
+            .await;
     }
 }
