@@ -25,7 +25,7 @@ pub fn setup_logs(
         let writer = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&log_file)
+            .open(log_file)
             .with_context(|| format!("Failed to open log file: {}", log_file.to_string_lossy()))?;
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);
