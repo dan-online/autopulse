@@ -6,8 +6,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub fn setup_logs(
-    log_level: LogLevel,
-    log_file: Option<PathBuf>,
+    log_level: &LogLevel,
+    log_file: &Option<PathBuf>,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
         .context("Failed to initialize the timer")?;

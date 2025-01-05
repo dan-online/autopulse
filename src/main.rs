@@ -26,7 +26,7 @@ use service::manager::PulseManager;
 use settings::Settings;
 use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
@@ -90,8 +90,6 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 
     let manager_clone = manager.clone();
 
-    info!("🚀 listening on {}:{}", hostname, port);
-
     let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -106,8 +104,10 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             .app_data(Data::new(manager_clone.clone()))
     })
     .disable_signals()
-    .bind((hostname, port))?
+    .bind((hostname.clone(), port))?
     .run();
+
+    info!("🚀 listening on {}:{}", hostname, port);
 
     let server_task = tokio::spawn(server);
 
@@ -138,17 +138,40 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 }
 
 #[doc(hidden)]
-pub fn main() -> anyhow::Result<()> {
+fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
     let args = Args::parse();
 
-    let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
+    let settings = Settings::get_settings(args.config).context("failed to load settings");
 
-    let guard = setup_logs(
-        settings.app.log_level.clone(),
-        settings.opts.log_file.clone(),
-    )?;
+    match settings {
+        Ok(settings) => {
+            let guard = setup_logs(&settings.app.log_level, &settings.opts.log_file)?;
 
-    info!("💫 autopulse starting up...");
+            Ok((settings, guard))
+        }
+        Err(e) => {
+            // still setup logs if settings failed to load
+            setup_logs(&settings::app::LogLevel::Info, &None)?;
 
-    run(settings, guard)
+            Err(e)
+        }
+    }
+}
+
+#[doc(hidden)]
+pub fn main() -> anyhow::Result<()> {
+    match setup() {
+        Ok((settings, guard)) => {
+            info!("💫 autopulse v{} starting up...", env!("CARGO_PKG_VERSION"),);
+
+            if let Err(e) = run(settings, guard) {
+                error!("{:?}", e);
+            }
+        }
+        Err(e) => {
+            error!("{:?}", e);
+        }
+    }
+
+    Ok(())
 }
