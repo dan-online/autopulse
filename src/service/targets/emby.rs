@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
-
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
 use struson::{
     json_path,
     reader::{JsonReader, JsonStreamReader},
@@ -368,7 +368,10 @@ impl Emby {
 
 impl TargetProcess for Emby {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let libraries = self.libraries().await?;
+        let libraries = self
+            .libraries()
+            .await
+            .context("failed to fetch libraries")?;
 
         let mut succeded = Vec::new();
 
@@ -386,8 +389,15 @@ impl TargetProcess for Emby {
             }
 
             for (library, library_events) in to_find {
-                let (found_in_library, not_found_in_library) =
-                    self.get_items(&library, library_events.clone()).await?;
+                let (found_in_library, not_found_in_library) = self
+                    .get_items(&library, library_events.clone())
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to fetch items for library: {}",
+                            library.name.to_owned()
+                        )
+                    })?;
 
                 to_refresh.extend(found_in_library);
                 to_scan.extend(not_found_in_library);
@@ -409,7 +419,7 @@ impl TargetProcess for Emby {
         }
 
         if !to_scan.is_empty() {
-            self.scan(&to_scan).await?;
+            self.scan(&to_scan).await.context("failed to scan files")?;
 
             for file in to_scan.iter() {
                 debug!("scanned file: {}", file.file_path);

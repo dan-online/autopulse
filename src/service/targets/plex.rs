@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use anyhow::Context;
 use reqwest::header;
 use serde::Deserialize;
 use tracing::{debug, error, trace};
@@ -257,7 +258,7 @@ impl Plex {
 
 impl TargetProcess for Plex {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let libraries = self.libraries().await?;
+        let libraries = self.libraries().await.context("unable to get libraries")?;
 
         let mut succeeded = Vec::new();
 
