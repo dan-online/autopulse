@@ -69,12 +69,18 @@ impl Tdarr {
             .json(&payload)
             .send()
             .await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send scan: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to send scan: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 }

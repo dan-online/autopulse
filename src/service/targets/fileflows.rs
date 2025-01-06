@@ -103,14 +103,20 @@ impl FileFlows {
         let url = url::Url::parse(&self.url)?.join("/api/library")?;
 
         let res = client.get(url.to_string()).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
-            let body = res.text().await?;
-            let libraries: Vec<FileFlowsLibrary> = serde_json::from_str(&body)?;
+        if status.is_success() {
+            let libraries: Vec<FileFlowsLibrary> = res.json().await?;
+
             Ok(libraries)
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to get libraries: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to get libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -128,14 +134,20 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             let files: Vec<FileFlowsLibraryFile> = res.json().await?;
 
             Ok(files.first().cloned())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to get library file: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to get library file: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -150,12 +162,18 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send reprocess: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to send reprocess: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -175,12 +193,18 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send manual-add: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to send manual-add: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 

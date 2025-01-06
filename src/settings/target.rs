@@ -27,8 +27,8 @@ pub enum Target {
     Autopulse(Autopulse),
 }
 
-impl Target {
-    pub async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
+impl TargetProcess for Target {
+    async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         match self {
             Self::Plex(p) => p.process(evs).await,
             Self::Jellyfin(j) => j.process(evs).await,

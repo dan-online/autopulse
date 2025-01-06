@@ -119,9 +119,19 @@ impl Emby {
             .to_string();
 
         let res = client.get(&url).send().await?;
-        let libraries: Vec<Library> = res.json().await?;
+        let status = res.status();
 
-        Ok(libraries)
+        if status.is_success() {
+            Ok(res.json().await?)
+        } else {
+            let body = res.text().await?;
+
+            Err(anyhow::anyhow!(
+                "unable to fetch libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
+        }
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -315,12 +325,18 @@ impl Emby {
             .json(&body)
             .send()
             .await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send scan: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to send scan: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -334,12 +350,18 @@ impl Emby {
         );
 
         let res = client.post(url.to_string()).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to refresh item: {}", body))
+
+            Err(anyhow::anyhow!(
+                "unable to refresh item: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 }

@@ -100,9 +100,21 @@ impl Plex {
             .to_string();
 
         let res = client.get(&url).send().await?;
-        let libraries: LibraryResponse = res.json().await?;
+        let status = res.status();
 
-        Ok(libraries.media_container.directory.unwrap())
+        if status.is_success() {
+            let libraries: LibraryResponse = res.json().await?;
+
+            Ok(libraries.media_container.directory.unwrap())
+        } else {
+            let body = res.text().await?;
+
+            Err(anyhow::anyhow!(
+                "unable to get libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
+        }
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -130,6 +142,18 @@ impl Plex {
             .to_string();
 
         let res = client.get(&url).send().await?;
+        let status = res.status();
+
+        if !status.is_success() {
+            let body = res.text().await?;
+
+            return Err(anyhow::anyhow!(
+                "unable to get library: {} - {}",
+                status.as_u16(),
+                body
+            ));
+        }
+
         let lib: LibraryResponse = res.json().await?;
 
         for item in lib.media_container.metadata.unwrap_or_default() {

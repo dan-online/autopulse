@@ -8,7 +8,7 @@ use crate::{
         },
     },
     service::webhooks::WebhookManager,
-    settings::Settings,
+    settings::{target::TargetProcess, Settings},
     utils::sify::sify,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
