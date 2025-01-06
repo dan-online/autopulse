@@ -85,7 +85,7 @@ impl Notify {
 
         let event_handler = move |res| {
             if let Err(e) = tx.send(res) {
-                error!("unable to process notify event: {e}")
+                error!("failed to process notify event: {e}")
             }
         };
 
@@ -141,7 +141,7 @@ impl Notify {
                     }
                     _ => {}
                 },
-                Err(e) => error!("unable to process notify event: {e}"),
+                Err(e) => error!("failed to process notify event: {e}"),
             }
         }
 

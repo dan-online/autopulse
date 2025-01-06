@@ -190,7 +190,7 @@ impl PulseManager {
 
                 loop {
                     if let Err(e) = runner.run().await {
-                        error!("unable to run pulse: {:?}", e);
+                        error!("failed to run pulse: {:?}", e);
                     }
 
                     timer.tick().await;
@@ -207,7 +207,7 @@ impl PulseManager {
             .spawn(async move {
                 loop {
                     if let Err(e) = webhooks.send().await {
-                        error!("unable to send webhooks: {:?}", e);
+                        error!("failed to send webhooks: {:?}", e);
                     }
 
                     timer.tick().await;
@@ -238,7 +238,7 @@ impl PulseManager {
                         service
                             .watcher(tx)
                             .await
-                            .context(format!("unable to start notify service '{}'", cloned_name))
+                            .context(format!("failed to start notify service '{}'", cloned_name))
                     })
                     .await;
 
@@ -251,7 +251,7 @@ impl PulseManager {
                                 reason,
                                 chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
                             )) {
-                                error!("unable to send notify event: {:?}", e);
+                                error!("failed to send notify event: {:?}", e);
                             }
                         }
                     })
@@ -272,7 +272,7 @@ impl PulseManager {
                     };
 
                     if let Err(e) = manager.add_event(&new_scan_event) {
-                        error!("unable to add notify event: {:?}", e);
+                        error!("failed to add notify event: {:?}", e);
                     } else {
                         debug!(
                             "added 1 file from {} trigger due to: {}",

@@ -251,7 +251,7 @@ impl PulseRunner {
         );
 
         if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)?) {
-            error!("unable to delete not found events: {:?}", e);
+            error!("failed to delete not found events: {:?}", e);
         }
 
         let delete_failed = diesel::delete(
@@ -261,7 +261,7 @@ impl PulseRunner {
         );
 
         if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)?) {
-            error!("unable to delete failed events: {:?}", e);
+            error!("failed to delete failed events: {:?}", e);
         }
 
         Ok(())

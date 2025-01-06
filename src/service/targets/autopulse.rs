@@ -51,7 +51,7 @@ impl Autopulse {
             let body = res.text().await?;
 
             return Err(anyhow::anyhow!(
-                "unable to scan file: {} - {}",
+                "failed to scan file: {} - {}",
                 status.as_u16(),
                 body
             ));

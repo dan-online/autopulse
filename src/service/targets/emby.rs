@@ -127,7 +127,7 @@ impl Emby {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to fetch libraries: {} - {}",
+                "failed to fetch libraries: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -333,7 +333,7 @@ impl Emby {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to send scan: {} - {}",
+                "failed to send scan: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -358,7 +358,7 @@ impl Emby {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to refresh item: {} - {}",
+                "failed to refresh item: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -384,7 +384,7 @@ impl TargetProcess for Emby {
                 if let Some(library) = self.get_library(&libraries, &ev.file_path) {
                     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 } else {
-                    error!("unable to find library for file: {}", ev.file_path);
+                    error!("failed to find library for file: {}", ev.file_path);
                 }
             }
 

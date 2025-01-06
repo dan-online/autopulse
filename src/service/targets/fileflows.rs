@@ -110,7 +110,7 @@ impl FileFlows {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to get libraries: {} - {}",
+                "failed to get libraries: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -141,7 +141,7 @@ impl FileFlows {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to get library file: {} - {}",
+                "failed to get library file: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -167,7 +167,7 @@ impl FileFlows {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to send reprocess: {} - {}",
+                "failed to send reprocess: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -198,7 +198,7 @@ impl FileFlows {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to send manual-add: {} - {}",
+                "failed to send manual-add: {} - {}",
                 status.as_u16(),
                 body
             ))
@@ -220,7 +220,7 @@ impl FileFlows {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send rescan: {}", body))
+    //         Err(anyhow::anyhow!("failed to send rescan: {}", body))
     //     }
     // }
 
@@ -238,7 +238,7 @@ impl FileFlows {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send scan: {}", body))
+    //         Err(anyhow::anyhow!("failed to send scan: {}", body))
     //     }
     // }
 }

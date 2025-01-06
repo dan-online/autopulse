@@ -77,7 +77,7 @@ impl Tdarr {
             let body = res.text().await?;
 
             Err(anyhow::anyhow!(
-                "unable to send scan: {} - {}",
+                "failed to send scan: {} - {}",
                 status.as_u16(),
                 body
             ))
