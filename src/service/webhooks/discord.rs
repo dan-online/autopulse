@@ -45,6 +45,14 @@ impl DiscordWebhook {
             .expect("failed to build reqwest client")
     }
 
+    fn truncate_message(message: String, length: usize) -> String {
+        if message.len() > length {
+            format!("{}...", &message[..(length - 3)])
+        } else {
+            message
+        }
+    }
+
     fn generate_json(&self, batch: &WebhookBatch) -> DiscordEmbedContent {
         let mut content = DiscordEmbedContent {
             username: self
@@ -96,7 +104,8 @@ impl DiscordWebhook {
                 },
                 DiscordEmbedField {
                     name: "Files".to_string(),
-                    value: files.join("\n"),
+                    // value: files.join("\n"),
+                    value: Self::truncate_message(files.join("\n"), 1024),
                 },
             ];
 
