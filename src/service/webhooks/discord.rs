@@ -136,7 +136,11 @@ impl DiscordWebhook {
 
                 if let Some(reset) = reset {
                     if retries == 0 {
-                        return Err(anyhow::anyhow!("failed to send webhook, retries exhausted"));
+                        let body = res.text().await?;
+
+                        return Err(anyhow::anyhow!(
+                            "failed to send webhook, retries exhausted: {body}"
+                        ));
                     }
 
                     let reset = reset.to_str().unwrap_or_default();
