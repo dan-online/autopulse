@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use reqwest::header;
@@ -230,7 +233,10 @@ impl TargetProcess for FileFlows {
             let files = evs
                 .iter()
                 .filter_map(|ev| {
-                    if ev.file_path.starts_with(library.path.as_deref()?) {
+                    let ev_path = Path::new(&ev.file_path);
+                    let lib_path = Path::new(library.path.as_deref()?);
+
+                    if ev_path.starts_with(lib_path) {
                         Some(*ev)
                     } else {
                         None

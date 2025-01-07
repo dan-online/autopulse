@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, io::Cursor};
+use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
 
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use reqwest::header;
@@ -125,10 +125,19 @@ impl Emby {
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
-        libraries
-            .iter()
-            .find(|lib| lib.locations.iter().any(|loc| path.starts_with(loc)))
-            .cloned()
+        let ev_path = Path::new(path);
+
+        for library in libraries {
+            for location in &library.locations {
+                let path = Path::new(location);
+
+                if ev_path.starts_with(path) {
+                    return Some(library.clone());
+                }
+            }
+        }
+
+        None
     }
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {

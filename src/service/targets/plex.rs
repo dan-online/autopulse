@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use reqwest::header;
 use serde::Deserialize;
@@ -103,22 +105,24 @@ impl Plex {
         Ok(libraries.media_container.directory.unwrap())
     }
 
-    fn in_library(
-        &self,
-        libraries: &Vec<Library>,
-        ev: &ScanEvent,
-    ) -> anyhow::Result<Option<Library>> {
+    fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
+        let ev_path = Path::new(path);
+
         for library in libraries {
             for location in &library.location {
-                if ev.file_path.starts_with(&location.path) {
-                    return Ok(Some(library.clone()));
+                let path = Path::new(&location.path);
+
+                if ev_path.starts_with(path) {
+                    return Some(library.clone());
                 }
             }
         }
 
-        Ok(None)
+        None
     }
 
+    // TODO: X-Plex-Media-Container-Size
+    // TODO: Change to get_items
     async fn get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Metadata>> {
         let client = self.get_client()?;
         let url = url::Url::parse(&self.url)?
@@ -234,7 +238,7 @@ impl TargetProcess for Plex {
         let mut succeeded = Vec::new();
 
         for ev in evs {
-            if let Some(library) = self.in_library(&libraries, ev)? {
+            if let Some(library) = self.get_library(&libraries, &ev.file_path) {
                 match self.scan(ev, &library).await {
                     Ok(_) => {
                         debug!("scanned file '{}'", ev.file_path);
