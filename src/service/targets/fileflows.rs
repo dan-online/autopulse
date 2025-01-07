@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
 use reqwest::header;
@@ -258,6 +258,12 @@ impl TargetProcess for FileFlows {
             let mut library_files = HashMap::new();
 
             for ev in evs {
+                // Skip directories
+                if PathBuf::from(&ev.file_path).is_dir() {
+                    succeeded.push(ev.id.clone());
+                    continue;
+                }
+
                 let file = self.get_library_file(ev).await?;
 
                 if let Some(file) = file {
