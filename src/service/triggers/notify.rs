@@ -1,12 +1,43 @@
 use crate::settings::{rewrite::Rewrite, timer::Timer};
 use notify::{
     event::{ModifyKind, RenameMode},
-    Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+    Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tracing::error;
+use tracing::{error, trace};
+
+#[derive(Deserialize, Clone, Eq, PartialEq, Debug)]
+pub enum NotifyBackendType {
+    #[serde(rename = "recommended")]
+    /// Uses the recommended backend such as `inotify` on Linux, `FSEvents` on macOS, and `ReadDirectoryChangesW` on Windows
+    Recommended,
+    #[serde(rename = "polling")]
+    /// Uses a polling backend (useful for rclone/nfs/etc mounts), which will be extremely inefficient with a high number of files
+    Polling,
+}
+
+#[doc(hidden)]
+pub enum NotifyBackend {
+    Recommended(RecommendedWatcher),
+    Polling(PollWatcher),
+}
+
+impl NotifyBackend {
+    pub fn watch(&mut self, path: String, mode: RecursiveMode) -> anyhow::Result<()> {
+        match self {
+            Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
+            Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
+        }
+    }
+}
+
+impl Default for NotifyBackendType {
+    fn default() -> Self {
+        Self::Recommended
+    }
+}
 
 #[derive(Deserialize, Clone)]
 pub struct Notify {
@@ -22,13 +53,17 @@ pub struct Notify {
     /// Timer
     #[serde(default)]
     pub timer: Timer,
+    /// Backend
+    #[serde(default)]
+    pub backend: NotifyBackendType,
 }
 
 impl Notify {
     pub fn send_event(
         &self,
-        tx: UnboundedSender<String>,
+        tx: UnboundedSender<(String, EventKind)>,
         path: Option<&PathBuf>,
+        reason: EventKind,
     ) -> anyhow::Result<()> {
         if path.is_none() {
             return Ok(());
@@ -40,38 +75,56 @@ impl Notify {
             path = rewrite.rewrite_path(path);
         }
 
-        tx.send(path).map_err(|e| anyhow::anyhow!(e))
+        tx.send((path, reason)).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn async_watcher(
         &self,
-    ) -> notify::Result<(RecommendedWatcher, UnboundedReceiver<notify::Result<Event>>)> {
+    ) -> anyhow::Result<(NotifyBackend, UnboundedReceiver<notify::Result<Event>>)> {
         let (tx, rx) = unbounded_channel();
 
-        let watcher = RecommendedWatcher::new(
-            move |res| {
-                if let Err(e) = tx.send(res) {
-                    error!("unable to process notify event: {e}")
-                }
-            },
-            Config::default(),
-        )?;
+        let event_handler = move |res| {
+            if let Err(e) = tx.send(res) {
+                error!("failed to process notify event: {e}")
+            }
+        };
 
-        Ok((watcher, rx))
+        if self.backend == NotifyBackendType::Recommended {
+            let watcher = RecommendedWatcher::new(event_handler, Config::default())?;
+
+            Ok((NotifyBackend::Recommended(watcher), rx))
+        } else {
+            let watcher = PollWatcher::new(
+                event_handler,
+                Config::default().with_poll_interval(Duration::from_secs(10)),
+            )?;
+
+            // watcher.poll()?;
+
+            Ok((NotifyBackend::Polling(watcher), rx))
+        }
     }
 
-    pub async fn watcher(&self, tx: UnboundedSender<String>) -> anyhow::Result<()> {
+    pub async fn watcher(&self, tx: UnboundedSender<(String, EventKind)>) -> anyhow::Result<()> {
         let (mut watcher, mut rx) = self.async_watcher()?;
 
         for path in &self.paths {
+            let start = std::time::Instant::now();
+
+            let recursive_mode = self.recursive.unwrap_or(true);
+
             watcher.watch(
-                path.as_ref(),
-                if self.recursive.unwrap_or(true) {
+                path.clone(),
+                if recursive_mode {
                     RecursiveMode::Recursive
                 } else {
                     RecursiveMode::NonRecursive
                 },
             )?;
+
+            if let NotifyBackend::Polling(_) = watcher {
+                trace!("watching '{}' took: {:?}", path, start.elapsed());
+            }
         }
 
         while let Some(res) = rx.recv().await {
@@ -83,12 +136,12 @@ impl Notify {
                     | EventKind::Create(_)
                     | EventKind::Remove(_) => {
                         for path in event.paths {
-                            self.send_event(tx.clone(), Some(&path))?;
+                            self.send_event(tx.clone(), Some(&path), event.kind)?;
                         }
                     }
                     _ => {}
                 },
-                Err(e) => error!("unable to process notify event: {e}"),
+                Err(e) => error!("failed to process notify event: {e}"),
             }
         }
 

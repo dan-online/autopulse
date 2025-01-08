@@ -45,10 +45,16 @@ impl Autopulse {
         }
 
         let res = client.get(url.to_string()).send().await?;
+        let status = res.status();
 
-        if !res.status().is_success() {
+        if !status.is_success() {
             let body = res.text().await?;
-            return Err(anyhow::anyhow!("unable to scan file: {}", body));
+
+            return Err(anyhow::anyhow!(
+                "failed to scan file: {} - {}",
+                status.as_u16(),
+                body
+            ));
         }
 
         Ok(())

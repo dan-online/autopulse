@@ -17,6 +17,7 @@ mod tests {
             recursive: None,
             excludes: vec![],
             timer: Default::default(),
+            backend: Default::default(),
         };
 
         let (_, mut rx) = notifier.async_watcher()?;

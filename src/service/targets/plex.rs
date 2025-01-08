@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use anyhow::Context;
 use reqwest::header;
 use serde::Deserialize;
 use tracing::{debug, error, trace};
@@ -100,9 +101,21 @@ impl Plex {
             .to_string();
 
         let res = client.get(&url).send().await?;
-        let libraries: LibraryResponse = res.json().await?;
+        let status = res.status();
 
-        Ok(libraries.media_container.directory.unwrap())
+        if status.is_success() {
+            let libraries: LibraryResponse = res.json().await?;
+
+            Ok(libraries.media_container.directory.unwrap())
+        } else {
+            let body = res.text().await?;
+
+            Err(anyhow::anyhow!(
+                "failed to get libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
+        }
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -130,6 +143,18 @@ impl Plex {
             .to_string();
 
         let res = client.get(&url).send().await?;
+        let status = res.status();
+
+        if !status.is_success() {
+            let body = res.text().await?;
+
+            return Err(anyhow::anyhow!(
+                "failed to get library: {} - {}",
+                status.as_u16(),
+                body
+            ));
+        }
+
         let lib: LibraryResponse = res.json().await?;
 
         for item in lib.media_container.metadata.unwrap_or_default() {
@@ -160,7 +185,7 @@ impl Plex {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send refresh: {}", body))
+    //         Err(anyhow::anyhow!("failed to send refresh: {}", body))
     //     }
     // }
 
@@ -175,7 +200,7 @@ impl Plex {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send analyze: {}", body))
+    //         Err(anyhow::anyhow!("failed to send analyze: {}", body))
     //     }
     // }
 
@@ -189,7 +214,7 @@ impl Plex {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send analyze: {}", body))
+            Err(anyhow::anyhow!("failed to send analyze: {}", body))
         }
     }
 
@@ -203,7 +228,7 @@ impl Plex {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send analyze: {}", body))
+            Err(anyhow::anyhow!("failed to send analyze: {}", body))
         }
     }
 
@@ -214,9 +239,9 @@ impl Plex {
 
         let file_dir = std::path::Path::new(&ev.file_path)
             .parent()
-            .ok_or_else(|| anyhow::anyhow!("unable to get parent directory"))?
+            .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
             .to_str()
-            .ok_or_else(|| anyhow::anyhow!("unable to convert path to string"))?;
+            .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?;
 
         url.query_pairs_mut().append_pair("path", file_dir);
 
@@ -226,14 +251,14 @@ impl Plex {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send scan: {}", body))
+            Err(anyhow::anyhow!("failed to send scan: {}", body))
         }
     }
 }
 
 impl TargetProcess for Plex {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let libraries = self.libraries().await?;
+        let libraries = self.libraries().await.context("failed to get libraries")?;
 
         let mut succeeded = Vec::new();
 
@@ -291,7 +316,7 @@ impl TargetProcess for Plex {
                                 }
                                 Ok(None) => {
                                     trace!(
-                                        "unable to find item for file: {}, leaving at scan",
+                                        "failed to find item for file: {}, leaving at scan",
                                         ev.file_path
                                     );
                                     succeeded.push(ev.id.clone());
@@ -312,7 +337,7 @@ impl TargetProcess for Plex {
                     }
                 }
             } else {
-                error!("unable to find library for file: {}", ev.file_path);
+                error!("failed to find library for file: {}", ev.file_path);
             }
         }
 

@@ -1,13 +1,10 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
-
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{error, trace};
+use std::{collections::HashMap, path::Path, path::PathBuf};
+use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
 pub struct FileFlows {
@@ -103,14 +100,20 @@ impl FileFlows {
         let url = url::Url::parse(&self.url)?.join("/api/library")?;
 
         let res = client.get(url.to_string()).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
-            let body = res.text().await?;
-            let libraries: Vec<FileFlowsLibrary> = serde_json::from_str(&body)?;
+        if status.is_success() {
+            let libraries: Vec<FileFlowsLibrary> = res.json().await?;
+
             Ok(libraries)
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to get libraries: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to get libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -128,14 +131,20 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             let files: Vec<FileFlowsLibraryFile> = res.json().await?;
 
             Ok(files.first().cloned())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to get library file: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to get library file: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -150,12 +159,18 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send reprocess: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to send reprocess: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -175,12 +190,18 @@ impl FileFlows {
         };
 
         let res = client.post(url.to_string()).json(&req).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send manual-add: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to send manual-add: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -199,7 +220,7 @@ impl FileFlows {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send rescan: {}", body))
+    //         Err(anyhow::anyhow!("failed to send rescan: {}", body))
     //     }
     // }
 
@@ -217,7 +238,7 @@ impl FileFlows {
     //         Ok(())
     //     } else {
     //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("unable to send scan: {}", body))
+    //         Err(anyhow::anyhow!("failed to send scan: {}", body))
     //     }
     // }
 }
@@ -225,7 +246,10 @@ impl FileFlows {
 impl TargetProcess for FileFlows {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeeded = Vec::new();
-        let libraries = self.get_libraries().await?;
+        let libraries = self
+            .get_libraries()
+            .await
+            .context("failed to get libraries")?;
 
         let mut to_scan: HashMap<FileFlowsLibrary, Vec<&ScanEvent>> = HashMap::new();
 
@@ -270,12 +294,14 @@ impl TargetProcess for FileFlows {
                     continue;
                 }
 
-                let file = self.get_library_file(ev).await?;
-
-                if let Some(file) = file {
-                    library_files.insert(ev, Some(file));
-                } else {
-                    library_files.insert(ev, None);
+                match self.get_library_file(ev).await {
+                    Ok(file) => {
+                        library_files.insert(ev, file);
+                    }
+                    Err(e) => {
+                        error!("failed to get library file: {}", e);
+                        library_files.insert(ev, None);
+                    }
                 }
             }
 
@@ -300,7 +326,9 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        trace!("reprocessed {} files", processed.len());
+                        for (ev, _) in processed.iter() {
+                            debug!("reprocessed file: {}", ev.file_path);
+                        }
                         succeeded.extend(processed.iter().map(|(ev, _)| ev.id.clone()));
                     }
                     Err(e) => error!("failed to reprocess files: {}", e),
@@ -316,7 +344,9 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        trace!("manually added {} files", not_processed.len());
+                        for (ev, _) in not_processed.iter() {
+                            debug!("manually added file: {}", ev.file_path);
+                        }
                         succeeded.extend(not_processed.iter().map(|(ev, _)| ev.id.clone()));
                     }
                     Err(e) => error!("failed to manually add files: {}", e),

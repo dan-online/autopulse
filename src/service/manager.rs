@@ -4,6 +4,7 @@ use crate::db::schema::scan_events::{
     can_process, created_at, event_source, file_path, id, updated_at,
 };
 use crate::routes::stats::Stats;
+use crate::utils::task_manager::TaskManager;
 use crate::{
     db::{
         conn::{get_conn, DbPool},
@@ -12,8 +13,10 @@ use crate::{
     },
     settings::{trigger::Trigger, Settings},
 };
+use anyhow::Context;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
 #[derive(Clone)]
@@ -21,6 +24,7 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
+    pub task_manager: Arc<TaskManager>,
 }
 
 impl PulseManager {
@@ -28,12 +32,18 @@ impl PulseManager {
         let settings = Arc::new(settings);
         let pool = Arc::new(pool);
         let webhooks = Arc::new(WebhookManager::new(settings.clone()));
+        let task_manager = Arc::new(TaskManager::new());
 
         Self {
             settings,
             pool,
             webhooks,
+            task_manager,
         }
+    }
+
+    pub async fn shutdown(&self) -> anyhow::Result<()> {
+        self.task_manager.shutdown().await
     }
 
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
@@ -168,53 +178,45 @@ impl PulseManager {
             .map_err(Into::into)
     }
 
-    pub fn start(&self) -> tokio::task::JoinHandle<()> {
+    pub async fn start(&self) -> Arc<JoinHandle<()>> {
         let pool = self.pool.clone();
         let webhooks = self.webhooks.clone();
         let settings = self.settings.clone();
 
-        // spawn a loop to log every 0.5s the pool.state()
+        self.task_manager
+            .spawn(async move {
+                let runner = PulseRunner::new(settings, pool, webhooks);
+                let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
-        // let pool_clone = pool.clone();
-        // tokio::spawn(async move {
-        //     let mut timer = tokio::time::interval(std::time::Duration::from_millis(500));
+                loop {
+                    if let Err(e) = runner.run().await {
+                        error!("failed to run pulse: {:?}", e);
+                    }
 
-        //     loop {
-        //         info!("pool state: {:?}", pool_clone.state());
-        //         timer.tick().await;
-        //     }
-        // });
-
-        tokio::spawn(async move {
-            let runner = PulseRunner::new(settings, pool, webhooks);
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
-
-            loop {
-                if let Err(e) = runner.run().await {
-                    error!("unable to run pulse: {:?}", e);
+                    timer.tick().await;
                 }
-
-                timer.tick().await;
-            }
-        })
+            })
+            .await
     }
 
-    pub fn start_webhooks(&self) -> tokio::task::JoinHandle<()> {
+    pub async fn start_webhooks(&self) -> Arc<JoinHandle<()>> {
         let webhooks = self.webhooks.clone();
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
-        tokio::spawn(async move {
-            loop {
-                if let Err(e) = webhooks.send().await {
-                    error!("unable to send webhooks: {:?}", e);
-                }
+        self.task_manager
+            .spawn(async move {
+                loop {
+                    if let Err(e) = webhooks.send().await {
+                        error!("failed to send webhooks: {:?}", e);
+                    }
 
-                timer.tick().await;
-            }
-        })
+                    timer.tick().await;
+                }
+            })
+            .await
     }
 
-    pub fn start_notify(&self) -> tokio::task::JoinHandle<()> {
+    pub async fn start_notify(&self) {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settings = self.settings.clone();
@@ -231,48 +233,68 @@ impl PulseManager {
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
-                tokio::spawn(async move {
-                    if let Err(e) = service.watcher(tx).await {
-                        error!("unable to start notify service '{}': {:?}", cloned_name, e);
-                    }
-                });
+                self.task_manager
+                    .spawn(async move {
+                        service
+                            .watcher(tx)
+                            .await
+                            .context(format!("failed to start notify service '{}'", cloned_name))
+                    })
+                    .await;
 
-                tokio::spawn(async move {
-                    while let Some(path) = rx.recv().await {
-                        if let Err(e) = global_tx.send((
-                            name.clone(),
-                            path,
-                            chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
-                        )) {
-                            error!("unable to send notify event: {:?}", e);
+                self.task_manager
+                    .spawn(async move {
+                        while let Some((path, reason)) = rx.recv().await {
+                            if let Err(e) = global_tx.send((
+                                name.clone(),
+                                path,
+                                reason,
+                                chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
+                            )) {
+                                error!("failed to send notify event: {:?}", e);
+                            }
                         }
-                    }
-                });
+                    })
+                    .await;
             }
         }
 
         let manager = Arc::new(self.clone());
 
-        tokio::spawn(async move {
-            while let Some((name, path, when_process)) = global_rx.recv().await {
-                let new_scan_event = NewScanEvent {
-                    event_source: name.clone(),
-                    file_path: path.clone(),
-                    can_process: when_process,
-                    ..Default::default()
-                };
+        self.task_manager
+            .spawn(async move {
+                while let Some((name, path, reason, when_process)) = global_rx.recv().await {
+                    let new_scan_event = NewScanEvent {
+                        event_source: name.clone(),
+                        file_path: path.clone(),
+                        can_process: when_process,
+                        ..Default::default()
+                    };
 
-                if let Err(e) = manager.add_event(&new_scan_event) {
-                    error!("unable to add notify event: {:?}", e);
-                } else {
-                    debug!("added 1 file from {} trigger", name);
+                    if let Err(e) = manager.add_event(&new_scan_event) {
+                        error!("failed to add notify event: {:?}", e);
+                    } else {
+                        debug!(
+                            "added 1 file from {} trigger due to: {}",
+                            name,
+                            match reason {
+                                notify::EventKind::Create(_) => "create",
+                                notify::EventKind::Modify(_) => "modify",
+                                notify::EventKind::Remove(_) => "remove",
+                                notify::EventKind::Access(_) => "access",
+                                notify::EventKind::Any => "any",
+                                notify::EventKind::Other => "other",
+                            }
+                        );
+                    }
+
+                    manager
+                        .webhooks
+                        .add_event(EventType::New, Some(name.clone()), &[path])
+                        .await;
                 }
-
-                manager
-                    .webhooks
-                    .add_event(EventType::New, Some(name.clone()), &[path])
-                    .await;
-            }
-        })
+                // Ok(())
+            })
+            .await;
     }
 }

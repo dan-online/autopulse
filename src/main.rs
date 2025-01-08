@@ -25,7 +25,8 @@ use routes::{index::hello, triggers::trigger_get};
 use service::manager::PulseManager;
 use settings::Settings;
 use std::sync::Arc;
-use tracing::info;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{debug, error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 use utils::cli::Args;
 use utils::logs::setup_logs;
@@ -83,13 +84,13 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let manager = PulseManager::new(settings, pool.clone());
     let manager = Arc::new(manager);
 
-    let manager_task = manager.start();
-    let webhook_task = manager.start_webhooks();
-    let notify_task = manager.start_notify();
+    manager.start().await;
+    manager.start_webhooks().await;
+    manager.start_notify().await;
 
-    info!("🚀 Listening on {}:{}", hostname, port);
+    let manager_clone = manager.clone();
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             .service(hello)
@@ -100,34 +101,77 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             .service(login)
             .service(list)
             .app_data(basic::Config::default().realm("Restricted area"))
-            .app_data(Data::new(manager.clone()))
+            .app_data(Data::new(manager_clone.clone()))
     })
-    .bind((hostname, port))?
-    .run()
-    .await
-    .with_context(|| "Failed to start server")?;
+    .disable_signals()
+    .bind((hostname.clone(), port))?
+    .run();
 
-    info!("Shutting down...");
+    info!("🚀 listening on {}:{}", hostname, port);
 
-    manager_task.abort();
-    webhook_task.abort();
-    notify_task.abort();
+    let server_task = tokio::spawn(server);
+
+    let shutdown: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+        let mut sigterm = signal(SignalKind::terminate())?;
+        let mut sigint = signal(SignalKind::interrupt())?;
+
+        tokio::select! {
+            _ = sigterm.recv() => {
+                debug!("Received SIGTERM");
+            }
+            _ = sigint.recv() => {
+                debug!("Received SIGINT");
+            }
+        }
+
+        info!("💤 shutting down...");
+
+        Ok(())
+    });
+
+    shutdown.await??;
+
+    manager.shutdown().await?;
+    server_task.abort();
 
     Ok(())
 }
 
 #[doc(hidden)]
-pub fn main() -> anyhow::Result<()> {
+fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
     let args = Args::parse();
 
-    let settings = Settings::get_settings(args.config).with_context(|| "Failed to get settings")?;
+    let settings = Settings::get_settings(args.config).context("failed to load settings");
 
-    let guard = setup_logs(
-        settings.app.log_level.clone(),
-        settings.opts.log_file.clone(),
-    )?;
+    match settings {
+        Ok(settings) => {
+            let guard = setup_logs(&settings.app.log_level, &settings.opts.log_file)?;
 
-    info!("💫 autopulse starting up...");
+            Ok((settings, guard))
+        }
+        Err(e) => {
+            // still setup logs if settings failed to load
+            setup_logs(&settings::app::LogLevel::Info, &None)?;
 
-    run(settings, guard)
+            Err(e)
+        }
+    }
+}
+
+#[doc(hidden)]
+pub fn main() -> anyhow::Result<()> {
+    match setup() {
+        Ok((settings, guard)) => {
+            info!("💫 autopulse v{} starting up...", env!("CARGO_PKG_VERSION"),);
+
+            if let Err(e) = run(settings, guard) {
+                error!("{:?}", e);
+            }
+        }
+        Err(e) => {
+            error!("{:?}", e);
+        }
+    }
+
+    Ok(())
 }

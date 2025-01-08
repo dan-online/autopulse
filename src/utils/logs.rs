@@ -6,8 +6,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub fn setup_logs(
-    log_level: LogLevel,
-    log_file: Option<PathBuf>,
+    log_level: &LogLevel,
+    log_file: &Option<PathBuf>,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
         .context("Failed to initialize the timer")?;
@@ -25,7 +25,7 @@ pub fn setup_logs(
         let writer = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&log_file)
+            .open(log_file)
             .with_context(|| format!("Failed to open log file: {}", log_file.to_string_lossy()))?;
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);

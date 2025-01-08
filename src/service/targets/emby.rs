@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
-
 use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
 use struson::{
     json_path,
     reader::{JsonReader, JsonStreamReader},
@@ -119,9 +119,19 @@ impl Emby {
             .to_string();
 
         let res = client.get(&url).send().await?;
-        let libraries: Vec<Library> = res.json().await?;
+        let status = res.status();
 
-        Ok(libraries)
+        if status.is_success() {
+            Ok(res.json().await?)
+        } else {
+            let body = res.text().await?;
+
+            Err(anyhow::anyhow!(
+                "failed to fetch libraries: {} - {}",
+                status.as_u16(),
+                body
+            ))
+        }
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -315,12 +325,18 @@ impl Emby {
             .json(&body)
             .send()
             .await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to send scan: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to send scan: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 
@@ -334,19 +350,28 @@ impl Emby {
         );
 
         let res = client.post(url.to_string()).send().await?;
+        let status = res.status();
 
-        if res.status().is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             let body = res.text().await?;
-            Err(anyhow::anyhow!("unable to refresh item: {}", body))
+
+            Err(anyhow::anyhow!(
+                "failed to refresh item: {} - {}",
+                status.as_u16(),
+                body
+            ))
         }
     }
 }
 
 impl TargetProcess for Emby {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let libraries = self.libraries().await?;
+        let libraries = self
+            .libraries()
+            .await
+            .context("failed to fetch libraries")?;
 
         let mut succeded = Vec::new();
 
@@ -359,13 +384,20 @@ impl TargetProcess for Emby {
                 if let Some(library) = self.get_library(&libraries, &ev.file_path) {
                     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 } else {
-                    error!("unable to find library for file: {}", ev.file_path);
+                    error!("failed to find library for file: {}", ev.file_path);
                 }
             }
 
             for (library, library_events) in to_find {
-                let (found_in_library, not_found_in_library) =
-                    self.get_items(&library, library_events.clone()).await?;
+                let (found_in_library, not_found_in_library) = self
+                    .get_items(&library, library_events.clone())
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to fetch items for library: {}",
+                            library.name.to_owned()
+                        )
+                    })?;
 
                 to_refresh.extend(found_in_library);
                 to_scan.extend(not_found_in_library);
@@ -387,7 +419,7 @@ impl TargetProcess for Emby {
         }
 
         if !to_scan.is_empty() {
-            self.scan(&to_scan).await?;
+            self.scan(&to_scan).await.context("failed to scan files")?;
 
             for file in to_scan.iter() {
                 debug!("scanned file: {}", file.file_path);
