@@ -45,6 +45,7 @@ We use the following terminology:
     - Linux: `inotify`
     - MacOS: `FSEvents`
     - Windows: `ReadDirectoryChangesW`
+    - Fallback: `polling`
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
