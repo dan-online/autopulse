@@ -27,11 +27,13 @@
 
 ## About The Project
 
-autopulse is a simple project, designed after the deprecation of [autoscan](https://github.com/Cloudbox/autoscan) and a lot of inspiration comes from there. The goal is to provide a simple, efficient, and reliable way to update your media library reducing full library scans. A key feature is the ability to provide a hash of the file to the API, which will then wait for the file to match that hash before updating targets.
+autopulse is a web server that receives notifications from media organizers like Sonarr/Radarr/Lidarr/etc ([triggers](#terminology)) and updates the items in media servers like Plex/Jellyfin/Emby/etc ([targets](#terminology)). It is designed to be efficient, only updating the items that have changed, reducing the load on media servers.
+
+> Why migrate from [autoscan](https://github.com/Cloudbox/autoscan)? autoscan is a great project and autopulse takes a lot of inspiration from it, but it is no longer maintained and isn't very efficient at updating libraries as it uses a more general "scan" on a folder rather than a specific file. autopulse finds the corresponding library item and sends an update request directly.
 
 ### Terminology
 
-Following autoscan, we use the following terminology:
+We use the following terminology:
 - **Trigger**: A trigger is a specification for an endpoint that will be called when a file is ready to be processed
   - [Manual](#manual) (default: /triggers/manual)
     - Fileflows ([sub-flow](https://github.com/dan-online/autopulse/issues/5#issuecomment-2333917695))
@@ -51,6 +53,13 @@ Following autoscan, we use the following terminology:
   - Tdarr
   - FileFlows
   - Another autopulse instance
+
+#### Example Flow
+
+1. Sonarr organizes an episode and sends a webhook notification to autopulse
+2. autopulse receives the notification and rewrites the path to the expected path for the target
+3. autopulse optionally checks the file exists and optionally waits for the file to match a provided hash
+4. autopulse sends a request to Plex to update or add the episode information/metadata
 
 ### Features
 
