@@ -13,9 +13,10 @@ $: ev = $page.data.ev;
 
 let updateTimeout: number;
 
-function autoReload() {
+async function autoReload() {
+	await invalidateAll();
 	updateTimeout = setTimeout(() => {
-		invalidateAll();
+		autoReload();
 	}, 5000);
 }
 
