@@ -102,7 +102,12 @@ impl Emby {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        headers.insert("X-Emby-Token", self.token.parse().unwrap());
+        headers.insert(
+            "Authorzation",
+            format!("MediaBrowser Token=\"{}\"", self.token)
+                .parse()
+                .unwrap(),
+        );
         headers.insert("Accept", "application/json".parse().unwrap());
 
         reqwest::Client::builder()
