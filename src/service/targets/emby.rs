@@ -103,7 +103,7 @@ impl Emby {
         let mut headers = header::HeaderMap::new();
 
         headers.insert(
-            "Authorzation",
+            "Authorization",
             format!("MediaBrowser Token=\"{}\"", self.token)
                 .parse()
                 .unwrap(),
