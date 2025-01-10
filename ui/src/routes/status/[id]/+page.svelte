@@ -17,7 +17,7 @@ async function autoReload() {
 	await invalidateAll();
 	updateTimeout = setTimeout(() => {
 		autoReload();
-	}, 5000);
+	}, 500);
 }
 
 onMount(() => {
