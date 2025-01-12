@@ -1596,7 +1596,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify/utils@npm:^2.2.0, @iconify/utils@npm:^2.2.1":
+"@iconify/utils@npm:^2.2.1":
   version: 2.2.1
   resolution: "@iconify/utils@npm:2.2.1"
   dependencies:
@@ -5615,7 +5615,7 @@ __metadata:
     svelte-check: "npm:^4.1.3"
     typescript: "npm:^5.7.3"
     unocss: "npm:^0.65.4"
-    unplugin-icons: "npm:^0.22.0"
+    unplugin-icons: "npm:^22.0.0"
     vite: "npm:^6.0.7"
     wrangler: "npm:^3.101.0"
   languageName: unknown
@@ -5712,13 +5712,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unplugin-icons@npm:^0.22.0":
-  version: 0.22.0
-  resolution: "unplugin-icons@npm:0.22.0"
+"unplugin-icons@npm:^22.0.0":
+  version: 22.0.0
+  resolution: "unplugin-icons@npm:22.0.0"
   dependencies:
     "@antfu/install-pkg": "npm:^0.5.0"
     "@antfu/utils": "npm:^0.7.10"
-    "@iconify/utils": "npm:^2.2.0"
+    "@iconify/utils": "npm:^2.2.1"
     debug: "npm:^4.4.0"
     kolorist: "npm:^1.8.0"
     local-pkg: "npm:^0.5.1"
@@ -5743,7 +5743,7 @@ __metadata:
       optional: true
     vue-template-es2015-compiler:
       optional: true
-  checksum: 10c0/d61ebd36aa049bcfa72be0871d67f346ee7dbf58022ef3bae0ee10a47be00958456eaee24399373b1fc6daa57a81b6e9df5069cc0770ff39a147062bc20907c5
+  checksum: 10c0/e58601a18afcd2f9279b1cd57000c738cf58f83d2b67cbcf2a53cb2e96a94097c51884471b2a55b71663c391435a671cd7b86dc48a6c80cd1e8e4d775e78a954
   languageName: node
   linkType: hard
 
