@@ -870,10 +870,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cloudflare/workers-types@npm:^4.20231121.0":
-  version: 4.20241022.0
-  resolution: "@cloudflare/workers-types@npm:4.20241022.0"
-  checksum: 10c0/1ed42846adab00f5a5d8c215e1b7d5c287e1fe374cab6da169438772a73fd4382c24ac2f838f0663243fa557d4428a5592b18efc646c2a13a7f8f731600572c4
+"@cloudflare/workers-types@npm:^4.20241106.0":
+  version: 4.20250109.0
+  resolution: "@cloudflare/workers-types@npm:4.20250109.0"
+  checksum: 10c0/945de6ea746893d689be063c9d603d9c5e0956e997337f29f0dedfd7355628b9603e08cf5d530fb868de5109ecee523db9ab8b21b743e3c31f462d62338cdf39
   languageName: node
   linkType: hard
 
@@ -2666,17 +2666,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/adapter-cloudflare@npm:^4.9.0":
-  version: 4.9.0
-  resolution: "@sveltejs/adapter-cloudflare@npm:4.9.0"
+"@sveltejs/adapter-cloudflare@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "@sveltejs/adapter-cloudflare@npm:5.0.0"
   dependencies:
-    "@cloudflare/workers-types": "npm:^4.20231121.0"
+    "@cloudflare/workers-types": "npm:^4.20241106.0"
     esbuild: "npm:^0.24.0"
     worktop: "npm:0.8.0-next.18"
   peerDependencies:
     "@sveltejs/kit": ^2.0.0
-    wrangler: ^3.28.4
-  checksum: 10c0/fb0cf4c8fa1777ce797720d6b5d8f8082f0932d5f1de4445316b72b2124ff5aed05f3b2fd49efe2c22035df0dde8d8da42f0fa6003c8a46e1e6b0556ae2a532e
+    wrangler: ^3.87.0
+  checksum: 10c0/b815970c47189ace62dc521d5c850d3d9ae5d52c01325a710030103e4fe74c9ffa44697019905970eb7d22229657c3770fa27cbcbb6facafea0f6bb34cd44646
   languageName: node
   linkType: hard
 
@@ -5604,7 +5604,7 @@ __metadata:
     "@iconify/json": "npm:^2.2.294"
     "@matthiesenxyz/unocss-preset-daisyui": "npm:^0.1.2"
     "@sveltejs/adapter-auto": "npm:^3.3.1"
-    "@sveltejs/adapter-cloudflare": "npm:^4.9.0"
+    "@sveltejs/adapter-cloudflare": "npm:^5.0.0"
     "@sveltejs/adapter-node": "npm:^5.2.11"
     "@sveltejs/kit": "npm:^2.15.2"
     "@sveltejs/vite-plugin-svelte": "npm:^5.0.3"
