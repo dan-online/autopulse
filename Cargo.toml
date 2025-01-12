@@ -32,7 +32,7 @@ actix-web-httpauth = "0.8.2"
 anyhow = { version = "1.0.87" }
 
 # Configuration
-config = "0.14.0"
+config = "0.15.0"
 
 # Serialization
 serde = "1.0.210"
