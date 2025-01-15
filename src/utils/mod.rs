@@ -7,6 +7,8 @@ pub mod generate_uuid;
 #[doc(hidden)]
 pub mod get_timestamp;
 #[doc(hidden)]
+pub mod get_url;
+#[doc(hidden)]
 pub mod join_path;
 #[doc(hidden)]
 pub mod logs;

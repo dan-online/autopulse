@@ -1,7 +1,7 @@
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 
 #[derive(Deserialize, Clone)]
 pub struct Tdarr {
@@ -59,9 +59,7 @@ impl Tdarr {
             },
         };
 
-        let url = url::Url::parse(&self.url)?
-            .join("/api/v2/scan-files")?
-            .to_string();
+        let url = get_url(&self.url)?.join("/api/v2/scan-files")?.to_string();
 
         let res = client
             .post(&url)

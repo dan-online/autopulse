@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 use anyhow::Context;
 use reqwest::header;
 use serde::Deserialize;
@@ -96,9 +96,7 @@ impl Plex {
 
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?
-            .join("/library/sections")?
-            .to_string();
+        let url = get_url(&self.url)?.join("library/sections")?.to_string();
 
         let res = client.get(&url).send().await?;
         let status = res.status();
@@ -138,8 +136,8 @@ impl Plex {
     // TODO: Change to get_items
     async fn get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Metadata>> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?
-            .join(&format!("/library/sections/{}/all", library.key))?
+        let url = get_url(&self.url)?
+            .join(&format!("library/sections/{}/all", library.key))?
             .to_string();
 
         let res = client.get(&url).send().await?;
@@ -175,7 +173,7 @@ impl Plex {
     // async fn refresh_library(&self, library: &str) -> anyhow::Result<()> {
     //     let client = self.get_client()?;
     //     let mut url =
-    //         url::Url::parse(&self.url)?.join(&format!("/library/sections/{}/refresh", library))?;
+    //         get_url(&self.url)?.join(&format!("/library/sections/{}/refresh", library))?;
 
     //     url.query_pairs_mut().append_pair("force", "1");
 
@@ -192,7 +190,7 @@ impl Plex {
     // async fn analyze_library(&self, library: &str) -> anyhow::Result<()> {
     //     let client = self.get_client()?;
     //     let url =
-    //         url::Url::parse(&self.url)?.join(&format!("/library/sections/{}/analyze", library))?;
+    //         get_url(&self.url)?.join(&format!("/library/sections/{}/analyze", library))?;
 
     //     let res = client.put(url.to_string()).send().await?;
 
@@ -206,7 +204,7 @@ impl Plex {
 
     async fn refresh_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?.join(&format!("{}/refresh", key))?;
+        let url = get_url(&self.url)?.join(&format!("{}/refresh", key))?;
 
         let res = client.put(url.to_string()).send().await?;
 
@@ -220,7 +218,7 @@ impl Plex {
 
     async fn analyze_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?.join(&format!("{}/analyze", key))?;
+        let url = get_url(&self.url)?.join(&format!("{}/analyze", key))?;
 
         let res = client.put(url.to_string()).send().await?;
 
@@ -234,8 +232,8 @@ impl Plex {
 
     async fn scan(&self, ev: &ScanEvent, library: &Library) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let mut url = url::Url::parse(&self.url)?
-            .join(&format!("/library/sections/{}/refresh", library.key))?;
+        let mut url =
+            get_url(&self.url)?.join(&format!("library/sections/{}/refresh", library.key))?;
 
         let file_dir = std::path::Path::new(&ev.file_path)
             .parent()

@@ -1,4 +1,4 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -117,20 +117,12 @@ impl Emby {
             .map_err(Into::into)
     }
 
-    fn get_url(&self) -> anyhow::Result<url::Url> {
-        let url = if self.url.ends_with('/') {
-            self.url.clone()
-        } else {
-            format!("{}/", self.url)
-        };
-
-        url::Url::parse(&url).map_err(Into::into)
-    }
-
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
 
-        let url = self.get_url()?.join("Library/VirtualFolders")?.to_string();
+        let url = get_url(&self.url)?
+            .join("Library/VirtualFolders")?
+            .to_string();
 
         let res = client.get(&url).send().await?;
         let status = res.status();
@@ -166,7 +158,7 @@ impl Emby {
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
-        let mut url = self.get_url()?.join("Items")?;
+        let mut url = get_url(&self.url)?.join("Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
@@ -220,7 +212,7 @@ impl Emby {
         let limit = 1000;
 
         let client = self.get_client()?;
-        let mut url = self.get_url()?.join("Items")?;
+        let mut url = get_url(&self.url)?.join("Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
@@ -319,7 +311,9 @@ impl Emby {
     // not as effective as refreshing the item, but good enough
     async fn scan(&self, ev: &[&ScanEvent]) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = self.get_url()?.join("Library/Media/Updated")?.to_string();
+        let url = get_url(&self.url)?
+            .join("Library/Media/Updated")?
+            .to_string();
 
         let updates = ev
             .iter()
@@ -354,9 +348,7 @@ impl Emby {
 
     async fn refresh_item(&self, item: &Item) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let mut url = self
-            .get_url()?
-            .join(&format!("Items/{}/Refresh", item.id))?;
+        let mut url = get_url(&self.url)?.join(&format!("Items/{}/Refresh", item.id))?;
 
         url.query_pairs_mut().append_pair(
             "metadataRefreshMode",
