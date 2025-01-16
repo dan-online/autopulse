@@ -86,7 +86,7 @@ uuid = { version = "1.10.0", features = ["v4"] }
 notify = "7.0.0"
 
 # Other
-struson = { version = "0.5.0", features = [
+struson = { version = "0.6.0", features = [
     "experimental",
     "serde",
 ] } # Parse Jellyfin response as a stream
