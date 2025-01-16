@@ -1,4 +1,4 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -119,8 +119,9 @@ impl Emby {
 
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?
-            .join("/Library/VirtualFolders")?
+
+        let url = get_url(&self.url)?
+            .join("Library/VirtualFolders")?
             .to_string();
 
         let res = client.get(&url).send().await?;
@@ -157,7 +158,7 @@ impl Emby {
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
         let client = self.get_client()?;
-        let mut url = url::Url::parse(&self.url)?.join("/Items")?;
+        let mut url = get_url(&self.url)?.join("Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
@@ -211,7 +212,7 @@ impl Emby {
         let limit = 1000;
 
         let client = self.get_client()?;
-        let mut url = url::Url::parse(&self.url)?.join("/Items")?;
+        let mut url = get_url(&self.url)?.join("Items")?;
 
         url.query_pairs_mut().append_pair("Recursive", "true");
         url.query_pairs_mut().append_pair("Fields", "Path");
@@ -310,8 +311,8 @@ impl Emby {
     // not as effective as refreshing the item, but good enough
     async fn scan(&self, ev: &[&ScanEvent]) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = url::Url::parse(&self.url)?
-            .join("/Library/Media/Updated")?
+        let url = get_url(&self.url)?
+            .join("Library/Media/Updated")?
             .to_string();
 
         let updates = ev
@@ -347,7 +348,7 @@ impl Emby {
 
     async fn refresh_item(&self, item: &Item) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let mut url = url::Url::parse(&self.url)?.join(&format!("/Items/{}/Refresh", item.id))?;
+        let mut url = get_url(&self.url)?.join(&format!("Items/{}/Refresh", item.id))?;
 
         url.query_pairs_mut().append_pair(
             "metadataRefreshMode",

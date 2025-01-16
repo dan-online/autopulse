@@ -1,6 +1,7 @@
 use crate::{
     db::models::ScanEvent,
     settings::{auth::Auth, target::TargetProcess},
+    utils::get_url::get_url,
 };
 use reqwest::header;
 use serde::Deserialize;
@@ -35,7 +36,7 @@ impl Autopulse {
 
     async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let mut url = url::Url::parse(&self.url)?.join("/triggers/manual")?;
+        let mut url = get_url(&self.url)?.join("triggers/manual")?;
 
         url.query_pairs_mut().append_pair("path", &ev.file_path);
 

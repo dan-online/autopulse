@@ -1,4 +1,4 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -97,7 +97,7 @@ impl FileFlows {
     async fn get_libraries(&self) -> anyhow::Result<Vec<FileFlowsLibrary>> {
         let client = self.get_client()?;
 
-        let url = url::Url::parse(&self.url)?.join("/api/library")?;
+        let url = get_url(&self.url)?.join("api/library")?;
 
         let res = client.get(url.to_string()).send().await?;
         let status = res.status();
@@ -123,7 +123,7 @@ impl FileFlows {
     ) -> anyhow::Result<Option<FileFlowsLibraryFile>> {
         let client = self.get_client()?;
 
-        let url = url::Url::parse(&self.url)?.join("/api/library-file/search")?;
+        let url = get_url(&self.url)?.join("api/library-file/search")?;
 
         let req = FileFlowsSearchRequest {
             path: ev.file_path.clone(),
@@ -151,7 +151,7 @@ impl FileFlows {
     async fn reprocess_library_filse(&self, evs: Vec<&FileFlowsLibraryFile>) -> anyhow::Result<()> {
         let client = self.get_client()?;
 
-        let url = url::Url::parse(&self.url)?.join("/api/library-file/reprocess")?;
+        let url = get_url(&self.url)?.join("api/library-file/reprocess")?;
 
         let req = FileFlowsReprocessRequest {
             uids: evs.iter().map(|ev| ev.uid.clone()).collect(),
@@ -181,7 +181,7 @@ impl FileFlows {
     ) -> anyhow::Result<()> {
         let client = self.get_client()?;
 
-        let url = url::Url::parse(&self.url)?.join("/api/library-file/manually-add")?;
+        let url = get_url(&self.url)?.join("api/library-file/manually-add")?;
 
         let req = FileFlowsManuallyAddRequest {
             flow_uid: library.flow.as_ref().unwrap().uid.clone(),
@@ -208,7 +208,7 @@ impl FileFlows {
     // async fn rescan_library(&self, libraries: &FileFlowsLibrary) -> anyhow::Result<()> {
     //     let client = self.get_client()?;
 
-    //     let url = url::Url::parse(&self.url)?.join("/api/library/rescan")?;
+    //     let url = get_url(&self.url)?.join("/api/library/rescan")?;
 
     //     let req = FileFlowsRescanLibraryRequest {
     //         uids: vec![libraries.uid.clone()],
@@ -228,7 +228,7 @@ impl FileFlows {
     // async fn scan(&self, ev: &ScanEvent, library: &FileFlowsLibrary) -> anyhow::Result<()> {
     //     let client = self.get_client()?;
 
-    //     let mut url = url::Url::parse(&self.url)?.join("/api/library-file/process-file")?;
+    //     let mut url = get_url(&self.url)?.join("/api/library-file/process-file")?;
 
     //     url.query_pairs_mut().append_pair("filename", &ev.file_path);
 
