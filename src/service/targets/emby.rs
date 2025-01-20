@@ -351,9 +351,20 @@ impl Emby {
         let mut url = get_url(&self.url)?.join(&format!("Items/{}/Refresh", item.id))?;
 
         url.query_pairs_mut().append_pair(
-            "metadataRefreshMode",
+            "MetadataRefreshMode",
             &self.metadata_refresh_mode.to_string(),
         );
+        url.query_pairs_mut()
+            .append_pair("ImageRefreshMode", &self.metadata_refresh_mode.to_string());
+        url.query_pairs_mut()
+            .append_pair("ReplaceAllMetadata", "true");
+        url.query_pairs_mut().append_pair("Recursive", "true");
+
+        // TODO: Possible options in future?
+        url.query_pairs_mut()
+            .append_pair("ReplaceAllImages", "false");
+        url.query_pairs_mut()
+            .append_pair("RegenerateTrickplay", "false");
 
         let res = client.post(url.to_string()).send().await?;
         let status = res.status();
