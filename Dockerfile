@@ -1,5 +1,5 @@
 ARG IMAGE_TAG=3.21
-FROM --platform=$TARGETPLATFORM ghcr.io/linuxserver/baseimage-alpine:${IMAGE_TAG} AS runtime
+FROM ghcr.io/linuxserver/baseimage-alpine:${IMAGE_TAG} AS runtime
 
 WORKDIR /app
 
