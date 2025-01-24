@@ -7,7 +7,7 @@ COPY ./autopulse /bin
 
 ENV S6_AUTOPULSE_DIR=/etc/s6-overlay/s6-rc.d/svc-autopulse
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:${AUTOPULSE__APP__PORT:-2875}/stats || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget --quiet --tries=1 --spider http://127.0.0.1:${AUTOPULSE__APP__PORT:-2875}/stats || exit 1
 
 RUN mkdir -p $S6_AUTOPULSE_DIR && \
     echo '#!/usr/bin/with-contenv bash' >> $S6_AUTOPULSE_DIR/run && \
