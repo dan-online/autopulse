@@ -120,6 +120,22 @@ pub mod fileflows;
 ///
 /// See [Plex](plex::Plex) for all options
 pub mod plex;
+/// Sonarr - Sonarr target
+///
+/// This target is used to refresh/rescan a file in Sonarr
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   sonarr:
+///     type: sonarr
+///     url: http://localhost:8989
+///     token: "<API_KEY>"
+/// ```
+///
+/// See [Sonarr](sonarr::Sonarr) for all options
+pub mod sonarr;
 /// Tdarr - Tdarr target
 ///
 /// This target is used to process a file in Tdarr
