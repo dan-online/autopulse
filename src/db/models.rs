@@ -103,7 +103,11 @@ pub struct ScanEvent {
 
 impl ScanEvent {
     pub fn get_targets_hit(&self) -> Vec<String> {
-        self.targets_hit.split(',').map(|s| s.to_string()).collect()
+        self.targets_hit
+            .split(',')
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
     }
 
     pub fn add_target_hit(&mut self, target: &str) {
