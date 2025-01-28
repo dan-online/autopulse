@@ -200,6 +200,8 @@ impl PulseRunner {
                     }
                 }
                 Err(e) => {
+                    failed_ids.extend(evs.iter().map(|x| x.id.clone()));
+
                     error!("failed to process target '{}': {:?}", name, e);
                 }
             }
