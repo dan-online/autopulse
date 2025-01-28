@@ -4,7 +4,7 @@ use crate::{
     db::models::ScanEvent,
     service::targets::{
         autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
-        sonarr::Sonarr, tdarr::Tdarr,
+        radarr::Radarr, sonarr::Sonarr, tdarr::Tdarr,
     },
 };
 
@@ -23,6 +23,7 @@ pub enum Target {
     Emby(Emby),
     Tdarr(Tdarr),
     Sonarr(Sonarr),
+    Radarr(Radarr),
     Command(Command),
     FileFlows(FileFlows),
     Autopulse(Autopulse),
@@ -36,9 +37,10 @@ impl TargetProcess for Target {
             Self::Emby(e) => e.process(evs).await,
             Self::Command(c) => c.process(evs).await,
             Self::Tdarr(t) => t.process(evs).await,
+            Self::Sonarr(s) => s.process(evs).await,
+            Self::Radarr(r) => r.process(evs).await,
             Self::FileFlows(f) => f.process(evs).await,
             Self::Autopulse(a) => a.process(evs).await,
-            Self::Sonarr(s) => s.process(evs).await,
         }
     }
 }

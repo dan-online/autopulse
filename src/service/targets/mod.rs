@@ -120,9 +120,25 @@ pub mod fileflows;
 ///
 /// See [Plex](plex::Plex) for all options
 pub mod plex;
+/// Radarr - Radarr target
+///
+/// This target is used to refresh/rescan a movie in Radarr
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   radarr:
+///     type: radarr
+///     url: http://localhost:7878
+///     token: "<API_KEY>"
+/// ```
+///
+/// See [Radarr](radarr::Radarr) for all options
+pub mod radarr;
 /// Sonarr - Sonarr target
 ///
-/// This target is used to refresh/rescan a file in Sonarr
+/// This target is used to refresh/rescan a series in Sonarr
 ///
 /// # Example
 ///
