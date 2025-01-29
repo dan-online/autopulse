@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use serde::Serialize;
 use std::fmt::Display;
 
-use crate::utils::generate_uuid::generate_uuid;
+use crate::{settings::rewrite::Rewrite, utils::generate_uuid::generate_uuid};
 
 /// The status of a scan event being proccessed by [Targets](crate::service::targets).
 #[derive(Serialize)]
@@ -116,6 +116,14 @@ impl ScanEvent {
         targets.sort();
         targets.dedup();
         self.targets_hit = targets.join(",");
+    }
+
+    pub fn get_path(&self, rewrite: &Option<Rewrite>) -> String {
+        if let Some(rewrite) = rewrite {
+            rewrite.rewrite_path(self.file_path.clone())
+        } else {
+            self.file_path.clone()
+        }
     }
 }
 

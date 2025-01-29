@@ -51,6 +51,8 @@ We use the following terminology:
   - Jellyfin
   - Emby
   - Command
+  - Sonarr
+  - Radarr
   - Tdarr
   - FileFlows
   - Another autopulse instance
@@ -167,17 +169,11 @@ triggers:
       from: "/downloads"
       to: "/movies"
 
-  my_lidarr:
-    type: "lidarr"
+  my_manual:
+    type: "manual"
     rewrite:
       from: "/downloads"
-      to: "/music"
-  
-  my_readarr:
-    type: "readarr"
-    rewrite:
-      from: "/downloads"
-      to: "/books"
+      to: "/"
   
   my_notify:
     type: "notify"
@@ -197,6 +193,14 @@ targets:
     type: "plex"
     url: "http://plex:32400"
     token: "<your_token>"
+
+  my_different_plex:
+    type: "plex"
+    url: "http://plex:32401"
+    token: "<your_token>"
+    rewrite:
+      from: "/media"
+      to: "/plex"
 
   my_jellyfin:
     type: "jellyfin"

@@ -1,4 +1,8 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+    utils::get_url::get_url,
+};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
@@ -7,9 +11,11 @@ use tracing::error;
 #[derive(Deserialize, Clone)]
 pub struct Sonarr {
     /// URL to the Plex server
-    pub url: String,
+    url: String,
     /// API token for the Plex server
-    pub token: String,
+    token: String,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -66,11 +72,12 @@ impl Sonarr {
         let series = res.json::<Vec<SonarrSeries>>().await?;
 
         for ev in evs {
-            let path = Path::new(&ev.file_path);
+            let ev_path = ev.get_path(&self.rewrite);
+            let ev_path = Path::new(&ev_path);
 
             for s in &series {
                 let series_path = Path::new(&s.path);
-                if path.starts_with(series_path) {
+                if ev_path.starts_with(series_path) {
                     to_be_refreshed.entry(s.id).or_default().push(ev.id.clone());
                     break;
                 }

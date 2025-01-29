@@ -1,6 +1,6 @@
 use crate::{
     db::models::ScanEvent,
-    settings::{auth::Auth, target::TargetProcess},
+    settings::{auth::Auth, rewrite::Rewrite, target::TargetProcess},
     utils::get_url::get_url,
 };
 use reqwest::header;
@@ -15,6 +15,8 @@ pub struct Autopulse {
     pub auth: Auth,
     /// Trigger to hit (must be type: manual) (default: manual)
     pub trigger: Option<String>,
+    /// Rewrite path for the file
+    pub rewrite: Option<Rewrite>,
 }
 
 impl Autopulse {
@@ -38,7 +40,8 @@ impl Autopulse {
         let client = self.get_client()?;
         let mut url = get_url(&self.url)?.join("triggers/manual")?;
 
-        url.query_pairs_mut().append_pair("path", &ev.file_path);
+        url.query_pairs_mut()
+            .append_pair("path", &ev.get_path(&self.rewrite));
 
         if ev.file_hash.is_some() {
             url.query_pairs_mut()
@@ -70,7 +73,7 @@ impl TargetProcess for Autopulse {
             match self.scan(ev).await {
                 Ok(_) => {
                     succeded.push(ev.id.clone());
-                    debug!("file scanned: {}", ev.file_path);
+                    debug!("file scanned: {}", ev.get_path(&self.rewrite));
                 }
                 Err(e) => {
                     error!("error scanning file: {}", e);

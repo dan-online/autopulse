@@ -1,23 +1,28 @@
-use std::path::Path;
-
-use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+    utils::get_url::get_url,
+};
 use anyhow::Context;
 use reqwest::header;
 use serde::Deserialize;
+use std::path::Path;
 use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
 pub struct Plex {
     /// URL to the Plex server
-    pub url: String,
+    url: String,
     /// API token for the Plex server
-    pub token: String,
+    token: String,
     /// Whether to refresh metadata of the file (default: false)
     #[serde(default)]
-    pub refresh: bool,
+    refresh: bool,
     /// Whether to analyze the file (default: false)
     #[serde(default)]
-    pub analyze: bool,
+    analyze: bool,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -30,17 +35,17 @@ pub struct Media {
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Part {
-    pub id: i64,
+    // pub id: i64,
     pub key: String,
-    pub duration: Option<i64>,
+    // pub duration: Option<i64>,
     pub file: String,
-    pub size: i64,
-    pub audio_profile: Option<String>,
-    pub container: Option<String>,
-    pub video_profile: Option<String>,
-    pub has_thumbnail: Option<String>,
-    pub has64bit_offsets: Option<bool>,
-    pub optimized_for_streaming: Option<bool>,
+    // pub size: i64,
+    // pub audio_profile: Option<String>,
+    // pub container: Option<String>,
+    // pub video_profile: Option<String>,
+    // pub has_thumbnail: Option<String>,
+    // pub has64bit_offsets: Option<bool>,
+    // pub optimized_for_streaming: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -235,7 +240,8 @@ impl Plex {
         let mut url =
             get_url(&self.url)?.join(&format!("library/sections/{}/refresh", library.key))?;
 
-        let file_dir = std::path::Path::new(&ev.file_path)
+        let ev_path = ev.get_path(&self.rewrite);
+        let file_dir = Path::new(&ev_path)
             .parent()
             .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
             .to_str()
@@ -261,18 +267,20 @@ impl TargetProcess for Plex {
         let mut succeeded = Vec::new();
 
         for ev in evs {
-            if let Some(library) = self.get_library(&libraries, &ev.file_path) {
+            let ev_path = ev.get_path(&self.rewrite);
+
+            if let Some(library) = self.get_library(&libraries, &ev_path) {
                 match self.scan(ev, &library).await {
                     Ok(_) => {
-                        debug!("scanned file '{}'", ev.file_path);
+                        debug!("scanned file '{}'", ev_path);
 
-                        let is_dir = std::path::Path::new(&ev.file_path).is_dir();
+                        let is_dir = Path::new(&ev_path).is_dir();
 
                         // Only analyze and refresh metadata for files
                         if !is_dir && (self.analyze || self.refresh) {
-                            match self.get_item(&library, &ev.file_path).await {
+                            match self.get_item(&library, &ev_path).await {
                                 Ok(Some(item)) => {
-                                    trace!("found item for file '{}'", ev.file_path);
+                                    trace!("found item for file '{}'", ev_path);
 
                                     let mut success = true;
 
@@ -315,15 +323,12 @@ impl TargetProcess for Plex {
                                 Ok(None) => {
                                     trace!(
                                         "failed to find item for file: {}, leaving at scan",
-                                        ev.file_path
+                                        ev_path
                                     );
                                     succeeded.push(ev.id.clone());
                                 }
                                 Err(e) => {
-                                    error!(
-                                        "failed to get item for file '{}': {:?}",
-                                        ev.file_path, e
-                                    );
+                                    error!("failed to get item for file '{}': {:?}", ev_path, e);
                                 }
                             };
                         } else {
@@ -331,11 +336,11 @@ impl TargetProcess for Plex {
                         }
                     }
                     Err(e) => {
-                        error!("failed to scan file '{}': {}", ev.file_path, e);
+                        error!("failed to scan file '{}': {}", ev_path, e);
                     }
                 }
             } else {
-                error!("failed to find library for file: {}", ev.file_path);
+                error!("failed to find library for file: {}", ev_path);
             }
         }
 
