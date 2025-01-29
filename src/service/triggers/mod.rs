@@ -56,7 +56,7 @@ pub mod lidarr;
 ///
 /// See [Manual](manual::Manual) for all options
 /// and
-/// [ManualQueryParams](manual::ManualQueryParams) for query parameters
+/// [`ManualQueryParams`](manual::ManualQueryParams) for query parameters
 pub mod manual;
 /// Notify - Notify trigger
 ///

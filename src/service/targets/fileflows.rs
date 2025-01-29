@@ -12,7 +12,7 @@ use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
 pub struct FileFlows {
-    /// URL to the FileFlows server
+    /// URL to the `FileFlows` server
     url: String,
     /// Rewrite path for the file
     rewrite: Option<Rewrite>,
@@ -333,7 +333,7 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        for (ev, _) in processed.iter() {
+                        for (ev, _) in &processed {
                             debug!("reprocessed file: {}", ev.get_path(&self.rewrite));
                         }
                         succeeded.extend(processed.iter().map(|(ev, _)| ev.id.clone()));
@@ -351,7 +351,7 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        for (ev, _) in not_processed.iter() {
+                        for (ev, _) in &not_processed {
                             debug!("manually added file: {}", ev.get_path(&self.rewrite));
                         }
                         succeeded.extend(not_processed.iter().map(|(ev, _)| ev.id.clone()));

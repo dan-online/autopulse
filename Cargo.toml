@@ -101,3 +101,10 @@ futures-util = "0.3.31"
 # [dev-dependencies]
 # # Standardize logging output
 # tracing-test = "0.2.5"
+
+[lints.clippy]
+nursery = "warn"
+
+[profile.dev]
+opt-level = 1
+incremental = true

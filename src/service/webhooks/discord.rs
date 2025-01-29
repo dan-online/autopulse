@@ -153,15 +153,15 @@ impl DiscordWebhook {
                     }
 
                     let reset = reset.to_str().unwrap_or_default();
-                    let reset = reset.parse::<i64>().unwrap_or_default();
-                    let now = chrono::Utc::now().timestamp();
+                    let reset = reset.parse::<u64>().unwrap_or_default();
+                    let now = chrono::Utc::now().timestamp() as u64;
 
                     if reset > now {
-                        let wait = reset - now;
+                        let wait = reset.saturating_sub(now);
 
                         trace!("rate limited, waiting for {} seconds", wait);
 
-                        tokio::time::sleep(tokio::time::Duration::from_secs(wait as u64)).await;
+                        tokio::time::sleep(tokio::time::Duration::from_secs(wait)).await;
 
                         self.send(batch, retries - 1).await?;
                         continue;

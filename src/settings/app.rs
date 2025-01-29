@@ -66,7 +66,7 @@ pub struct App {
     /// Port to bind to (default: 2875)
     #[serde(default = "default_port")]
     pub port: u16,
-    /// Database URL (see [AnyConnection](crate::db::conn::AnyConnection))
+    /// Database URL (see [`AnyConnection`](crate::db::conn::AnyConnection))
     #[serde(default = "default_database_url")]
     pub database_url: String,
     /// Log level (default: info) (trace, debug, info, warn, error)

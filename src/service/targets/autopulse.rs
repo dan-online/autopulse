@@ -27,7 +27,7 @@ impl Autopulse {
             headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
         }
 
-        println!("headers: {:?}", headers);
+        println!("headers: {headers:?}");
 
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
@@ -71,7 +71,7 @@ impl TargetProcess for Autopulse {
 
         for ev in evs {
             match self.scan(ev).await {
-                Ok(_) => {
+                Ok(()) => {
                     succeded.push(ev.id.clone());
                     debug!("file scanned: {}", ev.get_path(&self.rewrite));
                 }

@@ -25,7 +25,7 @@ pub struct Emby {
     url: String,
     /// API token for the Jellyfin/Emby server
     token: String,
-    /// Metadata refresh mode (default: FullRefresh)
+    /// Metadata refresh mode (default: `FullRefresh`)
     #[serde(default)]
     metadata_refresh_mode: EmbyMetadataRefreshMode,
     /// Whether to try to refresh metadata for the item instead of scan (default: true)
@@ -58,7 +58,7 @@ impl Display for EmbyMetadataRefreshMode {
             Self::FullRefresh => "FullRefresh",
         };
 
-        write!(f, "{}", mode)
+        write!(f, "{mode}")
     }
 }
 
@@ -205,7 +205,7 @@ impl Emby {
         Ok(None)
     }
 
-    async fn fetch_items(
+    fn fetch_items(
         &self,
         library: &Library,
     ) -> anyhow::Result<(
@@ -288,10 +288,10 @@ impl Emby {
         library: &Library,
         events: Vec<&'a ScanEvent>,
     ) -> anyhow::Result<(Vec<(&'a ScanEvent, Item)>, Vec<&'a ScanEvent>)> {
-        let (mut rx, handle) = self.fetch_items(library).await?;
+        let (mut rx, handle) = self.fetch_items(library)?;
 
         let mut found_in_library = Vec::new();
-        let mut not_found_in_library = events.to_vec();
+        let mut not_found_in_library = events.clone();
 
         while let Some(item) = rx.recv().await {
             if let Some(ev) = events
@@ -418,7 +418,7 @@ impl TargetProcess for Emby {
                     .with_context(|| {
                         format!(
                             "failed to fetch items for library: {}",
-                            library.name.to_owned()
+                            library.name.clone()
                         )
                     })?;
 
@@ -428,7 +428,7 @@ impl TargetProcess for Emby {
 
             for (ev, item) in to_refresh {
                 match self.refresh_item(&item).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         debug!("refreshed item: {}", item.path.unwrap());
                         succeded.push(ev.id.clone());
                     }
@@ -444,7 +444,7 @@ impl TargetProcess for Emby {
         if !to_scan.is_empty() {
             self.scan(&to_scan).await.context("failed to scan files")?;
 
-            for file in to_scan.iter() {
+            for file in &to_scan {
                 debug!("scanned file: {}", file.file_path);
             }
         }

@@ -36,7 +36,7 @@ pub mod status;
 ///
 /// # Responses
 ///
-/// - **200 OK**: Returns a [StatsResponse](stats::StatsResponse) object containing the service statistics and response time.
+/// - **200 OK**: Returns a [`StatsResponse`](stats::StatsResponse) object containing the service statistics and response time.
 pub mod stats;
 
 /// GET `/list?status={status}&page={page}&limit={limit}&sort={sort}`
@@ -50,11 +50,11 @@ pub mod stats;
 /// - `limit`: The number of items to retrieve per page.
 /// - `sort`: The field to sort the results by. Can be one of `id`, `file_path`, `process_status`, `event_source`, `created_at`, or `updated_at`.
 ///
-/// See [list::ListQuery] for more information.
+/// See [`list::ListQuery`] for more information.
 ///
 /// # Responses
 ///
-/// - **200 OK**: Returns a list of [ScanEvent](crate::db::models::ScanEvent) objects.
+/// - **200 OK**: Returns a list of [`ScanEvent`](crate::db::models::ScanEvent) objects.
 /// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod list;
 
@@ -78,7 +78,7 @@ pub mod login;
 ///
 /// # Responses
 ///
-/// - **200 OK**: Returns a [ScanEvent](crate::db::models::ScanEvent) object containing the scan event.
+/// - **200 OK**: Returns a [`ScanEvent`](crate::db::models::ScanEvent) object containing the scan event.
 /// - **401 Unauthorized**: Returned if the request is not authenticated.
 /// - **404 Not Found**: Returned if the trigger does not exist.
 /// - **400 Bad Request**: Returned if the request is invalid.

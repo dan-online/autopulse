@@ -115,11 +115,9 @@ impl TargetProcess for Sonarr {
 
         let series = self.get_series(evs).await?;
 
-        println!("{:?}", series);
-
         for (series_id, ev_ids) in series {
             match self.refresh_series(series_id).await {
-                Ok(_) => {
+                Ok(()) => {
                     succeeded.extend(ev_ids);
                 }
                 Err(e) => {

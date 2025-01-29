@@ -209,7 +209,7 @@ impl Plex {
 
     async fn refresh_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = get_url(&self.url)?.join(&format!("{}/refresh", key))?;
+        let url = get_url(&self.url)?.join(&format!("{key}/refresh"))?;
 
         let res = client.put(url.to_string()).send().await?;
 
@@ -223,7 +223,7 @@ impl Plex {
 
     async fn analyze_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = get_url(&self.url)?.join(&format!("{}/analyze", key))?;
+        let url = get_url(&self.url)?.join(&format!("{key}/analyze"))?;
 
         let res = client.put(url.to_string()).send().await?;
 
@@ -271,7 +271,7 @@ impl TargetProcess for Plex {
 
             if let Some(library) = self.get_library(&libraries, &ev_path) {
                 match self.scan(ev, &library).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         debug!("scanned file '{}'", ev_path);
 
                         let is_dir = Path::new(&ev_path).is_dir();
@@ -286,7 +286,7 @@ impl TargetProcess for Plex {
 
                                     if self.analyze {
                                         match self.analyze_item(&item.key).await {
-                                            Ok(_) => {
+                                            Ok(()) => {
                                                 debug!("analyzed metadata '{}'", item.key);
                                             }
                                             Err(e) => {
@@ -302,7 +302,7 @@ impl TargetProcess for Plex {
 
                                     if self.refresh {
                                         match self.refresh_item(&item.key).await {
-                                            Ok(_) => {
+                                            Ok(()) => {
                                                 debug!("refreshed metadata '{}'", item.key);
                                             }
                                             Err(e) => {

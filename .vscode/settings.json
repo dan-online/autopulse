@@ -13,5 +13,6 @@
     "editor.codeActionsOnSave": {
         "source.fixAll.ts": "explicit",
         "source.organizeImports": "explicit",
-    }
+    },
+    "rust-analyzer.check.command": "clippy"
 }

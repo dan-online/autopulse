@@ -168,7 +168,7 @@ impl PulseRunner {
 
         let trigger_settings = &self.settings.triggers;
 
-        for (name, target) in self.settings.targets.iter() {
+        for (name, target) in &self.settings.targets {
             let evs = evs
                 .iter_mut()
                 .filter(|x| !x.get_targets_hit().contains(name))
@@ -242,7 +242,7 @@ impl PulseRunner {
         Ok((succeeded, retrying, failed))
     }
 
-    async fn cleanup(&self) -> anyhow::Result<()> {
+    fn cleanup(&self) -> anyhow::Result<()> {
         let time_before_cleanup = chrono::Utc::now().naive_utc()
             - chrono::Duration::days(self.settings.opts.cleanup_days as i64);
 
@@ -290,7 +290,7 @@ impl PulseRunner {
 
         self.update_found_status().await?;
         self.update_process_status().await?;
-        self.cleanup().await?;
+        self.cleanup()?;
 
         Ok(())
     }

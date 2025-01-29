@@ -122,7 +122,7 @@ impl TargetProcess for Radarr {
         let movies = self.get_movies(evs).await?;
 
         match self.refresh_movies(movies).await {
-            Ok(_) => {
+            Ok(()) => {
                 succeeded.extend(evs.iter().map(|ev| ev.id.clone()));
             }
             Err(e) => {
