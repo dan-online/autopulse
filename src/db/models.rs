@@ -119,11 +119,10 @@ impl ScanEvent {
     }
 
     pub fn get_path(&self, rewrite: &Option<Rewrite>) -> String {
-        if let Some(rewrite) = rewrite {
-            rewrite.rewrite_path(self.file_path.clone())
-        } else {
-            self.file_path.clone()
-        }
+        rewrite.as_ref().map_or_else(
+            || self.file_path.clone(),
+            |rewrite| rewrite.rewrite_path(self.file_path.clone()),
+        )
     }
 }
 
