@@ -3,7 +3,6 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
 use std::fmt::Display;
-use std::string::ToString::to_string;
 
 /// The status of a scan event being proccessed by [Targets](crate::service::targets).
 #[derive(Serialize)]
@@ -105,7 +104,7 @@ impl ScanEvent {
     pub fn get_targets_hit(&self) -> Vec<String> {
         self.targets_hit
             .split(',')
-            .map(to_string)
+            .map(|s| s.to_string())
             .filter(|s| !s.is_empty())
             .collect()
     }
