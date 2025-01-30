@@ -1,0 +1,25 @@
+[package]
+name = "autopulse-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Core
+anyhow = { workspace = true }
+url = { workspace = true }
+chrono = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+
+# Hashing
+sha2 = "0.10.8"
+
+# Rewrites
+regex = "1.10.6"
+
+# UUID
+uuid = { version = "1.10.0", features = ["v4"] }
+
+# Logging
+tracing-appender = "0.2.3"
