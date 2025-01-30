@@ -1,5 +1,5 @@
-use crate::settings::timer::Timer;
 use crate::settings::rewrite::Rewrite;
+use crate::settings::timer::Timer;
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
