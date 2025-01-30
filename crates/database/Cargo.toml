@@ -8,7 +8,6 @@ build = "src/build.rs"
 postgres = ["diesel/postgres", "diesel_migrations/postgres"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
 vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled"]
-default = ["postgres", "sqlite"]
 
 [dependencies]
 # Crates

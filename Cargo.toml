@@ -5,6 +5,9 @@ edition = "2021"
 
 [features]
 vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
+sqlite = ["autopulse-database/sqlite"]
+postgres = ["autopulse-database/postgres"]
+default = ["sqlite", "postgres"]
 
 [dependencies]
 # Crates
