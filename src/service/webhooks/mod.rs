@@ -21,7 +21,7 @@
 ///     username: "autopulse"
 /// ```
 ///
-/// See [DiscordWebhook](discord::DiscordWebhook) for all options
+/// See [`DiscordWebhook`](discord::DiscordWebhook) for all options
 pub mod discord;
 
 #[doc(hidden)]

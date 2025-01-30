@@ -11,6 +11,6 @@ mod tests {
     #[test]
     fn test_sify_single() {
         let vec = vec![1];
-        assert_eq!(sify(&vec), "".to_string());
+        assert_eq!(sify(&vec), String::new());
     }
 }

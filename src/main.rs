@@ -10,6 +10,7 @@
 //!
 //! ## About
 #![doc = include_str!("../README.md")]
+#![cfg_attr(debug_assertions, warn(clippy::nursery))]
 
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;

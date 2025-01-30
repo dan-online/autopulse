@@ -1,4 +1,8 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+    utils::get_url::get_url,
+};
 use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -18,17 +22,17 @@ const fn default_true() -> bool {
 #[derive(Clone, Deserialize)]
 pub struct Emby {
     /// URL to the Jellyfin/Emby server
-    pub url: String,
+    url: String,
     /// API token for the Jellyfin/Emby server
-    pub token: String,
-
-    /// Metadata refresh mode (default: FullRefresh)
+    token: String,
+    /// Metadata refresh mode (default: `FullRefresh`)
     #[serde(default)]
-    pub metadata_refresh_mode: EmbyMetadataRefreshMode,
-
+    metadata_refresh_mode: EmbyMetadataRefreshMode,
     /// Whether to try to refresh metadata for the item instead of scan (default: true)
     #[serde(default = "default_true")]
-    pub refresh_metadata: bool,
+    refresh_metadata: bool,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 /// Metadata refresh mode for Jellyfin/Emby
@@ -54,7 +58,7 @@ impl Display for EmbyMetadataRefreshMode {
             Self::FullRefresh => "FullRefresh",
         };
 
-        write!(f, "{}", mode)
+        write!(f, "{mode}")
     }
 }
 
@@ -201,7 +205,7 @@ impl Emby {
         Ok(None)
     }
 
-    async fn fetch_items(
+    fn fetch_items(
         &self,
         library: &Library,
     ) -> anyhow::Result<(
@@ -284,15 +288,15 @@ impl Emby {
         library: &Library,
         events: Vec<&'a ScanEvent>,
     ) -> anyhow::Result<(Vec<(&'a ScanEvent, Item)>, Vec<&'a ScanEvent>)> {
-        let (mut rx, handle) = self.fetch_items(library).await?;
+        let (mut rx, handle) = self.fetch_items(library)?;
 
         let mut found_in_library = Vec::new();
-        let mut not_found_in_library = events.to_vec();
+        let mut not_found_in_library = events.clone();
 
         while let Some(item) = rx.recv().await {
             if let Some(ev) = events
                 .iter()
-                .find(|ev| item.path == Some(ev.file_path.clone()))
+                .find(|ev| item.path == Some(ev.get_path(&self.rewrite)))
             {
                 found_in_library.push((*ev, item.clone()));
                 not_found_in_library.retain(|&e| e.id != ev.id);
@@ -318,7 +322,7 @@ impl Emby {
         let updates = ev
             .iter()
             .map(|ev| UpdateRequest {
-                path: ev.file_path.clone(),
+                path: ev.get_path(&self.rewrite),
                 update_type: "Modified".to_string(),
             })
             .collect();
@@ -398,10 +402,12 @@ impl TargetProcess for Emby {
 
         if self.refresh_metadata {
             for ev in evs {
-                if let Some(library) = self.get_library(&libraries, &ev.file_path) {
+                let ev_path = ev.get_path(&self.rewrite);
+
+                if let Some(library) = self.get_library(&libraries, &ev_path) {
                     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 } else {
-                    error!("failed to find library for file: {}", ev.file_path);
+                    error!("failed to find library for file: {}", ev_path);
                 }
             }
 
@@ -412,7 +418,7 @@ impl TargetProcess for Emby {
                     .with_context(|| {
                         format!(
                             "failed to fetch items for library: {}",
-                            library.name.to_owned()
+                            library.name.clone()
                         )
                     })?;
 
@@ -422,7 +428,7 @@ impl TargetProcess for Emby {
 
             for (ev, item) in to_refresh {
                 match self.refresh_item(&item).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         debug!("refreshed item: {}", item.path.unwrap());
                         succeded.push(ev.id.clone());
                     }
@@ -438,7 +444,7 @@ impl TargetProcess for Emby {
         if !to_scan.is_empty() {
             self.scan(&to_scan).await.context("failed to scan files")?;
 
-            for file in to_scan.iter() {
+            for file in &to_scan {
                 debug!("scanned file: {}", file.file_path);
             }
         }

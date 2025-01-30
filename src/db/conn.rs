@@ -18,12 +18,12 @@ const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/po
 #[cfg(feature = "sqlite")]
 const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqlite");
 
-/// Represents a connection to either a PostgreSQL or SQLite database.
+/// Represents a connection to either a `PostgreSQL` or `SQLite` database.
 #[derive(diesel::MultiConnection)]
 pub enum AnyConnection {
-    /// A connection to a PostgreSQL database.
+    /// A connection to a `PostgreSQL` database.
     ///
-    /// This is used when the `database_url` is a PostgreSQL URL.
+    /// This is used when the `database_url` is a `PostgreSQL` URL.
     ///
     /// # Example
     ///
@@ -33,9 +33,9 @@ pub enum AnyConnection {
     #[cfg(feature = "postgres")]
     Postgresql(diesel::PgConnection),
     // Mysql(diesel::MysqlConnection),
-    /// A connection to a SQLite database.
+    /// A connection to a `SQLite` database.
     ///
-    /// This is used when the `database_url` is a SQLite URL.
+    /// This is used when the `database_url` is a `SQLite` URL.
     ///
     /// Note: The directory where the database is stored will also be populated with a WAL file and a journal file.
     ///

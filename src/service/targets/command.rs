@@ -1,4 +1,7 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess};
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+};
 use serde::Deserialize;
 use tracing::{debug, error};
 
@@ -19,6 +22,8 @@ pub struct Command {
     ///
     /// Example: `echo $FILE_PATH >> list.log`
     raw: Option<String>,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 impl Command {
@@ -27,9 +32,11 @@ impl Command {
             return Err(anyhow::anyhow!("command cannot have both path and raw"));
         }
 
+        let ev_path = ev.get_path(&self.rewrite);
+
         if let Some(path) = self.path.clone() {
             let output = tokio::process::Command::new(path.clone())
-                .arg(&ev.file_path)
+                .arg(&ev_path)
                 .output();
 
             let timeout = self.timeout.unwrap_or(10);
@@ -50,7 +57,7 @@ impl Command {
 
         if let Some(raw) = self.raw.clone() {
             let output = tokio::process::Command::new("sh")
-                .env("FILE_PATH", &ev.file_path)
+                .env("FILE_PATH", &ev_path)
                 .arg("-c")
                 .arg(&raw)
                 .output();
@@ -81,7 +88,7 @@ impl TargetProcess for Command {
 
         for ev in evs {
             if let Err(e) = self.run(ev).await {
-                error!("failed to process '{}': {}", ev.file_path, e);
+                error!("failed to process '{}': {}", ev.get_path(&self.rewrite), e);
             } else {
                 succeded.push(ev.id.clone());
             }

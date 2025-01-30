@@ -133,7 +133,7 @@ impl PulseManager {
         if let Some(mut sort) = sort {
             let mut direction = "desc";
 
-            if sort.starts_with("-") {
+            if sort.starts_with('-') {
                 direction = "asc";
                 sort = sort[1..].to_string();
             }
@@ -168,12 +168,12 @@ impl PulseManager {
         }
 
         if let Some(search) = search {
-            query = query.filter(file_path.like(format!("%{}%", search)));
+            query = query.filter(file_path.like(format!("%{search}%")));
         }
 
         query
             .limit(limit.into())
-            .offset(((page - 1) * (limit as u64)) as i64)
+            .offset(((page - 1) * u64::from(limit)) as i64)
             .load::<ScanEvent>(&mut get_conn(&self.pool)?)
             .map_err(Into::into)
     }
@@ -238,7 +238,7 @@ impl PulseManager {
                         service
                             .watcher(tx)
                             .await
-                            .context(format!("failed to start notify service '{}'", cloned_name))
+                            .context(format!("failed to start notify service '{cloned_name}'"))
                     })
                     .await;
 

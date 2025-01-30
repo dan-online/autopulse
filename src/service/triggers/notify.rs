@@ -27,8 +27,8 @@ pub enum NotifyBackend {
 impl NotifyBackend {
     pub fn watch(&mut self, path: String, mode: RecursiveMode) -> anyhow::Result<()> {
         match self {
-            Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
-            Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(|e| e.into()),
+            Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
+            Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
         }
     }
 }
@@ -85,7 +85,7 @@ impl Notify {
 
         let event_handler = move |res| {
             if let Err(e) = tx.send(res) {
-                error!("failed to process notify event: {e}")
+                error!("failed to process notify event: {e}");
             }
         };
 
@@ -130,9 +130,11 @@ impl Notify {
         while let Some(res) = rx.recv().await {
             match res {
                 Ok(event) => match event.kind {
-                    EventKind::Modify(ModifyKind::Data(_))
-                    | EventKind::Modify(ModifyKind::Metadata(_))
-                    | EventKind::Modify(ModifyKind::Name(RenameMode::Both))
+                    EventKind::Modify(
+                        ModifyKind::Data(_)
+                        | ModifyKind::Metadata(_)
+                        | ModifyKind::Name(RenameMode::Both),
+                    )
                     | EventKind::Create(_)
                     | EventKind::Remove(_) => {
                         for path in event.paths {

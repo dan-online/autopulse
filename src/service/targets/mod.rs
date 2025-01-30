@@ -79,9 +79,9 @@ pub mod command;
 /// See [Emby](emby::Emby) for all options
 #[doc(alias("jellyfin"))]
 pub mod emby;
-/// FileFlows - FileFlows target
+/// `FileFlows` - `FileFlows` target
 ///
-/// This target is used to process a file in FileFlows
+/// This target is used to process a file in `FileFlows`
 ///
 /// # Example
 ///
@@ -92,7 +92,7 @@ pub mod emby;
 ///     url: http://localhost:5000
 /// ```
 ///
-/// See [FileFlows](fileflows::FileFlows) for all options
+/// See [`FileFlows`](fileflows::FileFlows) for all options
 pub mod fileflows;
 /// Plex - Plex target
 ///
@@ -120,6 +120,38 @@ pub mod fileflows;
 ///
 /// See [Plex](plex::Plex) for all options
 pub mod plex;
+/// Radarr - Radarr target
+///
+/// This target is used to refresh/rescan a movie in Radarr
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   radarr:
+///     type: radarr
+///     url: http://localhost:7878
+///     token: "<API_KEY>"
+/// ```
+///
+/// See [Radarr](radarr::Radarr) for all options
+pub mod radarr;
+/// Sonarr - Sonarr target
+///
+/// This target is used to refresh/rescan a series in Sonarr
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   sonarr:
+///     type: sonarr
+///     url: http://localhost:8989
+///     token: "<API_KEY>"
+/// ```
+///
+/// See [Sonarr](sonarr::Sonarr) for all options
+pub mod sonarr;
 /// Tdarr - Tdarr target
 ///
 /// This target is used to process a file in Tdarr

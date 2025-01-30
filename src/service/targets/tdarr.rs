@@ -1,14 +1,19 @@
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+    utils::get_url::get_url,
+};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-
-use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
 
 #[derive(Deserialize, Clone)]
 pub struct Tdarr {
     /// URL to the Tdarr server
-    pub url: String,
+    url: String,
     /// Library ID for the Tdarr server
-    pub db_id: String,
+    db_id: String,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 #[derive(Serialize)]
@@ -53,7 +58,7 @@ impl Tdarr {
             data: Data {
                 scan_config: ScanConfig {
                     db_id: self.db_id.clone(),
-                    array_or_path: evs.iter().map(|ev| ev.file_path.clone()).collect(),
+                    array_or_path: evs.iter().map(|ev| ev.get_path(&self.rewrite)).collect(),
                     mode: "scanFolderWatcher".to_string(),
                 },
             },

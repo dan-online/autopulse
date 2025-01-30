@@ -18,7 +18,7 @@ mod tests {
 
     #[test]
     fn test_check_auth_default_incorrect() -> anyhow::Result<()> {
-        let auth = BasicAuth::from(Basic::new("username".to_string(), Some("".to_string())));
+        let auth = BasicAuth::from(Basic::new("username".to_string(), Some(String::new())));
         let settings: Settings = serde_json::from_str("{}")?;
 
         assert!(!check_auth(&Some(auth), &settings));

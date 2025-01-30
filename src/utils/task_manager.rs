@@ -33,7 +33,7 @@ impl TaskManager {
         let fut = async move {
             tokio::select! {
                 _ = fut => {},
-                _ = shutdown.notified() => {
+                () = shutdown.notified() => {
                     // Task was asked to shut down
                 },
             }

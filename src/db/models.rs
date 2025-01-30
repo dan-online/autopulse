@@ -1,9 +1,8 @@
+use crate::{settings::rewrite::Rewrite, utils::generate_uuid::generate_uuid};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
 use std::fmt::Display;
-
-use crate::utils::generate_uuid::generate_uuid;
 
 /// The status of a scan event being proccessed by [Targets](crate::service::targets).
 #[derive(Serialize)]
@@ -16,7 +15,7 @@ pub enum ProcessStatus {
 
 /// Whether a file was found or not.
 ///
-/// Note: only used if [opts.check_path](crate::settings::opts::Opts::check_path) is set.
+/// Note: only used if [`opts.check_path`](crate::settings::opts::Opts::check_path) is set.
 #[derive(Serialize)]
 pub enum FoundStatus {
     Found,
@@ -79,7 +78,7 @@ pub struct ScanEvent {
     /// The status of the file being found.
     pub found_status: String,
 
-    /// The number of times the scan event has failed. Used for retries and is limited to [opts.max_retries](crate::settings::opts::Opts::max_retries).
+    /// The number of times the scan event has failed. Used for retries and is limited to [`opts.max_retries`](crate::settings::opts::Opts::max_retries).
     pub failed_times: i32,
     /// The time the scan event will be retried.
     pub next_retry_at: Option<chrono::NaiveDateTime>,
@@ -116,6 +115,13 @@ impl ScanEvent {
         targets.sort();
         targets.dedup();
         self.targets_hit = targets.join(",");
+    }
+
+    pub fn get_path(&self, rewrite: &Option<Rewrite>) -> String {
+        rewrite.as_ref().map_or_else(
+            || self.file_path.clone(),
+            |rewrite| rewrite.rewrite_path(self.file_path.clone()),
+        )
     }
 }
 

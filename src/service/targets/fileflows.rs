@@ -1,4 +1,8 @@
-use crate::{db::models::ScanEvent, settings::target::TargetProcess, utils::get_url::get_url};
+use crate::{
+    db::models::ScanEvent,
+    settings::{rewrite::Rewrite, target::TargetProcess},
+    utils::get_url::get_url,
+};
 use anyhow::Context;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -8,8 +12,10 @@ use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
 pub struct FileFlows {
-    /// URL to the FileFlows server
-    pub url: String,
+    /// URL to the `FileFlows` server
+    url: String,
+    /// Rewrite path for the file
+    rewrite: Option<Rewrite>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash, Debug)]
@@ -126,7 +132,7 @@ impl FileFlows {
         let url = get_url(&self.url)?.join("api/library-file/search")?;
 
         let req = FileFlowsSearchRequest {
-            path: ev.file_path.clone(),
+            path: ev.get_path(&self.rewrite),
             limit: 1,
         };
 
@@ -185,7 +191,7 @@ impl FileFlows {
 
         let req = FileFlowsManuallyAddRequest {
             flow_uid: library.flow.as_ref().unwrap().uid.clone(),
-            files: files.iter().map(|ev| ev.file_path.clone()).collect(),
+            files: files.iter().map(|ev| ev.get_path(&self.rewrite)).collect(),
             custom_variables: HashMap::new(),
         };
 
@@ -257,7 +263,8 @@ impl TargetProcess for FileFlows {
             let files = evs
                 .iter()
                 .filter_map(|ev| {
-                    let ev_path = Path::new(&ev.file_path);
+                    let ev_path = ev.get_path(&self.rewrite);
+                    let ev_path = Path::new(&ev_path);
                     let lib_path = Path::new(library.path.as_deref()?);
 
                     if ev_path.starts_with(lib_path) {
@@ -289,7 +296,7 @@ impl TargetProcess for FileFlows {
 
             for ev in evs {
                 // Skip directories
-                if PathBuf::from(&ev.file_path).is_dir() {
+                if PathBuf::from(&ev.get_path(&self.rewrite)).is_dir() {
                     succeeded.push(ev.id.clone());
                     continue;
                 }
@@ -326,8 +333,8 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        for (ev, _) in processed.iter() {
-                            debug!("reprocessed file: {}", ev.file_path);
+                        for (ev, _) in &processed {
+                            debug!("reprocessed file: {}", ev.get_path(&self.rewrite));
                         }
                         succeeded.extend(processed.iter().map(|(ev, _)| ev.id.clone()));
                     }
@@ -344,8 +351,8 @@ impl TargetProcess for FileFlows {
                     .await
                 {
                     Ok(()) => {
-                        for (ev, _) in not_processed.iter() {
-                            debug!("manually added file: {}", ev.file_path);
+                        for (ev, _) in &not_processed {
+                            debug!("manually added file: {}", ev.get_path(&self.rewrite));
                         }
                         succeeded.extend(not_processed.iter().map(|(ev, _)| ev.id.clone()));
                     }
