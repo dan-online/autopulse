@@ -10,7 +10,7 @@ use autopulse_service::{
     manager::PulseManager, settings::triggers::manual::ManualQueryParams,
     settings::webhooks::EventType,
 };
-use autopulse_utils::sify::sify;
+use autopulse_utils::sify;
 use std::sync::Arc;
 use tracing::debug;
 

@@ -1,5 +1,5 @@
 use super::{EventType, WebhookBatch};
-use autopulse_utils::{get_timestamp::get_timestamp, sify::sify};
+use autopulse_utils::{get_timestamp, sify};
 use serde::{Deserialize, Serialize};
 use tracing::trace;
 

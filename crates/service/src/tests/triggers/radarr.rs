@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{service::triggers::radarr::RadarrRequest, settings::trigger::TriggerRequest};
+    use crate::{settings::triggers::radarr::RadarrRequest, settings::triggers::TriggerRequest};
 
     #[test]
     fn test_from_json_test() {

@@ -12,7 +12,7 @@ use autopulse_database::{
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
-use autopulse_utils::task_manager::TaskManager;
+use autopulse_utils::TaskManager;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::task::JoinHandle;

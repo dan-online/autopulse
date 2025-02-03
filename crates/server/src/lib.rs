@@ -35,3 +35,10 @@ pub fn get_server(
     .bind((hostname, port))?
     .run())
 }
+
+#[cfg(test)]
+mod tests {
+    mod middleware {
+        mod check_auth;
+    }
+}

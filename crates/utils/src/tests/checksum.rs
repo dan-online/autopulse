@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::checksum::sha256checksum;
+    use crate::checksum::sha256checksum;
     use std::{
         env,
         fs::{remove_file, File},

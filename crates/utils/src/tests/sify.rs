@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::sify::sify;
+    use crate::sify::sify;
 
     #[test]
     fn test_sify() {

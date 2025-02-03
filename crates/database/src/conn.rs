@@ -1,6 +1,6 @@
 use crate::models::{NewScanEvent, ScanEvent};
 use anyhow::Context;
-use autopulse_utils::sify::sify;
+use autopulse_utils::sify;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, QueryResult, RunQueryDsl};
@@ -27,7 +27,7 @@ pub enum AnyConnection {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```md
     /// postgres://user:password@localhost:5432/database
     /// ```
     #[cfg(feature = "postgres")]

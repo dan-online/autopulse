@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::settings::rewrite::Rewrite;
+    use crate::rewrite::Rewrite;
 
     #[test]
     fn test_rewrite_path_same() {

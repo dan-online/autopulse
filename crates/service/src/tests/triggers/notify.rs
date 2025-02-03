@@ -1,14 +1,14 @@
 #![cfg(test)]
 mod tests {
-    use crate::service::triggers::notify::Notify;
+    use crate::settings::triggers::notify::Notify;
+    use autopulse_utils::generate_uuid;
     use notify::{event::CreateKind, EventKind};
     use std::{env, fs::create_dir, time::Duration};
     use tokio::time::timeout;
-    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_notify() -> anyhow::Result<()> {
-        let path = env::temp_dir().join(Uuid::new_v4().to_string());
+        let path = env::temp_dir().join(generate_uuid());
         create_dir(&path)?;
 
         let notifier = Notify {

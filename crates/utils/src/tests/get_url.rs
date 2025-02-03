@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::get_url::get_url;
+    use crate::get_url::get_url;
 
     #[test]
     fn test_join_no_subpath() -> anyhow::Result<()> {

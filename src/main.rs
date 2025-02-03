@@ -16,7 +16,7 @@ use autopulse_database::conn::{get_conn, get_pool, AnyConnection};
 use autopulse_server::get_server;
 use autopulse_service::manager::PulseManager;
 use autopulse_service::settings::Settings;
-use autopulse_utils::logs::setup_logs;
+use autopulse_utils::setup_logs;
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use clap::Parser;
 use std::sync::Arc;
@@ -108,7 +108,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
         }
         Err(e) => {
             // still setup logs if settings failed to load
-            setup_logs(&autopulse_utils::logs::LogLevel::Info, &None)?;
+            setup_logs(&autopulse_utils::LogLevel::Info, &None)?;
 
             Err(e)
         }

@@ -1,4 +1,4 @@
-use autopulse_utils::logs::LogLevel;
+use autopulse_utils::LogLevel;
 use serde::Deserialize;
 
 #[doc(hidden)]

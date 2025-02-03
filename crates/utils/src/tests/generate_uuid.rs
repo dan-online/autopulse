@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::generate_uuid::generate_uuid;
+    use crate::generate_uuid::generate_uuid;
 
     #[test]
     fn test_generate_uuid() {

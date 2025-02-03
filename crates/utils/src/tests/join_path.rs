@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::join_path::join_path;
+    use crate::join_path::join_path;
 
     #[test]
     fn test_join_path() {

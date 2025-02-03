@@ -11,8 +11,8 @@ use autopulse_database::{
         can_process, dsl::scan_events, found_at, found_status, next_retry_at, process_status,
     },
 };
-use autopulse_utils::checksum::sha256checksum;
-use autopulse_utils::sify::sify;
+use autopulse_utils::sha256checksum;
+use autopulse_utils::sify;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};

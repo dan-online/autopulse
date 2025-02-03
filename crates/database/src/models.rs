@@ -1,4 +1,4 @@
-use autopulse_utils::{generate_uuid::generate_uuid, rewrite::Rewrite};
+use autopulse_utils::{generate_uuid, Rewrite};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;

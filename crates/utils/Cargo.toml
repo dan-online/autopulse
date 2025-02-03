@@ -3,6 +3,9 @@ name = "autopulse-utils"
 version = "0.1.0"
 edition = "2021"
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [dependencies]
 # Core
 anyhow = { workspace = true }

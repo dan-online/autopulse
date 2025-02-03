@@ -2,7 +2,7 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url::get_url;
+use autopulse_utils::get_url;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

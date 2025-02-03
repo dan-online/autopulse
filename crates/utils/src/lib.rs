@@ -1,20 +1,33 @@
 #[doc(hidden)]
-pub mod checksum;
+mod checksum;
 #[doc(hidden)]
-pub mod generate_uuid;
+mod generate_uuid;
 #[doc(hidden)]
-pub mod get_timestamp;
+mod get_timestamp;
 #[doc(hidden)]
-pub mod get_url;
+mod get_url;
 #[doc(hidden)]
-pub mod join_path;
+mod join_path;
 #[doc(hidden)]
-pub mod logs;
+mod logs;
 #[doc(hidden)]
-pub mod sify;
+mod sify;
 #[doc(hidden)]
-pub mod task_manager;
+mod task_manager;
 
 pub mod rewrite;
 
+pub use checksum::*;
+pub use generate_uuid::*;
+pub use get_timestamp::*;
+pub use get_url::*;
+pub use join_path::*;
+pub use logs::*;
+pub use rewrite::*;
+pub use sify::*;
+pub use task_manager::*;
+
 pub extern crate tracing_appender;
+
+#[cfg(test)]
+mod tests;
