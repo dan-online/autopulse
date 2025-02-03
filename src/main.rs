@@ -2,68 +2,39 @@
 //!
 //! ## Quick docs
 //!
-//! - **[Triggers](service::triggers)**: Create triggers that will be executed by a service when a certain event occurs
-//! - **[Targets](service::targets)**: Create targets that will be scanned by a service
-//! - **[Webhooks](service::webhooks)**: Send webhooks to services to notify them of an event
-//! - **[Settings](settings)**: Settings handler
-//! - **[Database](db::conn::AnyConnection)**: Database handler
+//! - **[Settings](autopulse_service::settings)**: Settings handler
+//!   - **[Triggers](autopulse_service::settings::triggers)**: Create triggers that will be executed by a service when a certain event occurs
+//!   - **[Targets](autopulse_service::settings::targets)**: Create targets that will be scanned by a service
+//!   - **[Webhooks](autopulse_service::settings::webhooks)**: Send webhooks to services to notify them of an event
+//! - **[Database](autopulse_database::conn::AnyConnection)**: Database handler
 //!
 //! ## About
 #![doc = include_str!("../README.md")]
-#![cfg_attr(debug_assertions, warn(clippy::nursery))]
 
-use actix_web::{middleware::Logger, web::Data, App, HttpServer};
-use actix_web_httpauth::extractors::basic;
 use anyhow::Context;
+use autopulse_database::conn::{get_conn, get_pool, AnyConnection};
+use autopulse_server::get_server;
+use autopulse_service::manager::PulseManager;
+use autopulse_service::settings::Settings;
+use autopulse_utils::setup_logs;
+use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use clap::Parser;
-use db::conn::{get_conn, get_pool, AnyConnection};
-use routes::list::list;
-use routes::login::login;
-use routes::stats::stats;
-use routes::status::status;
-use routes::triggers::trigger_post;
-use routes::{index::hello, triggers::trigger_get};
-use service::manager::PulseManager;
-use settings::Settings;
 use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{debug, error, info};
-use tracing_appender::non_blocking::WorkerGuard;
-use utils::cli::Args;
-use utils::logs::setup_logs;
 
-#[doc(hidden)]
-mod tests;
-
-/// Web server routes
-pub mod routes;
-
-/// Settings configuration
+/// Arguments for CLI
 ///
-/// Used to configure the service.
-///
-/// Can be defined in 2 ways:
-/// - Config file
-///   - `config.{json,toml,yaml,json5,ron,ini}` in the current directory
-/// - Environment variables
-///   - `AUTOPULSE__{SECTION}__{KEY}` (e.g. `AUTOPULSE__APP__DATABASE_URL`)
-///
-/// See [Settings] for all options
-pub mod settings;
-
-/// Database handler
-pub mod db;
-
-/// Core of autopulse
-///
-/// Includes:
-/// - `Triggers`
-/// - `Webhooks`
-/// - `Targets`
-pub mod service;
-
-/// Internal utility functions
-pub mod utils;
+/// ```
+/// $ autopulse --help
+/// ```
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    /// Location of configuration file
+    #[arg(short, long)]
+    pub config: Option<String>,
+}
 
 #[doc(hidden)]
 #[tokio::main]
@@ -91,22 +62,7 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 
     let manager_clone = manager.clone();
 
-    let server = HttpServer::new(move || {
-        App::new()
-            .wrap(Logger::default())
-            .service(hello)
-            .service(trigger_get)
-            .service(trigger_post)
-            .service(status)
-            .service(stats)
-            .service(login)
-            .service(list)
-            .app_data(basic::Config::default().realm("Restricted area"))
-            .app_data(Data::new(manager_clone.clone()))
-    })
-    .disable_signals()
-    .bind((hostname.clone(), port))?
-    .run();
+    let server = get_server(hostname.clone(), port, manager_clone)?;
 
     info!("🚀 listening on {}:{}", hostname, port);
 
@@ -152,7 +108,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
         }
         Err(e) => {
             // still setup logs if settings failed to load
-            setup_logs(&settings::app::LogLevel::Info, &None)?;
+            setup_logs(&autopulse_utils::LogLevel::Info, &None)?;
 
             Err(e)
         }

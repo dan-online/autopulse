@@ -41,7 +41,7 @@ jobs:
         run: cargo clean --doc
 
       - name: Build docs
-        run: cargo doc --no-deps --release
+        run: cargo doc --no-deps --workspace --release
 
       - name: Add redirect
         run: |

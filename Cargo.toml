@@ -2,41 +2,44 @@
 name = "autopulse"
 version = "1.2.3"
 edition = "2021"
-build = "src/build.rs"
 
 [features]
-postgres = ["diesel/postgres", "diesel_migrations/postgres"]
-sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
-vendored = [
-    "reqwest/native-tls-vendored",
-    "pq-sys/bundled",
-    "libsqlite3-sys/bundled",
-]
-default = ["postgres", "sqlite"]
+vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
+sqlite = ["autopulse-database/sqlite"]
+postgres = ["autopulse-database/postgres"]
+default = ["sqlite", "postgres"]
 
 [dependencies]
-# Web framework
-actix-web = { version = "4.9.0", default-features = false, features = [
-    # disable actix-web's zstd feature because it can't be vendored yet
-    "compat",
-    "compress-brotli",
-    "compress-gzip",
-    "cookies",
-    "http2",
-    "macros",
-    "unicode",
-] }
-actix-web-httpauth = "0.8.2"
+# Crates
+autopulse-server = { workspace = true }
+autopulse-database = { workspace = true }
+autopulse-service = { workspace = true }
+autopulse-utils = { workspace = true }
+
+# Core
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+clap = { version = "4.5.27", features = ["derive"] }
+clap_derive = { version = "4.5.18" }
+
+[workspace]
+members = ["crates/server", "crates/database", "crates/service", "crates/utils"]
+
+[workspace.dependencies]
+# Crates
+autopulse-server = { path = "crates/server" }
+autopulse-database = { path = "crates/database" }
+autopulse-service = { path = "crates/service" }
+autopulse-utils = { path = "crates/utils" }
 
 # Error handling
 anyhow = { version = "1.0.87" }
 
-# Configuration
-config = "0.15.0"
-
 # Serialization
-serde = "1.0.210"
-serde_json = "1.0.128"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.138"
 
 # Tracing
 tracing = "0.1.40"
@@ -46,18 +49,6 @@ tracing-subscriber = { version = "0.3.18", features = [
     "local-time",
     "time",
 ] }
-tracing-appender = "0.2.3"
-
-# Database
-diesel = { version = "2.2.4", features = [
-    "returning_clauses_for_sqlite_3_35",
-    "r2d2",
-    "chrono",
-] }
-diesel_migrations = { version = "2.2.0" }
-pq-sys = "0.6.3"
-# mysqlclient-sys = "0.4.1"
-libsqlite3-sys = "0.30.1"
 
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }
@@ -65,38 +56,13 @@ chrono = { version = "0.4.38", features = ["serde"] }
 # Asynchronous runtime
 tokio = { version = "1.40.0", features = [
     "process",
+    "sync",
     "macros",
     "rt-multi-thread",
 ] }
 
-# Hashing
-sha2 = "0.10.8"
-
-# HTTP client
-reqwest = { version = "0.12.7", features = ["json", "stream"] }
-base64 = "0.22.1"
-
 # URL parsing
 url = "2.5.2"
-
-# UUIDs
-uuid = { version = "1.10.0", features = ["v4"] }
-
-# File system notifications
-notify = "7.0.0"
-
-# Other
-struson = { version = "0.6.0", features = [
-    "simple-api",
-    "serde",
-] } # Parse Jellyfin response as a stream
-regex = "1.10.6" # Rewrite using regex
-async-recursion = "1.1.1" # Retry requests for webhooks
-
-# Command-line arguments
-clap = { version = "4.5.18", features = ["derive"] }
-clap_derive = { version = "4.5.18" }
-futures-util = "0.3.31"
 
 # [dev-dependencies]
 # # Standardize logging output
