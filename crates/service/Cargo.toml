@@ -16,9 +16,7 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
-url = { workspace = true }
 chrono = { workspace = true }
 
 # HTTP client
@@ -31,12 +29,11 @@ base64 = "0.22.1"
 config = "0.15.6"
 
 # File system notifications
-notify = "7.0.0"
+notify = "8.0.0"
 
 # Other
 struson = { version = "0.6.0", features = [
     "simple-api",
     "serde",
 ] } # Parse Jellyfin response as a stream
-regex = "1.10.6" # Rewrite using regex
 async-recursion = "1.1.1" # Retry requests for webhooks

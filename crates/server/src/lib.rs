@@ -1,10 +1,3 @@
-pub mod routes;
-mod middleware {
-    pub mod auth;
-}
-
-use std::sync::Arc;
-
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use autopulse_service::manager::PulseManager;
@@ -12,6 +5,13 @@ use routes::{
     index::hello, list::list, login::login, stats::stats, status::status, triggers::trigger_get,
     triggers::trigger_post,
 };
+use std::sync::Arc;
+
+pub mod routes;
+
+mod middleware {
+    pub mod auth;
+}
 
 pub fn get_server(
     hostname: String,
