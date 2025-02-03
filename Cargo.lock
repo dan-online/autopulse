@@ -384,7 +384,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-database"
-version = "0.1.0"
+version = "1.3.0"
 dependencies = [
  "anyhow",
  "autopulse-utils",
@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-server"
-version = "0.1.0"
+version = "1.3.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-service"
-version = "0.1.0"
+version = "1.3.0"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -435,7 +435,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-utils"
-version = "0.1.0"
+version = "1.3.0"
 dependencies = [
  "anyhow",
  "chrono",
