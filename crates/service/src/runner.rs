@@ -50,6 +50,12 @@ impl PulseRunner {
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
 
+            info!(
+                "checking file: {:?}, exists: {}",
+                file_path,
+                file_path.exists()
+            );
+
             if file_path.exists() {
                 if let Some(hash) = ev.file_hash.clone() {
                     let file_hash = sha256checksum(&file_path)?;
@@ -67,9 +73,9 @@ impl PulseRunner {
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    found_files.push(ev.file_path.clone());
-
                     ev.found_status = FoundStatus::Found.into();
+
+                    found_files.push(ev.file_path.clone());
                 }
             }
 
