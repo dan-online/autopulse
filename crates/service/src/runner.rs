@@ -45,6 +45,7 @@ impl PulseRunner {
 
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
+            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
             .load::<ScanEvent>(&mut get_conn(&self.pool)?)?;
 
         for ev in &mut evs {
@@ -67,9 +68,9 @@ impl PulseRunner {
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    found_files.push(ev.file_path.clone());
-
                     ev.found_status = FoundStatus::Found.into();
+
+                    found_files.push(ev.file_path.clone());
                 }
             }
 
