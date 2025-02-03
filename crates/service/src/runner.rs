@@ -40,7 +40,7 @@ impl PulseRunner {
             return Ok(());
         }
 
-        let mut found_files = vec![];
+        let mut found_files: Vec<(String, String)> = vec![];
         let mut mismatched_files = vec![];
 
         let mut evs = scan_events
@@ -64,13 +64,14 @@ impl PulseRunner {
                         ev.found_at = Some(chrono::Utc::now().naive_utc());
                     } else {
                         ev.found_status = FoundStatus::Found.into();
-                        found_files.push(ev.file_path.clone());
+                        found_files.push((ev.file_path.clone(), ev.event_source.clone()));
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
+
                     ev.found_status = FoundStatus::Found.into();
 
-                    found_files.push(ev.file_path.clone());
+                    found_files.push((ev.file_path.clone(), ev.event_source.clone()));
                 }
             }
 
@@ -81,9 +82,11 @@ impl PulseRunner {
         if !found_files.is_empty() {
             info!("found {} new file{}", found_files.len(), sify(&found_files));
 
-            self.webhooks
-                .add_event(EventType::Found, None, &found_files)
-                .await;
+            for (file, target) in found_files {
+                self.webhooks
+                    .add_event(EventType::Found, Some(target), &[file])
+                    .await;
+            }
         }
 
         if !mismatched_files.is_empty() {
