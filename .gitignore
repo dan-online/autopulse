@@ -13,3 +13,6 @@ data
 
 # Random testing scripts
 *.sh
+
+# Nix
+result

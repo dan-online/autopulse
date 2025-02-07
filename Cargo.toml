@@ -21,11 +21,11 @@ anyhow = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
-clap = { version = "4.5.27", features = ["derive"] }
-clap_derive = { version = "4.5.18" }
+clap = { version = "4.5.28", features = ["derive"] }
+clap_derive = { version = "4.5.28" }
 
 [workspace]
-members = ["crates/server", "crates/database", "crates/service", "crates/utils"]
+members = ["crates/*"]
 
 [workspace.dependencies]
 # Crates
@@ -35,15 +35,15 @@ autopulse-service = { path = "crates/service" }
 autopulse-utils = { path = "crates/utils" }
 
 # Error handling
-anyhow = { version = "1.0.87" }
+anyhow = { version = "1.0.95" }
 
 # Serialization
-serde = { version = "1.0.210", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.138"
 
 # Tracing
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = [
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = [
     "env-filter",
     "fmt",
     "local-time",
@@ -54,7 +54,7 @@ tracing-subscriber = { version = "0.3.18", features = [
 chrono = { version = "0.4.38", features = ["serde"] }
 
 # Asynchronous runtime
-tokio = { version = "1.40.0", features = [
+tokio = { version = "1.43.0", features = [
     "process",
     "sync",
     "macros",
@@ -62,7 +62,7 @@ tokio = { version = "1.40.0", features = [
 ] }
 
 # URL parsing
-url = "2.5.2"
+url = "2.5.4"
 
 # [dev-dependencies]
 # # Standardize logging output
