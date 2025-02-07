@@ -19,8 +19,8 @@ pub enum EventType {
     Retrying = 3,
     /// Processed event
     Processed = 4,
-    /// Error event
-    Error = 5,
+    /// Failed event
+    Failed = 5,
 }
 
 impl Display for EventType {
@@ -29,7 +29,7 @@ impl Display for EventType {
             Self::New => "NEW",
             Self::Retrying => "RETRY",
             Self::Found => "FOUND",
-            Self::Error => "ERROR",
+            Self::Failed => "FAILED",
             Self::Processed => "PROCESSED",
             Self::HashMismatch => "HASH MISMATCH",
         };
@@ -44,7 +44,7 @@ impl EventType {
             Self::New => "added",
             Self::Found => "found",
             Self::Retrying => "retrying",
-            Self::Error => "failed",
+            Self::Failed => "failed",
             Self::Processed => "processed",
             Self::HashMismatch => "mismatched",
         }

@@ -68,10 +68,10 @@ impl DiscordWebhook {
 
         for (event, trigger, files) in batch {
             let color = match event {
-                EventType::New => 6_061_450,    // grey
-                EventType::Found => 52084,      // green
-                EventType::Error => 16_711_680, // red
-                EventType::Processed => 39129,  // blue
+                EventType::New => 6_061_450,     // grey
+                EventType::Found => 52084,       // green
+                EventType::Failed => 16_711_680, // red
+                EventType::Processed => 39129,   // blue
                 EventType::Retrying | EventType::HashMismatch => 16_776_960,
             };
 
