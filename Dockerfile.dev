@@ -1,0 +1,56 @@
+ARG IMAGE_TAG=3.21
+FROM nixos/nix:latest AS builder
+
+WORKDIR /tmp/build
+
+RUN echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
+
+COPY flake.nix /tmp/build
+COPY flake.lock /tmp/build
+
+RUN nix --accept-flake-config flake prefetch
+
+COPY Cargo.toml /tmp/build
+COPY Cargo.lock /tmp/build
+
+# RUN mkdir -p /tmp/build/src && \
+#     echo "fn main() { eprintln!(\"If you see this, the build broke\") }" > /tmp/build/src/main.rs
+
+# RUN nix --accept-flake-config build
+
+COPY . /tmp/build
+
+RUN nix --accept-flake-config build
+
+RUN mkdir /tmp/nix-store-closure
+RUN cp -R $(nix-store -qR result/) /tmp/nix-store-closure
+
+
+FROM ghcr.io/linuxserver/baseimage-alpine:${IMAGE_TAG} AS runtime
+
+WORKDIR /app
+
+ENV S6_AUTOPULSE_DIR=/etc/s6-overlay/s6-rc.d/svc-autopulse
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 CMD wget --quiet --tries=1 --spider http://127.0.0.1:${AUTOPULSE__APP__PORT:-2875}/stats || exit 1
+
+RUN mkdir -p $S6_AUTOPULSE_DIR && \
+    echo '#!/usr/bin/with-contenv bash' >> $S6_AUTOPULSE_DIR/run && \
+    echo '# shellcheck shell=bash' >> $S6_AUTOPULSE_DIR/run && \
+    echo '' >> $S6_AUTOPULSE_DIR/run && \
+    echo 'cd /app && /bin/autopulse' >> $S6_AUTOPULSE_DIR/run && \
+    chmod +x $S6_AUTOPULSE_DIR/run && \
+    echo "longrun" > $S6_AUTOPULSE_DIR/type && \
+    echo "3" > $S6_AUTOPULSE_DIR/notification-fd && \
+    mkdir $S6_AUTOPULSE_DIR/dependencies.d/ && \
+    echo "" > $S6_AUTOPULSE_DIR/dependencies.d/init-services && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d && \
+    echo "" > /etc/s6-overlay/s6-rc.d/user/contents.d/svc-autopulse
+
+WORKDIR /app
+
+# Copy /nix/store
+COPY --from=builder /tmp/nix-store-closure /nix/store
+COPY --from=builder /tmp/build/result/bin/autopulse /bin/autopulse
+
+# CMD ["/app/bin/autopulse"]
