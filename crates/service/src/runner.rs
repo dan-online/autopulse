@@ -40,7 +40,7 @@ impl PulseRunner {
             return Ok(());
         }
 
-        let mut found_files = vec![];
+        let mut found_files: Vec<(String, String)> = vec![];
         let mut mismatched_files = vec![];
 
         let mut evs = scan_events
@@ -64,13 +64,14 @@ impl PulseRunner {
                         ev.found_at = Some(chrono::Utc::now().naive_utc());
                     } else {
                         ev.found_status = FoundStatus::Found.into();
-                        found_files.push(ev.file_path.clone());
+                        found_files.push((ev.file_path.clone(), ev.event_source.clone()));
                     }
                 } else {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
+
                     ev.found_status = FoundStatus::Found.into();
 
-                    found_files.push(ev.file_path.clone());
+                    found_files.push((ev.file_path.clone(), ev.event_source.clone()));
                 }
             }
 
@@ -81,9 +82,11 @@ impl PulseRunner {
         if !found_files.is_empty() {
             info!("found {} new file{}", found_files.len(), sify(&found_files));
 
-            self.webhooks
-                .add_event(EventType::Found, None, &found_files)
-                .await;
+            for (file, target) in found_files {
+                self.webhooks
+                    .add_event(EventType::Found, Some(target), &[file])
+                    .await;
+            }
         }
 
         if !mismatched_files.is_empty() {
@@ -134,17 +137,29 @@ impl PulseRunner {
                 sify(&processed)
             );
 
-            self.webhooks
-                .add_event(EventType::Processed, None, &processed)
-                .await;
+            for ev in &processed {
+                self.webhooks
+                    .add_event(
+                        EventType::Processed,
+                        Some(ev.event_source.clone()),
+                        &[ev.file_path.clone()],
+                    )
+                    .await;
+            }
         }
 
         if !retrying.is_empty() {
             warn!("retrying {} file{}", retrying.len(), sify(&retrying));
 
-            self.webhooks
-                .add_event(EventType::Retrying, None, &retrying)
-                .await;
+            for ev in &retrying {
+                self.webhooks
+                    .add_event(
+                        EventType::Retrying,
+                        Some(ev.event_source.clone()),
+                        &[ev.file_path.clone()],
+                    )
+                    .await;
+            }
         }
 
         if !failed.is_empty() {
@@ -154,9 +169,15 @@ impl PulseRunner {
                 sify(&failed)
             );
 
-            self.webhooks
-                .add_event(EventType::Error, None, &failed)
-                .await;
+            for ev in &failed {
+                self.webhooks
+                    .add_event(
+                        EventType::Failed,
+                        Some(ev.event_source.clone()),
+                        &[ev.file_path.clone()],
+                    )
+                    .await;
+            }
         }
 
         Ok(())
@@ -165,7 +186,7 @@ impl PulseRunner {
     async fn process_events(
         &self,
         evs: &mut [ScanEvent],
-    ) -> anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> {
+    ) -> anyhow::Result<(Vec<ScanEvent>, Vec<ScanEvent>, Vec<ScanEvent>)> {
         let mut failed_ids = vec![];
 
         let trigger_settings = &self.settings.triggers;
@@ -224,7 +245,7 @@ impl PulseRunner {
                 if ev.failed_times >= self.settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
-                    failed.push(conn.save_changes(ev)?.file_path.clone());
+                    failed.push(conn.save_changes(ev)?);
                 } else {
                     let next_retry = chrono::Utc::now().naive_utc()
                         + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
@@ -232,12 +253,12 @@ impl PulseRunner {
                     ev.process_status = ProcessStatus::Retry.into();
                     ev.next_retry_at = Some(next_retry);
 
-                    retrying.push(conn.save_changes(ev)?.file_path.clone());
+                    retrying.push(conn.save_changes(ev)?);
                 }
             } else {
                 ev.process_status = ProcessStatus::Complete.into();
                 ev.processed_at = Some(chrono::Utc::now().naive_utc());
-                succeeded.push(conn.save_changes(ev)?.file_path.clone());
+                succeeded.push(conn.save_changes(ev)?);
             }
         }
 
