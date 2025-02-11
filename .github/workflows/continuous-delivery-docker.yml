@@ -241,30 +241,35 @@ jobs:
 
       - name: Create and push manifests
         run: |
+          # Extract digests for each architecture
+          AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
+          ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
+
+          POSTGRES_AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
+          POSTGRES_ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
+
+          SQLITE_AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
+          SQLITE_ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
+
           # Root: latest/pr-<number>
           docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }} \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-amd64 \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-arm64
-            
-          # Full: latest-full/pr-<number>-full
-          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-full \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-amd64 \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-arm64
-          
-          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-full \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}
+              --amend danonline/autopulse@${AMD64_DIGEST} \
+              --amend danonline/autopulse@${ARM64_DIGEST}
+
+          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}
 
           # Postgres: latest-postgres/pr-<number>-postgres
           docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64
+              --amend danonline/autopulse@${POSTGRES_AMD64_DIGEST} \
+              --amend danonline/autopulse@${POSTGRES_ARM64_DIGEST}
 
           docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
 
           # SQLite: latest-sqlite/pr-<number>-sqlite
           docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 \
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64
+              --amend danonline/autopulse@${SQLITE_AMD64_DIGEST} \
+              --amend danonline/autopulse@${SQLITE_ARM64_DIGEST}
 
           docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+
 
