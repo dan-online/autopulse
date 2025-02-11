@@ -80,6 +80,7 @@ jobs:
         platform:
           - name: linux/amd64
             target: x86_64-unknown-linux-musl
+            tag: -amd64
           - name: linux/arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
@@ -182,7 +183,6 @@ jobs:
           cp target/${{ matrix.platform.target }}/release/autopulse ./autopulse
 
           file ./autopulse
-          ls target/${{ matrix.platform.target }}/release/
 
       # "latest-platform?" tag, full feature-set
       - name: Create Docker Image
@@ -207,3 +207,64 @@ jobs:
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
+
+  # Push a manifest for arm/amd64
+  manifest:
+    name: Push manifest
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - use: actions/checkout@v4
+      
+      - name: Pull Request suffix
+        run: |
+          if [ -n "${{ github.event.number }}" ]; then
+            echo "PR number: ${{ github.event.number }}"
+            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Release tag: ${{ github.event.release.tag_name }}"
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a PR branch"
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+        id: tag
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and push manifests
+        run: |
+          # Root: latest/pr-<number>
+          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }} \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-amd64 \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-arm64
+            
+          # Full: latest-full/pr-<number>-full
+          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-full \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-amd64 \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-full-arm64
+          
+          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-full \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}
+
+          # Postgres: latest-postgres/pr-<number>-postgres
+          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64
+
+          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+
+          # SQLite: latest-sqlite/pr-<number>-sqlite
+          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 \
+            danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64
+
+          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+
