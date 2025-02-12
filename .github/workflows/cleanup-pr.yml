@@ -28,14 +28,18 @@ jobs:
             pr_number="${{ github.event.number }}"
           fi
 
-          features=(full postgres sqlite)
-          tags=(none arm64)
+          features=(postgres sqlite)
+          tags=(none amd64 arm64)
 
+          # pr-${pr_number}/pr-${pr_number}-arm64/pr-${pr_number}-amd64/ui-pr-${pr_number}
           docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} \
             danonline/autopulse:pr-${pr_number} \
             danonline/autopulse:pr-${pr_number}-arm64 \
+            danonline/autopulse:pr-${pr_number}-amd64 \
             danonline/autopulse:ui-pr-${pr_number} || true
 
+          # pr-${pr_number}-postgres/pr-${pr_number}-postgres-arm64/pr-${pr_number}-postgres-amd64
+          # pr-${pr_number}-sqlite/pr-${pr_number}-sqlite-arm64/pr-${pr_number}-sqlite-amd64
           for feature in "${features[@]}"; do
             for tag in "${tags[@]}"; do
               if [ "$tag" == "none" ]; then
