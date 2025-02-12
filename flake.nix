@@ -164,12 +164,8 @@
           drv = crate;
         };
 
-        devShells.default = craneLib.devShell {
-          checks = self.checks.${system};
-
-          inputsFrom = [ crate ];
-
-          packages = [
+        devShells.default = {
+          buildInputs = buildInputs ++ [
             pkgs.biome
             pkgs.nixfmt-rfc-style
           ];

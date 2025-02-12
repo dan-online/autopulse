@@ -21,8 +21,12 @@ anyhow = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
-clap = { version = "4.5.28", features = ["derive"] }
-clap_derive = { version = "4.5.28" }
+# CLI
+clap = { version = "4.5.29", default-features = false, features = [
+    "std",
+    "derive",
+    "help",
+] }
 
 [workspace]
 members = ["crates/*"]
