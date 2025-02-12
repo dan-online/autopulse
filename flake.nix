@@ -164,8 +164,8 @@
           drv = crate;
         };
 
-        devShells.default = {
-          buildInputs = buildInputs ++ [
+        devShells.default = pkgs.mkShell {
+          buildInputs = commonArgs.buildInputs ++ [
             pkgs.biome
             pkgs.nixfmt-rfc-style
           ];
