@@ -90,7 +90,7 @@ The easiest way to get started with autopulse is to use the provided [docker ima
 
 #### Compose
 
-> Here is a sample [docker-compose.yml](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml)
+Docker Compose files for both SQLite and Postgres are provided in the [example](https://github.com/dan-online/autopulse/blob/main/example)
 
 #### CLI
 
@@ -287,6 +287,8 @@ Contributions are what make the open-source community such an amazing place to l
 5. Open a Pull Request
 
 ### Development
+
+> If you're a nix user then you can use the provided flake.nix to get started
 
 #### Dependencies
 

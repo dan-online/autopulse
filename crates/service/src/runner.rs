@@ -198,7 +198,7 @@ impl PulseRunner {
                 .filter(|x| {
                     trigger_settings
                         .get(&x.event_source)
-                        .map_or(true, |trigger| !trigger.excludes().contains(name))
+                        .is_none_or(|trigger| !trigger.excludes().contains(name))
                 })
                 .collect::<Vec<&mut ScanEvent>>();
 
