@@ -20,7 +20,7 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 
 # Database
-diesel = { version = "2.2.4", default-features = false, features = [
+diesel = { version = "2.2.7", default-features = false, features = [
     "returning_clauses_for_sqlite_3_35",
     "r2d2",
     "chrono",
