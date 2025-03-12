@@ -319,7 +319,6 @@ impl TargetProcess for Plex {
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
-                                        // Iterate through all items and process each one
                                         let mut all_success = true;
 
                                         for item in items {
@@ -355,7 +354,6 @@ impl TargetProcess for Plex {
                                                 }
                                             }
 
-                                            // Track if any item fails
                                             if !item_success {
                                                 all_success = false;
                                             }
