@@ -282,7 +282,7 @@ impl TargetProcess for Plex {
                         let is_dir = Path::new(&ev_path).is_dir();
 
                         // Only analyze and refresh metadata for files
-                        if self.analyze || self.refresh {
+                        if (self.analyze || self.refresh) && !is_dir {
                             match self.get_item(&library, &ev_path).await {
                                 Ok(Some(item)) => {
                                     trace!("found item for file '{}'", ev_path);
