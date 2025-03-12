@@ -24,14 +24,14 @@ pub struct Plex {
     pub rewrite: Option<Rewrite>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Media {
     #[serde(rename = "Part")]
     pub part: Vec<Part>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Part {
     // pub id: i64,
@@ -47,12 +47,14 @@ pub struct Part {
     // pub optimized_for_streaming: Option<bool>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub key: String,
     #[serde(rename = "Media")]
     pub media: Option<Vec<Media>>,
+    #[serde(rename = "type")]
+    pub t: String,
 }
 
 #[doc(hidden)]
@@ -82,6 +84,20 @@ struct MediaContainer {
 #[serde(rename_all = "PascalCase")]
 struct LibraryResponse {
     media_container: MediaContainer,
+}
+
+fn path_matches(part_file: &str, path: &Path) -> bool {
+    if path.is_dir() {
+        Path::new(part_file).parent() == Some(path)
+    } else {
+        Path::new(part_file) == path
+    }
+}
+
+fn has_matching_media(media: &[Media], path: &Path) -> bool {
+    media
+        .iter()
+        .any(|m| m.part.iter().any(|p| path_matches(&p.file, path)))
 }
 
 impl Plex {
@@ -136,15 +152,43 @@ impl Plex {
         None
     }
 
-    // TODO: X-Plex-Media-Container-Size
-    // TODO: Change to get_items
-    async fn get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Metadata>> {
+    async fn get_episodes(&self, key: &str) -> anyhow::Result<LibraryResponse> {
+        let client = self.get_client()?;
+        // remove last part of the key
+        let key = key
+            .split('/')
+            .collect::<Vec<_>>()
+            .into_iter()
+            .take(key.split('/').count() - 1)
+            .collect::<Vec<_>>()
+            .join("/");
+
+        let url = get_url(&self.url)?.join(&format!("{key}/allLeaves"))?;
+
+        let res = client.get(url.to_string()).send().await?;
+
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await?;
+
+            return Err(anyhow::anyhow!(
+                "failed to get library: {} - {}",
+                status.as_u16(),
+                body
+            ));
+        }
+        let lib: LibraryResponse = res.json().await?;
+        Ok(lib)
+    }
+
+    async fn get_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?
             .join(&format!("library/sections/{}/all", library.key))?
             .to_string();
 
         let res = client.get(&url).send().await?;
+
         let status = res.status();
 
         if !status.is_success() {
@@ -159,52 +203,36 @@ impl Plex {
 
         let lib: LibraryResponse = res.json().await?;
 
+        let path = Path::new(path);
+
+        let mut parts = vec![];
+
+        // TODO: Reduce the amount of data needed to be searched
         for item in lib.media_container.metadata.unwrap_or_default() {
-            if item
-                .media
-                .clone()
-                .unwrap_or_default()
-                .iter()
-                .any(|media| media.part.iter().any(|part| part.file == path))
-            {
-                return Ok(Some(item));
+            match item.t.as_str() {
+                "show" => {
+                    let episodes = self.get_episodes(&item.key).await?;
+
+                    for episode in episodes.media_container.metadata.unwrap_or_default() {
+                        if let Some(media) = &episode.media {
+                            if has_matching_media(media, path) {
+                                parts.push(episode.clone());
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    if let Some(media) = &item.media {
+                        if has_matching_media(media, path) {
+                            parts.push(item.clone());
+                        }
+                    }
+                }
             }
         }
 
-        Ok(None)
+        Ok(parts)
     }
-
-    // async fn refresh_library(&self, library: &str) -> anyhow::Result<()> {
-    //     let client = self.get_client()?;
-    //     let mut url =
-    //         get_url(&self.url)?.join(&format!("/library/sections/{}/refresh", library))?;
-
-    //     url.query_pairs_mut().append_pair("force", "1");
-
-    //     let res = client.get(url.to_string()).send().await?;
-
-    //     if res.status().is_success() {
-    //         Ok(())
-    //     } else {
-    //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("failed to send refresh: {}", body))
-    //     }
-    // }
-
-    // async fn analyze_library(&self, library: &str) -> anyhow::Result<()> {
-    //     let client = self.get_client()?;
-    //     let url =
-    //         get_url(&self.url)?.join(&format!("/library/sections/{}/analyze", library))?;
-
-    //     let res = client.put(url.to_string()).send().await?;
-
-    //     if res.status().is_success() {
-    //         Ok(())
-    //     } else {
-    //         let body = res.text().await?;
-    //         Err(anyhow::anyhow!("failed to send analyze: {}", body))
-    //     }
-    // }
 
     async fn refresh_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
@@ -250,7 +278,7 @@ impl Plex {
                 .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
         })
         .to_str()
-        .ok_or(anyhow::anyhow!("failed to convert path to string"))?;
+        .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?;
 
         url.query_pairs_mut().append_pair("path", file_dir);
 
@@ -277,63 +305,67 @@ impl TargetProcess for Plex {
             if let Some(library) = self.get_library(&libraries, &ev_path) {
                 match self.scan(ev, &library).await {
                     Ok(()) => {
-                        debug!("scanned file '{}'", ev_path);
+                        debug!("scanned '{}'", ev_path);
 
-                        let is_dir = Path::new(&ev_path).is_dir();
-
-                        // Only analyze and refresh metadata for files
-                        if (self.analyze || self.refresh) && !is_dir {
-                            match self.get_item(&library, &ev_path).await {
-                                Ok(Some(item)) => {
-                                    trace!("found item for file '{}'", ev_path);
-
-                                    let mut success = true;
-
-                                    if self.analyze {
-                                        match self.analyze_item(&item.key).await {
-                                            Ok(()) => {
-                                                debug!("analyzed metadata '{}'", item.key);
-                                            }
-                                            Err(e) => {
-                                                error!(
-                                                    "failed to analyze library '{}': {}",
-                                                    library.key, e
-                                                );
-
-                                                success = false;
-                                            }
-                                        }
-                                    }
-
-                                    if self.refresh {
-                                        match self.refresh_item(&item.key).await {
-                                            Ok(()) => {
-                                                debug!("refreshed metadata '{}'", item.key);
-                                            }
-                                            Err(e) => {
-                                                error!(
-                                                    "failed to refresh library '{}': {}",
-                                                    library.key, e
-                                                );
-
-                                                success = false;
-                                            }
-                                        }
-                                    }
-
-                                    if success {
+                        if self.analyze || self.refresh {
+                            match self.get_items(&library, &ev_path).await {
+                                Ok(items) => {
+                                    if items.is_empty() {
+                                        trace!(
+                                            "failed to find items for file: {}, leaving at scan",
+                                            ev_path
+                                        );
                                         succeeded.push(ev.id.clone());
+                                    } else {
+                                        trace!("found items for file '{}'", ev_path);
+
+                                        let mut all_success = true;
+
+                                        for item in items {
+                                            let mut item_success = true;
+
+                                            if self.refresh {
+                                                match self.refresh_item(&item.key).await {
+                                                    Ok(()) => {
+                                                        debug!("refreshed metadata '{}'", item.key);
+                                                    }
+                                                    Err(e) => {
+                                                        error!(
+                                                        "failed to refresh metadata for '{}': {}",
+                                                        item.key, e
+                                                    );
+                                                        item_success = false;
+                                                    }
+                                                }
+                                            }
+
+                                            if self.analyze {
+                                                match self.analyze_item(&item.key).await {
+                                                    Ok(()) => {
+                                                        debug!("analyzed metadata '{}'", item.key);
+                                                    }
+                                                    Err(e) => {
+                                                        error!(
+                                                        "failed to analyze metadata for '{}': {}",
+                                                        item.key, e
+                                                    );
+                                                        item_success = false;
+                                                    }
+                                                }
+                                            }
+
+                                            if !item_success {
+                                                all_success = false;
+                                            }
+                                        }
+
+                                        if all_success {
+                                            succeeded.push(ev.id.clone());
+                                        }
                                     }
-                                }
-                                Ok(None) => {
-                                    trace!(
-                                        "failed to find item for file: {}, leaving at scan",
-                                        ev_path
-                                    );
-                                    succeeded.push(ev.id.clone());
                                 }
                                 Err(e) => {
-                                    error!("failed to get item for file '{}': {:?}", ev_path, e);
+                                    error!("failed to get items for '{}': {:?}", ev_path, e);
                                 }
                             };
                         } else {
