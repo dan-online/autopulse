@@ -3,11 +3,11 @@
     "advisory-db": {
       "flake": false,
       "locked": {
-        "lastModified": 1738539423,
-        "narHash": "sha256-qb4FLJFuIHdzI1oeVor69678RugKy8YwsLRQd38fJnc=",
+        "lastModified": 1740955963,
+        "narHash": "sha256-QvSSvFBKsYaB6mQIkqKN0RwgYFZNmVMxdMScoZSDfuY=",
         "owner": "rustsec",
         "repo": "advisory-db",
-        "rev": "08617accdc251d22bc8fd4e3bd62cf53eeddf611",
+        "rev": "ba55c172c77b28744fe8252347ce012ca2dd432f",
         "type": "github"
       },
       "original": {
@@ -18,11 +18,11 @@
     },
     "crane": {
       "locked": {
-        "lastModified": 1738652123,
-        "narHash": "sha256-zdZek5FXK/k95J0vnLF0AMnYuZl4AjARq83blKuJBYY=",
+        "lastModified": 1739936662,
+        "narHash": "sha256-x4syUjNUuRblR07nDPeLDP7DpphaBVbUaSoeZkFbGSk=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "c7e015a5fcefb070778c7d91734768680188a9cd",
+        "rev": "19de14aaeb869287647d9461cbd389187d8ecdb7",
         "type": "github"
       },
       "original": {
@@ -39,11 +39,11 @@
         "rust-analyzer-src": []
       },
       "locked": {
-        "lastModified": 1738910045,
-        "narHash": "sha256-GG2e9+Zi892LJTECD9z4D99HywOzpvtQ2LrTsp4zhkg=",
+        "lastModified": 1740983659,
+        "narHash": "sha256-O/QzMeTWQ1y4nCj3OQT9Qc3zTE1y6SIZbW8Zjy5Q+dA=",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "bcae0353191b6033d300082df80e970438937820",
+        "rev": "14bd053c7f2a5437ca84c2c76eb7a68154dc30bb",
         "type": "github"
       },
       "original": {
@@ -72,10 +72,8 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1738702386,
-        "narHash": "sha256-nJj8f78AYAxl/zqLiFGXn5Im1qjFKU8yBPKoWEeZN5M=",
-        "path": "/nix/store/f30jn7l0bf7a01qj029fq55i466vmnkh-source",
-        "rev": "030ba1976b7c0e1a67d9716b17308ccdab5b381e",
+        "narHash": "sha256-cjbHI+zUzK5CPsQZqMhE3npTyYFt9tJ3+ohcfaOF/WM=\n",
+        "path": "/nix/store/hgymg9bbnkc3a605vyr96zf963xw1b0x-7g9h6nlrx5h1lwqy4ghxvbhb7imm3vcb-source",
         "type": "path"
       },
       "original": {

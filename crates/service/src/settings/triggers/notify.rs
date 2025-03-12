@@ -1,5 +1,6 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
+use autopulse_utils::regex::Regex;
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
@@ -48,15 +49,20 @@ pub struct Notify {
     pub rewrite: Option<Rewrite>,
     /// Recursive monitoring (default: true)
     pub recursive: Option<bool>,
+    /// Backend to use
+    /// - `recommended`: Uses the recommended backend such as `inotify` on Linux, `FSEvents` on macOS, and `ReadDirectoryChangesW` on Windows
+    /// - `polling`: Uses a polling backend (useful for rclone/nfs/etc mounts), which will be extremely inefficient with a high number of files
+    #[serde(default)]
+    pub backend: NotifyBackendType,
+    /// Filter by regex
+    pub filters: Option<Vec<String>>,
+
     /// Targets to exclude
     #[serde(default)]
     pub excludes: Vec<String>,
     /// Timer
     #[serde(default)]
     pub timer: Timer,
-    /// Backend
-    #[serde(default)]
-    pub backend: NotifyBackendType,
 }
 
 impl Notify {
@@ -71,6 +77,21 @@ impl Notify {
         }
 
         let mut path = path.unwrap().to_string_lossy().to_string();
+
+        if let Some(ref filters) = self.filters {
+            let mut matched = false;
+
+            for regex in filters {
+                if Regex::new(regex)?.is_match(&path) {
+                    matched = true;
+                    break;
+                }
+            }
+
+            if !matched {
+                return Ok(());
+            }
+        }
 
         if let Some(rewrite) = &self.rewrite {
             path = rewrite.rewrite_path(path);
