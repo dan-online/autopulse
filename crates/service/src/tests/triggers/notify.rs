@@ -16,6 +16,7 @@ mod tests {
             rewrite: None,
             recursive: None,
             excludes: vec![],
+            filters: None,
             timer: Default::default(),
             backend: Default::default(),
         };
