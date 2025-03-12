@@ -240,11 +240,17 @@ impl Plex {
             get_url(&self.url)?.join(&format!("library/sections/{}/refresh", library.key))?;
 
         let ev_path = ev.get_path(&self.rewrite);
-        let file_dir = Path::new(&ev_path)
-            .parent()
-            .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
-            .to_str()
-            .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?;
+        let ev_path = Path::new(&ev_path);
+
+        let file_dir = (if ev_path.is_dir() {
+            ev_path
+        } else {
+            ev_path
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
+        })
+        .to_str()
+        .ok_or(anyhow::anyhow!("failed to convert path to string"))?;
 
         url.query_pairs_mut().append_pair("path", file_dir);
 
@@ -276,7 +282,7 @@ impl TargetProcess for Plex {
                         let is_dir = Path::new(&ev_path).is_dir();
 
                         // Only analyze and refresh metadata for files
-                        if !is_dir && (self.analyze || self.refresh) {
+                        if self.analyze || self.refresh {
                             match self.get_item(&library, &ev_path).await {
                                 Ok(Some(item)) => {
                                     trace!("found item for file '{}'", ev_path);
