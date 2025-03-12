@@ -10,7 +10,7 @@ mod tests {
 
         let readarr_request = ReadarrRequest::from_json(json).unwrap();
 
-        assert!(matches!(readarr_request, ReadarrRequest::Test {}));
+        assert!(matches!(readarr_request, ReadarrRequest::Test));
     }
 
     #[test]

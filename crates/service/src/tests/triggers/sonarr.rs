@@ -10,7 +10,7 @@ mod tests {
 
         let sonarr_request = SonarrRequest::from_json(json).unwrap();
 
-        assert!(matches!(sonarr_request, SonarrRequest::Test {}));
+        assert!(matches!(sonarr_request, SonarrRequest::Test));
     }
 
     #[test]
