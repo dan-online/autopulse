@@ -10,7 +10,7 @@ mod tests {
 
         let lidarr_request = LidarrRequest::from_json(json).unwrap();
 
-        assert!(matches!(lidarr_request, LidarrRequest::Test {}));
+        assert!(matches!(lidarr_request, LidarrRequest::Test));
     }
 
     #[test]

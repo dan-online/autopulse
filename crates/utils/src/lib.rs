@@ -27,6 +27,7 @@ pub use rewrite::*;
 pub use sify::*;
 pub use task_manager::*;
 
+pub extern crate regex;
 pub extern crate tracing_appender;
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        assert!(matches!(radarr_request, RadarrRequest::Test {}));
+        assert!(matches!(radarr_request, RadarrRequest::Test));
     }
 
     #[test]
