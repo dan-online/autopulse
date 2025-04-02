@@ -88,7 +88,7 @@ jobs:
           vcpkg install openssl:x64-windows-static-md
         if: startsWith(matrix.os, 'windows')
 
-      - run : /
+      - run : |
           sudo apt update -y && \
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
