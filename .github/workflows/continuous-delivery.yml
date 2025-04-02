@@ -6,6 +6,8 @@ permissions:
 on:
   release:
     types: [published]
+  pull_request:
+    branches: [main]
 
 env:
   CARGO_INCREMENTAL: 0
@@ -29,9 +31,9 @@ jobs:
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
           # - target: aarch64-apple-darwin
           #   os: macos-12
           # - target: aarch64-pc-windows-msvc
@@ -40,8 +42,8 @@ jobs:
             os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
-          - target: x86_64-apple-darwin
-            os: macos-latest
+          # - target: x86_64-apple-darwin
+          #   os: macos-latest
           # - target: x86_64-pc-windows-msvc
           #   os: windows-2022
           # - target: x86_64-unknown-freebsd
@@ -73,18 +75,29 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
+
+      # - uses: taiki-e/install-action@cross
+      #   if: contains(matrix.target, '-musl')
+
+      # - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+      #   if: endsWith(matrix.target, 'windows-msvc')
+
+      # - run: |
+      #     echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+      #     vcpkg install openssl:x64-windows-static-md
+      #   if: startsWith(matrix.os, 'windows')
+
+      - run : |
+          sudo apt update -y && \
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
-      - uses: taiki-e/install-action@cross
-        if: contains(matrix.target, '-musl')
+      # - run : |
+      #     brew update
+      #     brew install postgresql@14
+      #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
+      #   if: startsWith(matrix.os, 'macos')
 
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-        if: endsWith(matrix.target, 'windows-msvc')
-
-      - run: |
-          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-          vcpkg install openssl:x64-windows-static-md
-        if: startsWith(matrix.os, 'windows')
 
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
@@ -92,5 +105,6 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: vendored
+          features: ${{ contains(matrix.target, '-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          dry-run: ${{ github.event_name == 'pull_request' }}
