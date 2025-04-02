@@ -320,7 +320,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "autopulse"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "anyhow",
  "autopulse-database",
@@ -334,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-database"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "anyhow",
  "autopulse-utils",
@@ -349,7 +349,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-server"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
@@ -365,7 +365,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-service"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "autopulse-utils"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "anyhow",
  "chrono",
