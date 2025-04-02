@@ -94,6 +94,6 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: ${{ contains(matrix.target, '-musl') ? 'vendored' : '' }}
+          features: ${{ contains(matrix.target, '-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name == 'pull_request' }}
