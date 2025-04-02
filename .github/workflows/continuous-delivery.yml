@@ -75,18 +75,17 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-        if: startsWith(matrix.os, 'ubuntu')
 
-      - uses: taiki-e/install-action@cross
-        if: contains(matrix.target, '-musl')
+      # - uses: taiki-e/install-action@cross
+      #   if: contains(matrix.target, '-musl')
 
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-        if: endsWith(matrix.target, 'windows-msvc')
+      # - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+      #   if: endsWith(matrix.target, 'windows-msvc')
 
-      - run: |
-          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-          vcpkg install openssl:x64-windows-static-md
-        if: startsWith(matrix.os, 'windows')
+      # - run: |
+      #     echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+      #     vcpkg install openssl:x64-windows-static-md
+      #   if: startsWith(matrix.os, 'windows')
 
       - run : |
           sudo apt update -y && \
