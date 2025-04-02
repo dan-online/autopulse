@@ -303,6 +303,7 @@ impl TargetProcess for Plex {
             let ev_path = ev.get_path(&self.rewrite);
 
             if let Some(library) = self.get_library(&libraries, &ev_path) {
+                trace!("found library '{}' for {ev_path}", library.key);
                 match self.scan(ev, &library).await {
                     Ok(()) => {
                         debug!("scanned '{}'", ev_path);
@@ -312,7 +313,7 @@ impl TargetProcess for Plex {
                                 Ok(items) => {
                                     if items.is_empty() {
                                         trace!(
-                                            "failed to find items for file: {}, leaving at scan",
+                                            "failed to find items for file: '{}', leaving at scan",
                                             ev_path
                                         );
                                         succeeded.push(ev.id.clone());
