@@ -42,8 +42,8 @@ jobs:
             os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
-          - target: x86_64-apple-darwin
-            os: macos-latest
+          # - target: x86_64-apple-darwin
+          #   os: macos-latest
           # - target: x86_64-pc-windows-msvc
           #   os: windows-2022
           # - target: x86_64-unknown-freebsd
@@ -93,11 +93,11 @@ jobs:
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
-      - run : |
-          brew update
-          brew install postgresql@14
-          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
-        if: startsWith(matrix.os, 'macos')
+      # - run : |
+      #     brew update
+      #     brew install postgresql@14
+      #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
+      #   if: startsWith(matrix.os, 'macos')
 
 
       - uses: taiki-e/upload-rust-binary-action@v1
