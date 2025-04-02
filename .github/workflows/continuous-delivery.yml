@@ -92,5 +92,5 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: ${{ matrix.target == 'x86_64-unknown-linux-musl' && 'vendored' || '' }}
+          features: ${{ matrix.target.contains('-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
