@@ -102,13 +102,17 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
 
     match settings {
         Ok(settings) => {
-            let guard = setup_logs(&settings.app.log_level, &settings.opts.log_file)?;
+            let guard = setup_logs(
+                &settings.app.log_level,
+                &settings.opts.log_file,
+                settings.app.api_logging,
+            )?;
 
             Ok((settings, guard))
         }
         Err(e) => {
             // still setup logs if settings failed to load
-            setup_logs(&autopulse_utils::LogLevel::Info, &None)?;
+            setup_logs(&autopulse_utils::LogLevel::Info, &None, false)?;
 
             Err(e)
         }

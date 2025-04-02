@@ -35,6 +35,9 @@ pub struct App {
     /// Log level (default: info) (trace, debug, info, warn, error)
     #[serde(default = "default_log_level")]
     pub log_level: LogLevel,
+    /// Whether to include api logging (default: false)
+    #[serde(default)]
+    pub api_logging: bool,
 }
 
 impl Default for App {
@@ -44,6 +47,7 @@ impl Default for App {
             port: default_port(),
             database_url: default_database_url(),
             log_level: default_log_level(),
+            api_logging: false,
         }
     }
 }

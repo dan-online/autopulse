@@ -46,16 +46,21 @@ impl std::str::FromStr for LogLevel {
 pub fn setup_logs(
     log_level: &LogLevel,
     log_file: &Option<PathBuf>,
+    api_logging: bool,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
         .context("Failed to initialize the timer")?;
 
     let mut file_guard = None;
 
-    let filter = EnvFilter::from_default_env()
-        .add_directive(format!("autopulse={log_level}").parse()?)
-        .add_directive("actix_web=info".parse()?)
-        .add_directive("actix_server::builder=info".parse()?);
+    let mut filter =
+        EnvFilter::from_default_env().add_directive(format!("autopulse={log_level}").parse()?);
+
+    if api_logging {
+        filter = filter
+            .add_directive("actix_web=info".parse()?)
+            .add_directive("actix_server::builder=info".parse()?);
+    }
 
     let registry = tracing_subscriber::registry().with(filter);
 
