@@ -6,6 +6,8 @@ permissions:
 on:
   release:
     types: [published]
+  pull_request:
+    branches: [main]
 
 env:
   CARGO_INCREMENTAL: 0
@@ -94,3 +96,4 @@ jobs:
           zip: windows
           features: ${{ matrix.target.contains('-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          dry-run: ${{ github.event_name == 'pull_request' }}
