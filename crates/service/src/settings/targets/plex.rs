@@ -66,6 +66,7 @@ struct Location {
 #[doc(hidden)]
 #[derive(Deserialize, Clone, Debug)]
 struct Library {
+    title: String,
     key: String,
     #[serde(rename = "Location")]
     location: Vec<Location>,
@@ -74,7 +75,7 @@ struct Library {
 #[doc(hidden)]
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-struct MediaContainer {
+struct LibraryMediaContainer {
     directory: Option<Vec<Library>>,
     metadata: Option<Vec<Metadata>>,
 }
@@ -83,7 +84,7 @@ struct MediaContainer {
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct LibraryResponse {
-    media_container: MediaContainer,
+    media_container: LibraryMediaContainer,
 }
 
 fn path_matches(part_file: &str, path: &Path) -> bool {
@@ -181,7 +182,101 @@ impl Plex {
         Ok(lib)
     }
 
-    async fn get_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
+    async fn search_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
+        // GET /search?query=<title>
+        // get title from path by removing the prefix from the library and the file name
+        // /mnt/media/anime/tvshows/Attack on Titan/Season 01/Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
+        // -/mnt/media/anime/tvshows/
+        // Attack on Titan/Season 01/Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
+        // -Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
+        // Attack on Titan/Season 01
+        // -Season 01
+        // Attack on Titan (2013)
+        // -(2013)
+        let client = self.get_client()?;
+        let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
+
+        // Extract the relative path from the library root
+        let rel_path = path
+            .strip_prefix(&library.location[0].path)
+            .unwrap_or(path)
+            .trim_matches('/');
+
+        // Split the path components
+        let path_parts: Vec<&str> = rel_path.split('/').collect();
+
+        // If we have a path that might point to a file
+        if !path_parts.is_empty() {
+            // Get the parent folder name as a search term (usually show or movie name)
+            let search_term = if path_parts.len() > 1 {
+                path_parts[0]
+            } else {
+                // If there's just one part, it might be a file or folder
+                let path_obj = Path::new(path);
+                if path_obj.is_dir() {
+                    rel_path
+                } else {
+                    path_obj
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or(rel_path)
+                }
+            };
+
+            trace!("searching for item with term: {}", search_term);
+
+            // Add search query parameter
+            url.query_pairs_mut().append_pair("title", search_term);
+        }
+
+        let res = client.get(url.to_string()).send().await?;
+
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await?;
+            return Err(anyhow::anyhow!(
+                "Failed to search items: {} - {}",
+                status.as_u16(),
+                body
+            ));
+        }
+
+        let lib: LibraryResponse = res.json().await?;
+
+        let path_obj = Path::new(path);
+
+        let mut results = vec![];
+
+        // Process search results
+        if let Some(metadata) = lib.media_container.metadata {
+            for item in metadata {
+                // For shows, we need to also get the episodes
+                if item.t == "show" {
+                    let episodes = self.get_episodes(&item.key).await?;
+
+                    if let Some(episode_metadata) = episodes.media_container.metadata {
+                        for episode in episode_metadata {
+                            if let Some(media) = &episode.media {
+                                if has_matching_media(media, path_obj) {
+                                    results.push(episode.clone());
+                                }
+                            }
+                        }
+                    }
+                } else if let Some(media) = &item.media {
+                    // For movies and other content types
+                    if has_matching_media(media, path_obj) {
+                        results.push(item.clone());
+                    }
+                }
+            }
+        }
+
+        trace!("found {} items matching search", results.len());
+        Ok(results)
+    }
+
+    async fn _get_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?
             .join(&format!("library/sections/{}/all", library.key))?
@@ -303,13 +398,13 @@ impl TargetProcess for Plex {
             let ev_path = ev.get_path(&self.rewrite);
 
             if let Some(library) = self.get_library(&libraries, &ev_path) {
-                trace!("found library '{}' for {ev_path}", library.key);
+                trace!("found library '{}' for {ev_path}", library.title);
                 match self.scan(ev, &library).await {
                     Ok(()) => {
                         debug!("scanned '{}'", ev_path);
 
                         if self.analyze || self.refresh {
-                            match self.get_items(&library, &ev_path).await {
+                            match self.search_items(&library, &ev_path).await {
                                 Ok(items) => {
                                     if items.is_empty() {
                                         trace!(
