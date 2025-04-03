@@ -183,16 +183,6 @@ impl Plex {
     }
 
     async fn search_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
-        // GET /search?query=<title>
-        // get title from path by removing the prefix from the library and the file name
-        // /mnt/media/anime/tvshows/Attack on Titan/Season 01/Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
-        // -/mnt/media/anime/tvshows/
-        // Attack on Titan/Season 01/Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
-        // -Attack on Titan (2013) - S01E01 - To You in 2,000 Years The Fall of Shiganshina 1 [Subs Bluray-1080p][Opus 2.0][AV1]-TatakaeFuniSubs.mkv
-        // Attack on Titan/Season 01
-        // -Season 01
-        // Attack on Titan (2013)
-        // -(2013)
         let client = self.get_client()?;
         let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
 
