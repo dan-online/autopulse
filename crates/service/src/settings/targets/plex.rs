@@ -2,7 +2,7 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, what_is, PathType};
 use reqwest::header;
 use serde::Deserialize;
 use std::path::Path;
@@ -89,8 +89,9 @@ struct LibraryResponse {
 
 fn path_matches(part_file: &str, path: &Path) -> bool {
     let part_file_path = Path::new(part_file);
+    let what_is_path = what_is(path);
 
-    if path.file_name().is_none() {
+    if what_is_path == PathType::Directory {
         part_file_path.starts_with(path)
     } else {
         part_file_path == path
@@ -207,27 +208,32 @@ impl Plex {
 
         let chosen_part = chosen_part
             .split_whitespace()
-            .filter(|&s| ["(", ")", "[", "]", "{", "}"].iter().all(|&c| !s.contains(c)))
+            .filter(|&s| {
+                ["(", ")", "[", "]", "{", "}"]
+                    .iter()
+                    .all(|&c| !s.contains(c))
+            })
             .collect::<Vec<_>>()
             .join(" ");
 
         Ok(chosen_part)
     }
 
-    async fn search_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
+    async fn search_items(&self, _library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
-        let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
+        let mut url = get_url(&self.url)?.join("search")?;
+        // println!
         let mut results = vec![];
 
-        let mut rel_path = path.to_string();
+        let rel_path = path.to_string();
 
-        for location in &library.location {
-            let trimmed = rel_path.trim_start_matches(location.path.as_str());
+        // for location in &library.location {
+        //     let trimmed = rel_path.trim_start_matches(location.path.as_str());
 
-            if trimmed.len() < rel_path.len() {
-                rel_path = trimmed.to_string();
-            }
-        }
+        //     if trimmed.len() < rel_path.len() {
+        //         rel_path = trimmed.to_string();
+        //     }
+        // }
 
         trace!("searching for item with relative path: {}", rel_path);
 
@@ -236,7 +242,7 @@ impl Plex {
         trace!("searching for item with term: {}", search_term);
 
         url.query_pairs_mut()
-            .append_pair("title", search_term.as_str());
+            .append_pair("query", search_term.as_str());
 
         let res = client.get(url.to_string()).send().await?;
 
@@ -254,7 +260,22 @@ impl Plex {
 
         let path_obj = Path::new(path);
 
-        if let Some(metadata) = lib.media_container.metadata {
+        if let Some(mut metadata) = lib.media_container.metadata {
+            // sort episodes then movies to the front, then the rest
+            metadata.sort_by(|a, b| {
+                if a.t == "episode" && b.t != "episode" {
+                    std::cmp::Ordering::Less
+                } else if a.t != "episode" && b.t == "episode" {
+                    std::cmp::Ordering::Greater
+                } else if a.t == "movie" && b.t != "movie" && b.t != "episode" {
+                    std::cmp::Ordering::Less
+                } else if a.t != "movie" && a.t != "episode" && b.t == "movie" {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+
             for item in metadata {
                 if item.t == "show" {
                     let episodes = self.get_episodes(&item.key).await?;
@@ -370,7 +391,7 @@ impl Plex {
         let ev_path = ev.get_path(&self.rewrite);
         let ev_path = Path::new(&ev_path);
 
-        let file_dir = (if ev_path.file_name().is_none() {
+        let file_dir = (if matches!(what_is(ev_path), PathType::File) {
             ev_path
         } else {
             ev_path
