@@ -182,82 +182,97 @@ impl Plex {
         Ok(lib)
     }
 
+    pub(crate) fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
+        let path_obj = Path::new(path);
+        let mut parts = path_obj.components().collect::<Vec<_>>();
+
+        if !path_obj.is_dir() {
+            let len = parts.len();
+            parts = parts.into_iter().take(len - 1).collect::<Vec<_>>();
+        }
+
+        let mut chosen_part = path_obj
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?
+            .to_string()
+            .replace("/", " ");
+
+        for part in parts.iter().rev() {
+            let part_str = part.as_os_str().to_string_lossy();
+
+            if part_str.contains("Season") || part_str.is_empty() {
+                continue;
+            }
+
+            chosen_part = part_str.to_string();
+            break;
+        }
+
+        let chosen_part = chosen_part
+            .split_whitespace()
+            .filter(|&s| ["(", ")", "[", "]"].iter().all(|&c| !s.contains(c)))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        Ok(chosen_part)
+    }
+
     async fn search_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
         let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
         let mut results = vec![];
 
+        let mut rel_path = path.to_string();
+
         for location in &library.location {
-            // Extract the relative path from the library root
-            let rel_path = path
-                .strip_prefix(&location.path)
-                .unwrap_or(path)
-                .trim_matches('/');
+            let trimmed = rel_path.trim_start_matches(location.path.as_str());
 
-            // Split the path components
-            let path_parts: Vec<&str> = rel_path.split('/').collect();
-
-            // If we have a path that might point to a file
-            if !path_parts.is_empty() {
-                // Get the parent folder name as a search term (usually show or movie name)
-                let search_term = if path_parts.len() > 1 {
-                    path_parts[0]
-                } else {
-                    // If there's just one part, it might be a file or folder
-                    let path_obj = Path::new(path);
-                    if path_obj.is_dir() {
-                        rel_path
-                    } else {
-                        path_obj
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or(rel_path)
-                    }
-                };
-
-                trace!("searching for item with term: {}", search_term);
-
-                // Add search query parameter
-                url.query_pairs_mut().append_pair("title", search_term);
+            if trimmed.len() < rel_path.len() {
+                rel_path = trimmed.to_string();
             }
+        }
 
-            let res = client.get(url.to_string()).send().await?;
+        let search_term = self.get_search_term(&rel_path)?;
 
-            let status = res.status();
-            if !status.is_success() {
-                let body = res.text().await?;
-                return Err(anyhow::anyhow!(
-                    "Failed to search items: {} - {}",
-                    status.as_u16(),
-                    body
-                ));
-            }
+        trace!("searching for item with term: {}", search_term);
 
-            let lib: LibraryResponse = res.json().await?;
+        url.query_pairs_mut()
+            .append_pair("title", search_term.as_str());
 
-            let path_obj = Path::new(path);
+        let res = client.get(url.to_string()).send().await?;
 
-            // Process search results
-            if let Some(metadata) = lib.media_container.metadata {
-                for item in metadata {
-                    // For shows, we need to also get the episodes
-                    if item.t == "show" {
-                        let episodes = self.get_episodes(&item.key).await?;
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await?;
+            return Err(anyhow::anyhow!(
+                "Failed to search items: {} - {}",
+                status.as_u16(),
+                body
+            ));
+        }
 
-                        if let Some(episode_metadata) = episodes.media_container.metadata {
-                            for episode in episode_metadata {
-                                if let Some(media) = &episode.media {
-                                    if has_matching_media(media, path_obj) {
-                                        results.push(episode.clone());
-                                    }
+        let lib: LibraryResponse = res.json().await?;
+
+        let path_obj = Path::new(path);
+
+        if let Some(metadata) = lib.media_container.metadata {
+            for item in metadata {
+                if item.t == "show" {
+                    let episodes = self.get_episodes(&item.key).await?;
+
+                    if let Some(episode_metadata) = episodes.media_container.metadata {
+                        for episode in episode_metadata {
+                            if let Some(media) = &episode.media {
+                                if has_matching_media(media, path_obj) {
+                                    results.push(episode.clone());
                                 }
                             }
                         }
-                    } else if let Some(media) = &item.media {
-                        // For movies and other content types
-                        if has_matching_media(media, path_obj) {
-                            results.push(item.clone());
-                        }
+                    }
+                } else if let Some(media) = &item.media {
+                    // For movies and other content types
+                    if has_matching_media(media, path_obj) {
+                        results.push(item.clone());
                     }
                 }
             }
