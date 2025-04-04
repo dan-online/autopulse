@@ -304,6 +304,9 @@ impl Plex {
             lib.media_container.metadata.unwrap_or_default().len()
         );
 
+        // if show + episode then remove duplicates
+        results.dedup_by_key(|item| item.key.clone());
+
         Ok(results)
     }
 
