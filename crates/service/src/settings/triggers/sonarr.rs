@@ -45,6 +45,8 @@ pub enum SonarrRequest {
     #[serde(rename_all = "camelCase")]
     Download {
         episode_file: EpisodeFile,
+        #[serde(default)]
+        deleted_files: Vec<EpisodeFile>,
         series: Series,
     },
     #[serde(rename = "Rename")]
@@ -96,8 +98,15 @@ impl TriggerRequest for SonarrRequest {
             Self::Download {
                 episode_file,
                 series,
+                deleted_files,
             } => {
-                vec![(join_path(&series.path, &episode_file.relative_path), true)]
+                let mut paths = vec![(join_path(&series.path, &episode_file.relative_path), true)];
+
+                for file in deleted_files {
+                    paths.push((join_path(&series.path, &file.relative_path), false));
+                }
+
+                paths
             }
             Self::Test => vec![],
         }

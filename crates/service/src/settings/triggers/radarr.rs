@@ -36,7 +36,11 @@ pub struct Movie {
 pub enum RadarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
-    Download { movie_file: MovieFile, movie: Movie },
+    Download {
+        movie_file: MovieFile,
+        movie: Movie,
+        deleted_files: Vec<MovieFile>,
+    },
     #[serde(rename = "MovieDelete")]
     #[serde(rename_all = "camelCase")]
     MovieDelete { movie: Movie },
@@ -68,11 +72,21 @@ impl TriggerRequest for RadarrRequest {
             Self::MovieDelete { movie } => {
                 vec![(movie.folder_path.clone(), false)]
             }
-            Self::Download { movie, movie_file } => {
-                vec![(
+            Self::Download {
+                movie,
+                movie_file,
+                deleted_files,
+            } => {
+                let mut paths = vec![(
                     join_path(&movie.folder_path, &movie_file.relative_path),
                     true,
-                )]
+                )];
+
+                for file in deleted_files {
+                    paths.push((join_path(&movie.folder_path, &file.relative_path), false));
+                }
+
+                paths
             }
             Self::Test => vec![],
         }
