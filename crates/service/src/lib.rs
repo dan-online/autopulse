@@ -8,8 +8,5 @@ pub mod settings;
 
 #[cfg(test)]
 mod tests {
-    mod targets {
-        mod plex;
-    }
     mod triggers;
 }

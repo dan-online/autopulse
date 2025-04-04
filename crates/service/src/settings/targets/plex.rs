@@ -142,18 +142,24 @@ impl Plex {
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
         let ev_path = Path::new(path);
+        let mut matches: Vec<(usize, &Library)> = vec![];
 
         for library in libraries {
             for location in &library.location {
-                let path = Path::new(&location.path);
-
-                if ev_path.starts_with(path) {
-                    return Some(library.clone());
+                let loc_path = Path::new(&location.path);
+                if ev_path.starts_with(loc_path) {
+                    matches.push((loc_path.components().count(), library));
                 }
             }
         }
 
-        None
+        matches.sort_by(|(len_a, _), (len_b, _)| len_b.cmp(len_a));
+
+        // Return the most specific match
+        matches
+            .into_iter()
+            .next()
+            .map(|(_, library)| library.clone())
     }
 
     async fn get_episodes(&self, key: &str) -> anyhow::Result<LibraryResponse> {
@@ -185,7 +191,7 @@ impl Plex {
         Ok(lib)
     }
 
-    pub(crate) fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
+    fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
         let path_obj = Path::new(path);
         let parts = path_obj.components().collect::<Vec<_>>();
 
@@ -214,27 +220,19 @@ impl Plex {
                     .all(|&c| !s.contains(c))
             })
             .collect::<Vec<_>>()
-            .join(" ")
-            .replace(|c: char| c.is_ascii_punctuation(), "");
+            .join(" ");
 
         Ok(chosen_part)
     }
 
     async fn search_items(&self, _library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
+        // let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
         let mut url = get_url(&self.url)?.join("search")?;
-        // println!
+
         let mut results = vec![];
 
         let rel_path = path.to_string();
-
-        // for location in &library.location {
-        //     let trimmed = rel_path.trim_start_matches(location.path.as_str());
-
-        //     if trimmed.len() < rel_path.len() {
-        //         rel_path = trimmed.to_string();
-        //     }
-        // }
 
         trace!("searching for item with relative path: {}", rel_path);
 
@@ -243,6 +241,7 @@ impl Plex {
         trace!("searching for item with term: {}", search_term);
 
         url.query_pairs_mut()
+            // .append_pair("title", search_term.as_str());
             .append_pair("query", search_term.as_str());
 
         let res = client.get(url.to_string()).send().await?;
@@ -261,7 +260,7 @@ impl Plex {
 
         let path_obj = Path::new(path);
 
-        if let Some(mut metadata) = lib.media_container.metadata {
+        if let Some(mut metadata) = lib.media_container.metadata.clone() {
             // sort episodes then movies to the front, then the rest
             metadata.sort_by(|a, b| {
                 if a.t == "episode" && b.t != "episode" {
@@ -299,7 +298,12 @@ impl Plex {
             }
         }
 
-        trace!("found {} items matching search", results.len());
+        trace!(
+            "found {} out of {} items matching search",
+            results.len(),
+            lib.media_container.metadata.unwrap_or_default().len()
+        );
+
         Ok(results)
     }
 
@@ -505,5 +509,90 @@ impl TargetProcess for Plex {
         }
 
         Ok(succeeded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_search_term() {
+        let plex = Plex {
+            url: String::new(),
+            token: String::new(),
+            refresh: false,
+            analyze: false,
+            rewrite: None,
+        };
+
+        // Test with a path that has a file name and season directory
+        let path = "/media/TV Shows/Breaking Bad/Season 1/S01E01.mkv";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Breaking Bad");
+
+        // Test with a path that has parentheses and brackets
+        let path = "/media/Movies/The Matrix (1999) [1080p]/matrix.mkv";
+        assert_eq!(plex.get_search_term(path).unwrap(), "The Matrix");
+
+        // Test with a simple path
+        let path = "/media/Movies/Inception/inception.mkv";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Inception");
+
+        // Test with a directory path
+        let path = "/media/TV Shows/Game of Thrones/Season 2";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Game of Thrones");
+
+        // Test with no directory path
+        let path = "/media/TV Shows/Game of Thrones";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Game of Thrones");
+
+        // Test with multiple levels of season directories
+        let path = "/media/TV Shows/Doctor Who/Season 10/Season 10 Part 2/S10E12.mkv";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Doctor Who");
+    }
+
+    #[test]
+    fn test_get_library() {
+        let plex = Plex {
+            url: String::new(),
+            token: String::new(),
+            refresh: false,
+            analyze: false,
+            rewrite: None,
+        };
+
+        let libraries = [Library {
+            title: "Movies".to_string(),
+            key: "library_key_movies".to_string(),
+            location: vec![Location {
+                path: "/media/movies".to_string(),
+            }],
+        }];
+
+        let path = "/media/movies/Inception.mkv";
+        let library = plex.get_library(&libraries, path).unwrap();
+        assert!(library.key == "library_key_movies");
+
+        let nested_libraries = [
+            Library {
+                title: "Movies".to_string(),
+                key: "library_key_movies".to_string(),
+                location: vec![Location {
+                    path: "/media/movies".to_string(),
+                }],
+            },
+            Library {
+                title: "Movies".to_string(),
+                key: "library_key_movies_4k".to_string(),
+                location: vec![Location {
+                    path: "/media/movies/4k".to_string(),
+                }],
+            },
+        ];
+
+        let path = "/media/movies/4k/Inception.mkv";
+
+        let library = plex.get_library(&nested_libraries, path).unwrap();
+        assert!(library.key == "library_key_movies_4k");
     }
 }
