@@ -39,6 +39,7 @@ pub enum RadarrRequest {
     Download {
         movie_file: MovieFile,
         movie: Movie,
+        #[serde(default)]
         deleted_files: Vec<MovieFile>,
     },
     #[serde(rename = "MovieDelete")]
