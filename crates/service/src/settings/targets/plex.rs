@@ -214,7 +214,8 @@ impl Plex {
                     .all(|&c| !s.contains(c))
             })
             .collect::<Vec<_>>()
-            .join(" ");
+            .join(" ")
+            .replace(|c: char| c.is_ascii_punctuation(), "");
 
         Ok(chosen_part)
     }
