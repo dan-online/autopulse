@@ -207,7 +207,7 @@ impl Plex {
 
         let chosen_part = chosen_part
             .split_whitespace()
-            .filter(|&s| ["(", ")", "[", "]"].iter().all(|&c| !s.contains(c)))
+            .filter(|&s| ["(", ")", "[", "]", "{", "}"].iter().all(|&c| !s.contains(c)))
             .collect::<Vec<_>>()
             .join(" ");
 
