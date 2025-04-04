@@ -295,7 +295,10 @@ impl TargetProcess for FileFlows {
 
             for ev in evs {
                 // Skip directories
-                if PathBuf::from(&ev.get_path(&self.rewrite)).is_dir() {
+                if PathBuf::from(&ev.get_path(&self.rewrite))
+                    .file_name()
+                    .is_none()
+                {
                     succeeded.push(ev.id.clone());
                     continue;
                 }

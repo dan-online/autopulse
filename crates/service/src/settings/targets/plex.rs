@@ -88,10 +88,12 @@ struct LibraryResponse {
 }
 
 fn path_matches(part_file: &str, path: &Path) -> bool {
-    if path.is_dir() {
-        Path::new(part_file).parent() == Some(path)
+    let part_file_path = Path::new(part_file);
+
+    if path.file_name().is_none() {
+        part_file_path.starts_with(path)
     } else {
-        Path::new(part_file) == path
+        part_file_path == path
     }
 }
 
@@ -184,12 +186,7 @@ impl Plex {
 
     pub(crate) fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
         let path_obj = Path::new(path);
-        let mut parts = path_obj.components().collect::<Vec<_>>();
-
-        if !path_obj.is_dir() {
-            let len = parts.len();
-            parts = parts.into_iter().take(len - 1).collect::<Vec<_>>();
-        }
+        let parts = path_obj.components().collect::<Vec<_>>();
 
         let mut chosen_part = path_obj
             .to_str()
@@ -200,7 +197,7 @@ impl Plex {
         for part in parts.iter().rev() {
             let part_str = part.as_os_str().to_string_lossy();
 
-            if part_str.contains("Season") || part_str.is_empty() {
+            if part_str.contains(".") || part_str.contains("Season") || part_str.is_empty() {
                 continue;
             }
 
@@ -373,7 +370,7 @@ impl Plex {
         let ev_path = ev.get_path(&self.rewrite);
         let ev_path = Path::new(&ev_path);
 
-        let file_dir = (if ev_path.is_dir() {
+        let file_dir = (if ev_path.file_name().is_none() {
             ev_path
         } else {
             ev_path

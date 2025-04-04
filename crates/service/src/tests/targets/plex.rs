@@ -28,6 +28,10 @@ mod tests {
         let path = "/media/TV Shows/Game of Thrones/Season 2";
         assert_eq!(plex.get_search_term(path).unwrap(), "Game of Thrones");
 
+        // Test with no directory path
+        let path = "/media/TV Shows/Game of Thrones";
+        assert_eq!(plex.get_search_term(path).unwrap(), "Game of Thrones");
+
         // Test with multiple levels of season directories
         let path = "/media/TV Shows/Doctor Who/Season 10/Season 10 Part 2/S10E12.mkv";
         assert_eq!(plex.get_search_term(path).unwrap(), "Doctor Who");
