@@ -232,6 +232,8 @@ impl Plex {
             }
         }
 
+        trace!("searching for item with relative path: {}", rel_path);
+
         let search_term = self.get_search_term(&rel_path)?;
 
         trace!("searching for item with term: {}", search_term);
