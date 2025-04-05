@@ -2,11 +2,11 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, what_is, PathType};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, path::Path, path::PathBuf};
+use std::{collections::HashMap, path::Path};
 use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
@@ -294,11 +294,8 @@ impl TargetProcess for FileFlows {
             let mut library_files = HashMap::new();
 
             for ev in evs {
-                // Skip directories
-                if PathBuf::from(&ev.get_path(&self.rewrite))
-                    .file_name()
-                    .is_none()
-                {
+                let what_is_path = what_is(ev.get_path(&self.rewrite));
+                if matches!(what_is_path, PathType::Directory) {
                     succeeded.push(ev.id.clone());
                     continue;
                 }
