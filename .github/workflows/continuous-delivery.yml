@@ -69,13 +69,6 @@ jobs:
       #   run: |
       #     choco install postgresql libsqlite3
 
-      - name: Install Rust toolchain
-        uses: taiki-e/github-actions/install-rust@main
-        with:
-          toolchain: stable
-          component: rustfmt,clippy
-          target: ${{ matrix.target }}
-
       - name: Cargo Cache
         uses: actions/cache@v4
         with:
@@ -88,6 +81,13 @@ jobs:
           key: ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-
+
+      - name: Install Rust toolchain
+        uses: taiki-e/github-actions/install-rust@main
+        with:
+          toolchain: stable
+          component: rustfmt,clippy
+          target: ${{ matrix.target }}
 
       # - uses: taiki-e/setup-cross-toolchain-action@v1
       #   with:
