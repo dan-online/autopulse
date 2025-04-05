@@ -2,7 +2,7 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::{get_url, what_is, PathType};
+use autopulse_utils::{get_url, squash_directory, what_is, PathType};
 use reqwest::header;
 use serde::Deserialize;
 use std::path::Path;
@@ -192,16 +192,11 @@ impl Plex {
     }
 
     fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
-        let mut path_obj = Path::new(path);
-        let what_is_path = what_is(path_obj);
-        if what_is_path == PathType::File {
-            path_obj = path_obj
-                .parent()
-                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?;
-        }
-        let parts = path_obj.components().collect::<Vec<_>>();
+        let parent_or_dir = squash_directory(Path::new(path));
 
-        let mut chosen_part = path_obj
+        let parts = parent_or_dir.components().collect::<Vec<_>>();
+
+        let mut chosen_part = parent_or_dir
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?
             .to_string()
@@ -403,17 +398,12 @@ impl Plex {
             get_url(&self.url)?.join(&format!("library/sections/{}/refresh", library.key))?;
 
         let ev_path = ev.get_path(&self.rewrite);
-        let ev_path = Path::new(&ev_path);
 
-        let file_dir = (if matches!(what_is(ev_path), PathType::Directory) {
-            ev_path
-        } else {
-            ev_path
-                .parent()
-                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?
-        })
-        .to_str()
-        .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?;
+        let squashed_path = squash_directory(&ev_path);
+        let file_dir = squashed_path
+            .as_os_str()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("failed to convert path to string"))?;
 
         url.query_pairs_mut().append_pair("path", file_dir);
 
