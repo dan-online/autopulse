@@ -192,7 +192,13 @@ impl Plex {
     }
 
     fn get_search_term(&self, path: &str) -> anyhow::Result<String> {
-        let path_obj = Path::new(path);
+        let mut path_obj = Path::new(path);
+        let what_is_path = what_is(path_obj);
+        if what_is_path == PathType::File {
+            path_obj = path_obj
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory"))?;
+        }
         let parts = path_obj.components().collect::<Vec<_>>();
 
         let mut chosen_part = path_obj
@@ -204,7 +210,7 @@ impl Plex {
         for part in parts.iter().rev() {
             let part_str = part.as_os_str().to_string_lossy();
 
-            if part_str.contains(".") || part_str.contains("Season") || part_str.is_empty() {
+            if part_str.contains("Season") || part_str.is_empty() {
                 continue;
             }
 
