@@ -5,6 +5,8 @@ use autopulse_utils::get_url;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 
+use super::RequestBuilderPerform;
+
 #[derive(Deserialize, Clone)]
 pub struct Tdarr {
     /// URL to the Tdarr server
@@ -63,27 +65,15 @@ impl Tdarr {
             },
         };
 
-        let url = get_url(&self.url)?.join("/api/v2/scan-files")?.to_string();
+        let url = get_url(&self.url)?.join("/api/v2/scan-files")?;
 
-        let res = client
-            .post(&url)
+        client
+            .post(url)
             .header("content-type", "application/json")
             .json(&payload)
-            .send()
-            .await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to send scan: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+            .perform()
+            .await
+            .map(|_| ())
     }
 }
 

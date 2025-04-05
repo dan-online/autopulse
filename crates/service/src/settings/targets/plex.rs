@@ -1,3 +1,4 @@
+use super::RequestBuilderPerform;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
@@ -120,24 +121,13 @@ impl Plex {
 
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
-        let url = get_url(&self.url)?.join("library/sections")?.to_string();
+        let url = get_url(&self.url)?.join("library/sections")?;
 
-        let res = client.get(&url).send().await?;
-        let status = res.status();
+        let res = client.get(url).perform().await?;
 
-        if status.is_success() {
-            let libraries: LibraryResponse = res.json().await?;
+        let libraries: LibraryResponse = res.json().await?;
 
-            Ok(libraries.media_container.directory.unwrap())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to get libraries: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        Ok(libraries.media_container.directory.unwrap())
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -164,30 +154,16 @@ impl Plex {
 
     async fn get_episodes(&self, key: &str) -> anyhow::Result<LibraryResponse> {
         let client = self.get_client()?;
+
         // remove last part of the key
-        let key = key
-            .split('/')
-            .collect::<Vec<_>>()
-            .into_iter()
-            .take(key.split('/').count() - 1)
-            .collect::<Vec<_>>()
-            .join("/");
+        let key = key.rsplit_once('/').map(|x| x.0).unwrap_or(key);
 
         let url = get_url(&self.url)?.join(&format!("{key}/allLeaves"))?;
 
-        let res = client.get(url.to_string()).send().await?;
+        let res = client.get(url).perform().await?;
 
-        let status = res.status();
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to get library: {} - {}",
-                status.as_u16(),
-                body
-            ));
-        }
         let lib: LibraryResponse = res.json().await?;
+
         Ok(lib)
     }
 
@@ -245,17 +221,7 @@ impl Plex {
             // .append_pair("title", search_term.as_str());
             .append_pair("query", search_term.as_str());
 
-        let res = client.get(url.to_string()).send().await?;
-
-        let status = res.status();
-        if !status.is_success() {
-            let body = res.text().await?;
-            return Err(anyhow::anyhow!(
-                "Failed to search items: {} - {}",
-                status.as_u16(),
-                body
-            ));
-        }
+        let res = client.get(url).perform().await?;
 
         let lib: LibraryResponse = res.json().await?;
 
@@ -313,23 +279,9 @@ impl Plex {
 
     async fn _get_items(&self, library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
-        let url = get_url(&self.url)?
-            .join(&format!("library/sections/{}/all", library.key))?
-            .to_string();
+        let url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
 
-        let res = client.get(&url).send().await?;
-
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to get library: {} - {}",
-                status.as_u16(),
-                body
-            ));
-        }
+        let res = client.get(url).perform().await?;
 
         let lib: LibraryResponse = res.json().await?;
 
@@ -368,28 +320,14 @@ impl Plex {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("{key}/refresh"))?;
 
-        let res = client.put(url.to_string()).send().await?;
-
-        if res.status().is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-            Err(anyhow::anyhow!("failed to send analyze: {}", body))
-        }
+        client.put(url).perform().await.map(|_| ())
     }
 
     async fn analyze_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("{key}/analyze"))?;
 
-        let res = client.put(url.to_string()).send().await?;
-
-        if res.status().is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-            Err(anyhow::anyhow!("failed to send analyze: {}", body))
-        }
+        client.put(url).perform().await.map(|_| ())
     }
 
     async fn scan(&self, ev: &ScanEvent, library: &Library) -> anyhow::Result<()> {
@@ -407,14 +345,7 @@ impl Plex {
 
         url.query_pairs_mut().append_pair("path", file_dir);
 
-        let res = client.get(url.to_string()).send().await?;
-
-        if res.status().is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-            Err(anyhow::anyhow!("failed to send scan: {}", body))
-        }
+        client.get(url).perform().await.map(|_| ())
     }
 }
 

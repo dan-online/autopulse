@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tracing::error;
 
+use super::RequestBuilderPerform;
+
 #[derive(Deserialize, Clone)]
 pub struct Sonarr {
     /// URL to the Plex server
@@ -52,21 +54,10 @@ impl Sonarr {
 
     async fn get_series(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<(i64, Vec<String>)>> {
         let client = self.get_client().unwrap();
-        let url = get_url(&self.url)?.join("api/v3/series")?.to_string();
+        let url = get_url(&self.url)?.join("api/v3/series")?;
         let mut to_be_refreshed: HashMap<i64, Vec<String>> = HashMap::new();
 
-        let res = client.get(&url).send().await?;
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to get series from Sonarr: {} - {}",
-                status,
-                body
-            ));
-        }
+        let res = client.get(url).perform().await?;
 
         let series = res.json::<Vec<SonarrSeries>>().await?;
 
@@ -88,23 +79,10 @@ impl Sonarr {
 
     async fn refresh_series(&self, series_id: i64) -> anyhow::Result<()> {
         let client = self.get_client().unwrap();
-        let url = get_url(&self.url)?.join("api/v3/command")?.to_string();
+        let url = get_url(&self.url)?.join("api/v3/command")?;
         let payload = Command::RefreshSeries(RefreshSeries { series_id });
 
-        let res = client.post(&url).json(&payload).send().await?;
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to refresh series in Sonarr: {} - {}",
-                status,
-                body
-            ));
-        }
-
-        Ok(())
+        client.post(url).json(&payload).perform().await.map(|_| ())
     }
 }
 
