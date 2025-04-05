@@ -69,8 +69,12 @@ jobs:
       #   run: |
       #     choco install postgresql libsqlite3
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      # - name: Install Rust toolchain
+      #   uses: taiki-e/github-actions/install-rust@main
+      #   with:
+      #     toolchain: stable
+      #     component: rustfmt,clippy
+      #     target: ${{ matrix.target }}
 
       - name: Cargo Cache
         uses: actions/cache@v4
@@ -85,9 +89,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-
 
-      - uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
+      # - uses: taiki-e/setup-cross-toolchain-action@v1
+      #   with:
+      #     target: ${{ matrix.target }}
 
       # - uses: taiki-e/install-action@cross
       #   if: contains(matrix.target, '-musl')
@@ -111,8 +115,7 @@ jobs:
       #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
       #   if: startsWith(matrix.os, 'macos')
 
-
-      - uses: taiki-e/upload-rust-binary-action@v1
+      - uses: taiki-e/upload-rust-binary-action@main
         with:
           bin: autopulse
           target: ${{ matrix.target }}

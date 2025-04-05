@@ -145,40 +145,26 @@ jobs:
           fi
         id: tag
 
-      - name: Test binary
-        uses: houseabsolute/actions-rust-cross@v0
-        if: matrix.feature == 'full'
+      - uses: taiki-e/github-actions/install-rust@main
         with:
-          command: test
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored"
-          strip: true
+          toolchain: stable
+          component: rustfmt,clippy
+          target: x86_64-unknown-linux-musl
+
+      - name: Test binary
+        if: matrix.feature == 'full'
+        run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v0
         if: matrix.feature == 'full'
-        with:
-          command: build
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored"
-          strip: true
+        run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      - name: Test
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Test binary
         if: matrix.feature != 'full'
-        with:
-          command: test
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
-      - name: Build
-        uses: houseabsolute/actions-rust-cross@v0
-        if: matrix.feature != 'full'
-        with:
-          command: build
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
-          strip: true
+      - name: Build binary
+        run: cargo build --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
       - name: Copy binary
         run: |

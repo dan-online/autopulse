@@ -46,12 +46,11 @@ jobs:
     steps:
       - name: Checkout Project
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Stable with rustfmt and clippy
-        uses: actions-rs/toolchain@v1
+      - uses: taiki-e/github-actions/install-rust@main
         with:
-          profile: minimal
           toolchain: stable
-          components: rustfmt, clippy
+          component: rustfmt,clippy
+          target: x86_64-unknown-linux-musl
       - name: Install libraries
         run: sudo apt install -y libpq-dev libsqlite3-dev # libmysqlclient-dev
       - name: Cargo Cache
