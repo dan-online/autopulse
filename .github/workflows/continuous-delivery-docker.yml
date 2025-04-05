@@ -70,7 +70,6 @@ jobs:
 
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         feature:
@@ -79,13 +78,16 @@ jobs:
           - sqlite
         platform:
           - name: linux/amd64
+            runner: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             tag: -amd64
           - name: linux/arm64
+            runner: ubuntu-22.04-arm64
             target: aarch64-unknown-linux-musl
             tag: -arm64
             build_args: |
               IMAGE_TAG=arm64v8-3.20
+    runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v4
 
