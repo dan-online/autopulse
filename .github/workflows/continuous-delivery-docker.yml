@@ -151,9 +151,9 @@ jobs:
           component: rustfmt,clippy
           target: ${{ matrix.platform.target }}
 
-      - uses: taiki-e/setup-cross-toolchain-action@v1
+      - uses: taiki-e/setup-cross-toolchain-action@main
         with:
-          target: ${{ matrix.target }}
+          target: ${{ matrix.platform.target }}
 
       - name: Test binary
         if: matrix.feature == 'full'
