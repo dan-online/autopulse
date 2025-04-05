@@ -27,7 +27,10 @@ mod tests {
 
         let radarr_request = RadarrRequest::from_json(json).unwrap();
 
-        if let RadarrRequest::Download { movie_file, movie } = radarr_request.clone() {
+        if let RadarrRequest::Download {
+            movie_file, movie, ..
+        } = radarr_request.clone()
+        {
             assert_eq!(
                 movie_file.relative_path,
                 "Interstellar.2014.UHD.BluRay.2160p.REMUX.mkv"
