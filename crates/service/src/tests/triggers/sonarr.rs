@@ -151,6 +151,7 @@ mod tests {
         if let SonarrRequest::Download {
             episode_file,
             series,
+            ..
         } = sonarr_request.clone()
         {
             assert_eq!(episode_file.relative_path, "Season 1/Westworld.S01E01.mkv");
