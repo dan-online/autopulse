@@ -8,7 +8,11 @@ build = "src/build.rs"
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "mysqlclient-sys"]
-vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled"]
+vendored = [
+    "pq-sys/bundled",
+    "libsqlite3-sys/bundled",
+    "mysqlclient-sys/bundled",
+]
 
 [dependencies]
 # Crates

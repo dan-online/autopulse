@@ -556,6 +556,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
+name = "cmake"
+version = "0.1.54"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7caa3f9de89ddbe2c607f4101924c5abec803763ae9534e4f4d7d8f84aa81f0"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "config"
 version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,6 +1562,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "link-cplusplus"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a6f6da007f968f9def0d65a05b187e2960183de70c160204ecfccf0ee330212"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1661,11 +1679,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "mysqlclient-src"
+version = "0.1.3+9.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ebac03ab8be41015fec2d2435929e4b19cd6133a624ac777409993f238768fd"
+dependencies = [
+ "cmake",
+ "link-cplusplus",
+ "openssl-src",
+ "openssl-sys",
+]
+
+[[package]]
 name = "mysqlclient-sys"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f29e21174d84e2622ceb7b0146a9187d36458a3a9ee9a66c9cac22e96493ef9"
 dependencies = [
+ "mysqlclient-src",
  "pkg-config",
  "vcpkg",
 ]
