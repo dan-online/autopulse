@@ -89,9 +89,9 @@ jobs:
           component: rustfmt,clippy
           target: ${{ matrix.target }}
 
-      # - uses: taiki-e/setup-cross-toolchain-action@v1
-      #   with:
-      #     target: ${{ matrix.target }}
+      - uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.target }}
 
       # - uses: taiki-e/install-action@cross
       #   if: contains(matrix.target, '-musl')

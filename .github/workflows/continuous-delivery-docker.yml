@@ -168,6 +168,7 @@ jobs:
         run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
       - name: Build binary
+        if: matrix.feature != 'full'
         run: cargo build --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
       - name: Copy binary
