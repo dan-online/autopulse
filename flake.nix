@@ -79,7 +79,7 @@
               pkgs.libmysqlclient
               pkgs.ncurses
               pkgs.cmake
-              pkgs.libtirpc
+              # pkgs.libtirpc
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv

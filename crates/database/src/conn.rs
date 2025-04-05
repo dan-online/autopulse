@@ -1,12 +1,11 @@
-use super::schema::scan_events::{can_process, event_source, id, updated_at};
+use super::schema::scan_events::{can_process, event_source, updated_at};
 use crate::models::{NewScanEvent, ScanEvent};
 use crate::schema::scan_events::table as scan_events;
 use anyhow::Context;
 use autopulse_utils::sify;
 use diesel::connection::SimpleConnection;
-use diesel::query_dsl::methods::FilterDsl;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, ConnectionError, ExpressionMethods, QueryResult, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, QueryResult, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::os::unix::fs::PermissionsExt;
@@ -187,6 +186,8 @@ impl AnyConnection {
                 .map_err(Into::into),
             #[cfg(feature = "mysql")]
             Self::Mysql(conn) => {
+                use super::schema::scan_events::id;
+
                 // mysql does not support returning clause, so we insert and then select the inserted row
                 diesel::insert_into(scan_events).values(ev).execute(conn)?;
 
