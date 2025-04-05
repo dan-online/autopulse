@@ -82,7 +82,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             tag: -amd64
           - name: linux/arm64
-            runner: ubuntu-22.04-arm64
+            runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
             tag: -arm64
             build_args: |
