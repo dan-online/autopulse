@@ -1,7 +1,6 @@
 use super::schema::scan_events::{can_process, event_source, id, updated_at};
-use crate::db::models::{NewScanEvent, ScanEvent};
-use crate::db::schema::scan_events::table as scan_events;
-use crate::utils::sify::sify;
+use crate::models::{NewScanEvent, ScanEvent};
+use crate::schema::scan_events::table as scan_events;
 use anyhow::Context;
 use autopulse_utils::sify;
 use diesel::connection::SimpleConnection;

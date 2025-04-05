@@ -55,7 +55,7 @@
         features = [
           "sqlite"
           "postgres"
-          # "mysql"
+          "mysql"
         ];
 
         commonArgs = {
@@ -68,13 +68,18 @@
           buildInputs =
             [
               pkgs.openssl
-              pkgs.sqlite
-              pkgs.postgresql
             ]
             ++ pkgs.lib.optionals (pkgs.lib.elem "sqlite" features) [
+              pkgs.sqlite
+            ]
+            ++ pkgs.lib.optionals (pkgs.lib.elem "postgres" features) [
+              pkgs.postgresql
+            ]
+            ++ pkgs.lib.optionals (pkgs.lib.elem "mysql" features) [
               pkgs.libmysqlclient
               pkgs.ncurses
               pkgs.cmake
+              pkgs.libtirpc
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
