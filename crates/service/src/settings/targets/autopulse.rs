@@ -1,3 +1,4 @@
+use super::RequestBuilderPerform;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::{auth::Auth, targets::TargetProcess};
 use autopulse_database::models::ScanEvent;
@@ -47,20 +48,7 @@ impl Autopulse {
                 .append_pair("hash", ev.file_hash.as_ref().unwrap());
         }
 
-        let res = client.get(url.to_string()).send().await?;
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to scan file: {} - {}",
-                status.as_u16(),
-                body
-            ));
-        }
-
-        Ok(())
+        client.get(url).perform().await.map(|_| ())
     }
 }
 

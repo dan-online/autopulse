@@ -14,6 +14,8 @@ mod logs;
 mod sify;
 #[doc(hidden)]
 mod task_manager;
+#[doc(hidden)]
+mod what_is;
 
 pub mod rewrite;
 
@@ -26,6 +28,7 @@ pub use logs::*;
 pub use rewrite::*;
 pub use sify::*;
 pub use task_manager::*;
+pub use what_is::*;
 
 pub extern crate regex;
 pub extern crate tracing_appender;

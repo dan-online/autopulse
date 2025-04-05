@@ -32,8 +32,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -70,7 +70,6 @@ jobs:
 
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         feature:
@@ -79,18 +78,21 @@ jobs:
           - sqlite
         platform:
           - name: linux/amd64
+            runner: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             tag: -amd64
           - name: linux/arm64
+            runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
             tag: -arm64
             build_args: |
               IMAGE_TAG=arm64v8-3.20
+    runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -143,40 +145,31 @@ jobs:
           fi
         id: tag
 
-      - name: Test binary
-        uses: houseabsolute/actions-rust-cross@v0
-        if: matrix.feature == 'full'
+      - uses: taiki-e/github-actions/install-rust@main
         with:
-          command: test
+          toolchain: stable
+          component: rustfmt,clippy
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored"
-          strip: true
+
+      - uses: taiki-e/setup-cross-toolchain-action@main
+        with:
+          target: ${{ matrix.platform.target }}
+
+      - name: Test binary
+        if: matrix.feature == 'full'
+        run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v0
         if: matrix.feature == 'full'
-        with:
-          command: build
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --features vendored"
-          strip: true
+        run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      - name: Test
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Test binary
         if: matrix.feature != 'full'
-        with:
-          command: test
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
+        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
-      - name: Build
-        uses: houseabsolute/actions-rust-cross@v0
+      - name: Build binary
         if: matrix.feature != 'full'
-        with:
-          command: build
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --no-default-features --features vendored,${{ matrix.feature }}"
-          strip: true
+        run: cargo build --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
 
       - name: Copy binary
         run: |

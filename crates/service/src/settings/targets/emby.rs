@@ -1,3 +1,4 @@
+use super::RequestBuilderPerform;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
@@ -122,25 +123,11 @@ impl Emby {
 
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
         let client = self.get_client()?;
+        let url = get_url(&self.url)?.join("Library/VirtualFolders")?;
 
-        let url = get_url(&self.url)?
-            .join("Library/VirtualFolders")?
-            .to_string();
+        let res = client.get(url).perform().await?;
 
-        let res = client.get(&url).send().await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(res.json().await?)
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to fetch libraries: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        Ok(res.json().await?)
     }
 
     fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
@@ -183,7 +170,7 @@ impl Emby {
         url.query_pairs_mut()
             .append_pair("EnableTotalRecordCount", "false");
 
-        let res = client.get(url.to_string()).send().await?;
+        let res = client.get(url).perform().await?;
 
         // Possibly uneeded unless we can use streams
         let bytes = res.bytes().await?;
@@ -248,7 +235,7 @@ impl Emby {
                     .query_pairs_mut()
                     .append_pair("StartIndex", &(page * limit).to_string());
 
-                let res = client.get(page_url.to_string()).send().await?;
+                let res = client.get(page_url).perform().await?;
 
                 let bytes = res.bytes().await?;
 
@@ -314,9 +301,7 @@ impl Emby {
     // not as effective as refreshing the item, but good enough
     async fn scan(&self, ev: &[&ScanEvent]) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let url = get_url(&self.url)?
-            .join("Library/Media/Updated")?
-            .to_string();
+        let url = get_url(&self.url)?.join("Library/Media/Updated")?;
 
         let updates = ev
             .iter()
@@ -328,25 +313,13 @@ impl Emby {
 
         let body = ScanPayload { updates };
 
-        let res = client
-            .post(&url)
+        client
+            .post(url)
             .header("Content-Type", "application/json")
             .json(&body)
-            .send()
-            .await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to send scan: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+            .perform()
+            .await
+            .map(|_| ())
     }
 
     async fn refresh_item(&self, item: &Item) -> anyhow::Result<()> {
@@ -369,20 +342,7 @@ impl Emby {
         url.query_pairs_mut()
             .append_pair("RegenerateTrickplay", "false");
 
-        let res = client.post(url.to_string()).send().await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to refresh item: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        client.post(url).perform().await.map(|_| ())
     }
 }
 

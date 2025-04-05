@@ -170,6 +170,7 @@ pub mod sonarr;
 pub mod tdarr;
 
 use autopulse_database::models::ScanEvent;
+use reqwest::{RequestBuilder, Response};
 use serde::Deserialize;
 use {
     autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
@@ -208,6 +209,49 @@ impl TargetProcess for Target {
             Self::Radarr(t) => t.process(evs).await,
             Self::FileFlows(t) => t.process(evs).await,
             Self::Autopulse(t) => t.process(evs).await,
+        }
+    }
+}
+
+pub trait RequestBuilderPerform {
+    fn perform(self) -> impl std::future::Future<Output = anyhow::Result<Response>> + Send;
+}
+
+impl RequestBuilderPerform for RequestBuilder {
+    async fn perform(self) -> anyhow::Result<Response> {
+        let copy = self
+            .try_clone()
+            .ok_or_else(|| anyhow::anyhow!("failed to clone request"))?;
+        let built = copy
+            .build()
+            .map_err(|e| anyhow::anyhow!("failed to build request: {}", e))?;
+        let response = self.send().await;
+
+        match response {
+            Ok(response) => {
+                if !response.status().is_success() {
+                    return Err(anyhow::anyhow!(
+                        // failed to PUT /path/to/file: 404 - Not Found
+                        "unable to {} {}: {} - {}",
+                        built.method(),
+                        built.url(),
+                        response.status(),
+                        response
+                            .text()
+                            .await
+                            .unwrap_or_else(|_| "unknown error".to_string()),
+                    ));
+                }
+
+                Ok(response)
+            }
+
+            Err(e) => Err(anyhow::anyhow!(
+                "failed to {} {}: {}",
+                built.method(),
+                built.url(),
+                e,
+            )),
         }
     }
 }

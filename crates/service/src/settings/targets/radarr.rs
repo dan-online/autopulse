@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tracing::error;
 
+use super::RequestBuilderPerform;
+
 #[derive(Deserialize, Clone)]
 pub struct Radarr {
     /// URL to the Plex server
@@ -53,21 +55,10 @@ impl Radarr {
     async fn get_movies(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<i64>> {
         let client = self.get_client().unwrap();
 
-        let url = get_url(&self.url)?.join("api/v3/movie")?.to_string();
+        let url = get_url(&self.url)?.join("api/v3/movie")?;
         let mut to_be_refreshed: HashMap<i64, Vec<String>> = HashMap::new();
 
-        let res = client.get(&url).send().await?;
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to get movie from Radarr: {} - {}",
-                status,
-                body
-            ));
-        }
+        let res = client.get(url).perform().await?;
 
         let movies = res.json::<Vec<RadarrMovie>>().await?;
 
@@ -94,23 +85,10 @@ impl Radarr {
 
     async fn refresh_movies(&self, movie_ids: Vec<i64>) -> anyhow::Result<()> {
         let client = self.get_client().unwrap();
-        let url = get_url(&self.url)?.join("api/v3/command")?.to_string();
+        let url = get_url(&self.url)?.join("api/v3/command")?;
         let payload = Command::RefreshMovie(RefreshMovie { movie_ids });
 
-        let res = client.post(&url).json(&payload).send().await?;
-        let status = res.status();
-
-        if !status.is_success() {
-            let body = res.text().await?;
-
-            return Err(anyhow::anyhow!(
-                "failed to refresh movies in Radarr: {} - {}",
-                status,
-                body
-            ));
-        }
-
-        Ok(())
+        client.post(url).json(&payload).perform().await.map(|_| ())
     }
 }
 

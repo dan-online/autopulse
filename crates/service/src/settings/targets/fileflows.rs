@@ -1,12 +1,13 @@
+use super::RequestBuilderPerform;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, what_is, PathType};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, path::Path, path::PathBuf};
+use std::{collections::HashMap, path::Path};
 use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
@@ -101,25 +102,13 @@ impl FileFlows {
 
     async fn get_libraries(&self) -> anyhow::Result<Vec<FileFlowsLibrary>> {
         let client = self.get_client()?;
-
         let url = get_url(&self.url)?.join("api/library")?;
 
-        let res = client.get(url.to_string()).send().await?;
-        let status = res.status();
+        let res = client.get(url).perform().await?;
 
-        if status.is_success() {
-            let libraries: Vec<FileFlowsLibrary> = res.json().await?;
+        let libraries: Vec<FileFlowsLibrary> = res.json().await?;
 
-            Ok(libraries)
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to get libraries: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        Ok(libraries)
     }
 
     async fn get_library_file(
@@ -129,28 +118,16 @@ impl FileFlows {
         let client = self.get_client()?;
 
         let url = get_url(&self.url)?.join("api/library-file/search")?;
-
         let req = FileFlowsSearchRequest {
             path: ev.get_path(&self.rewrite),
             limit: 1,
         };
 
-        let res = client.post(url.to_string()).json(&req).send().await?;
-        let status = res.status();
+        let res = client.post(url).json(&req).perform().await?;
 
-        if status.is_success() {
-            let files: Vec<FileFlowsLibraryFile> = res.json().await?;
+        let files: Vec<FileFlowsLibraryFile> = res.json().await?;
 
-            Ok(files.first().cloned())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to get library file: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        Ok(files.first().cloned())
     }
 
     async fn reprocess_library_filse(&self, evs: Vec<&FileFlowsLibraryFile>) -> anyhow::Result<()> {
@@ -163,20 +140,7 @@ impl FileFlows {
             ..Default::default()
         };
 
-        let res = client.post(url.to_string()).json(&req).send().await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to send reprocess: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        client.post(url).json(&req).perform().await.map(|_| ())
     }
 
     async fn manually_add_files(
@@ -194,20 +158,7 @@ impl FileFlows {
             custom_variables: HashMap::new(),
         };
 
-        let res = client.post(url.to_string()).json(&req).send().await?;
-        let status = res.status();
-
-        if status.is_success() {
-            Ok(())
-        } else {
-            let body = res.text().await?;
-
-            Err(anyhow::anyhow!(
-                "failed to send manual-add: {} - {}",
-                status.as_u16(),
-                body
-            ))
-        }
+        client.post(url).json(&req).perform().await.map(|_| ())
     }
 
     // async fn rescan_library(&self, libraries: &FileFlowsLibrary) -> anyhow::Result<()> {
@@ -294,8 +245,8 @@ impl TargetProcess for FileFlows {
             let mut library_files = HashMap::new();
 
             for ev in evs {
-                // Skip directories
-                if PathBuf::from(&ev.get_path(&self.rewrite)).is_dir() {
+                let what_is_path = what_is(ev.get_path(&self.rewrite));
+                if matches!(what_is_path, PathType::Directory) {
                     succeeded.push(ev.id.clone());
                     continue;
                 }
