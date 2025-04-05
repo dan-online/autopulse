@@ -405,7 +405,7 @@ impl Plex {
         let ev_path = ev.get_path(&self.rewrite);
         let ev_path = Path::new(&ev_path);
 
-        let file_dir = (if matches!(what_is(ev_path), PathType::File) {
+        let file_dir = (if matches!(what_is(ev_path), PathType::Directory) {
             ev_path
         } else {
             ev_path
