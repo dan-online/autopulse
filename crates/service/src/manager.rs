@@ -4,11 +4,11 @@ use crate::settings::webhooks::{EventType, WebhookManager};
 use crate::settings::Settings;
 use anyhow::Context;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, updated_at,
+    created_at, event_source, file_path, id, updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
-    diesel::{self, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods},
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
@@ -106,12 +106,11 @@ impl PulseManager {
         }
 
         if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
-            let updated = diesel::update(&existing)
-                .set((
-                    updated_at.eq(chrono::Utc::now().naive_utc()),
-                    can_process.eq(ev.can_process),
-                ))
-                .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?;
+            let updated = get_conn(&self.pool)?.set_and_return(
+                &existing,
+                chrono::Utc::now().naive_utc(),
+                ev.can_process,
+            )?;
 
             return Ok(updated);
         }

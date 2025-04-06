@@ -65,9 +65,11 @@
           nativeBuildInputs = [
             pkgs.pkg-config
           ];
+
           buildInputs =
             [
               pkgs.openssl
+              pkgs.pkg-config
             ]
             ++ pkgs.lib.optionals (pkgs.lib.elem "sqlite" features) [
               pkgs.sqlite
@@ -79,7 +81,7 @@
               pkgs.libmysqlclient
               pkgs.ncurses
               pkgs.cmake
-              # pkgs.libtirpc
+              pkgs.libtirpc
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
@@ -175,6 +177,10 @@
             pkgs.biome
             pkgs.nixfmt-rfc-style
           ];
+
+          shellHook = ''
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath commonArgs.buildInputs}
+          '';
         };
       }
     );
