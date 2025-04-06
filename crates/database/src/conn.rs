@@ -51,7 +51,7 @@ pub enum AnyConnection {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```md
     /// mysql://user:password@localhost:3306/database
     /// ```
     #[cfg(feature = "mysql")]

@@ -156,6 +156,10 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
 
+      - run : |
+          sudo apt update -y && \
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev build-essential
+
       - name: Test binary
         if: matrix.feature == 'full'
         run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
