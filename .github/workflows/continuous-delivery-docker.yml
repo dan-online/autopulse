@@ -76,6 +76,7 @@ jobs:
           - full
           - postgres
           - sqlite
+          - mysql
         platform:
           - name: linux/amd64
             runner: ubuntu-22.04
@@ -155,11 +156,15 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
 
+      - run : |
+          sudo apt update -y && \
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev libmysqlclient-dev gcc pkg-config
+
       - name: Test binary
         if: matrix.feature == 'full'
         run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      - name: Build binary
+      - name: Build binary  
         if: matrix.feature == 'full'
         run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 
@@ -199,70 +204,3 @@ jobs:
           tags: |
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           platforms: ${{ matrix.platform.name }}
-          build-args: ${{ matrix.platform.build_args }}
-
-  # Push a manifest for arm/amd64
-  manifest:
-    name: Push manifest
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Pull Request suffix
-        run: |
-          if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}"
-            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "Release tag: ${{ github.event.release.tag_name }}"
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "Not a PR branch"
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-        id: tag
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Create and push manifests
-        run: |
-          # Extract digests for each architecture
-          AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
-          ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
-
-          POSTGRES_AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
-          POSTGRES_ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
-
-          SQLITE_AMD64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
-          SQLITE_ARM64_DIGEST=$(docker manifest inspect danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
-
-          # Root: latest/pr-<number>
-          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }} \
-              --amend danonline/autopulse@${AMD64_DIGEST} \
-              --amend danonline/autopulse@${ARM64_DIGEST}
-
-          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}
-
-          # Postgres: latest-postgres/pr-<number>-postgres
-          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres \
-              --amend danonline/autopulse@${POSTGRES_AMD64_DIGEST} \
-              --amend danonline/autopulse@${POSTGRES_ARM64_DIGEST}
-
-          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
-
-          # SQLite: latest-sqlite/pr-<number>-sqlite
-          docker manifest create danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite \
-              --amend danonline/autopulse@${SQLITE_AMD64_DIGEST} \
-              --amend danonline/autopulse@${SQLITE_ARM64_DIGEST}
-
-          docker manifest push danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
-
-

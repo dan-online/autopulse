@@ -3,11 +3,11 @@
     "advisory-db": {
       "flake": false,
       "locked": {
-        "lastModified": 1740955963,
-        "narHash": "sha256-QvSSvFBKsYaB6mQIkqKN0RwgYFZNmVMxdMScoZSDfuY=",
+        "lastModified": 1743864670,
+        "narHash": "sha256-baVgx8o9dhVNHJHkHKvB20YAz5/qP/LUygawKxIQi/E=",
         "owner": "rustsec",
         "repo": "advisory-db",
-        "rev": "ba55c172c77b28744fe8252347ce012ca2dd432f",
+        "rev": "f1688a2f9a55b7e9a6226d053fd43099f1849f5f",
         "type": "github"
       },
       "original": {
@@ -18,11 +18,11 @@
     },
     "crane": {
       "locked": {
-        "lastModified": 1739936662,
-        "narHash": "sha256-x4syUjNUuRblR07nDPeLDP7DpphaBVbUaSoeZkFbGSk=",
+        "lastModified": 1743908961,
+        "narHash": "sha256-e1idZdpnnHWuosI3KsBgAgrhMR05T2oqskXCmNzGPq0=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "19de14aaeb869287647d9461cbd389187d8ecdb7",
+        "rev": "80ceeec0dc94ef967c371dcdc56adb280328f591",
         "type": "github"
       },
       "original": {
@@ -39,11 +39,11 @@
         "rust-analyzer-src": []
       },
       "locked": {
-        "lastModified": 1740983659,
-        "narHash": "sha256-O/QzMeTWQ1y4nCj3OQT9Qc3zTE1y6SIZbW8Zjy5Q+dA=",
+        "lastModified": 1742452566,
+        "narHash": "sha256-sVuLDQ2UIWfXUBbctzrZrXM2X05YjX08K7XHMztt36E=",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "14bd053c7f2a5437ca84c2c76eb7a68154dc30bb",
+        "rev": "7d9ba794daf5e8cc7ee728859bc688d8e26d5f06",
         "type": "github"
       },
       "original": {
@@ -72,8 +72,10 @@
     },
     "nixpkgs": {
       "locked": {
-        "narHash": "sha256-cjbHI+zUzK5CPsQZqMhE3npTyYFt9tJ3+ohcfaOF/WM=\n",
-        "path": "/nix/store/hgymg9bbnkc3a605vyr96zf963xw1b0x-7g9h6nlrx5h1lwqy4ghxvbhb7imm3vcb-source",
+        "lastModified": 1743703532,
+        "narHash": "sha256-s1KLDALEeqy+ttrvqV3jx9mBZEvmthQErTVOAzbjHZs=",
+        "path": "/nix/store/hvs4if4zly4mp0fhbh86vh208x6fs8fg-source",
+        "rev": "bdb91860de2f719b57eef819b5617762f7120c70",
         "type": "path"
       },
       "original": {

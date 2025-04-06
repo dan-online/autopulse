@@ -7,7 +7,13 @@ build = "src/build.rs"
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
-vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql", "mysqlclient-sys"]
+bindgen = ["mysqlclient-sys/buildtime_bindgen"]
+vendored = [
+    "pq-sys/bundled",
+    "libsqlite3-sys/bundled",
+    "mysqlclient-sys/buildtime_bindgen",
+]
 
 [dependencies]
 # Crates
@@ -20,7 +26,7 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 
 # Database
-diesel = { version = "2.2.7", default-features = false, features = [
+diesel = { version = "2.2.9", default-features = false, features = [
     "returning_clauses_for_sqlite_3_35",
     "r2d2",
     "chrono",
@@ -28,6 +34,6 @@ diesel = { version = "2.2.7", default-features = false, features = [
 diesel_migrations = { version = "2.2.0", default-features = false }
 
 # Connectors
-pq-sys = { version = "0.7.0", optional = true }
-libsqlite3-sys = { version = "0.31.0", optional = true }
-# mysqlclient-sys = "x.x.x"
+pq-sys = { version = "0.7.1", optional = true }
+libsqlite3-sys = { version = "0.32.0", optional = true }
+mysqlclient-sys = { version = "0.4.4", optional = true }

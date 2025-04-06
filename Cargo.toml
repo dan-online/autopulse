@@ -5,9 +5,11 @@ edition = "2021"
 
 [features]
 vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
+bindgen = ["autopulse-database/bindgen"]
 sqlite = ["autopulse-database/sqlite"]
 postgres = ["autopulse-database/postgres"]
-default = ["sqlite", "postgres"]
+mysql = ["autopulse-database/mysql"]
+default = ["sqlite", "postgres", "mysql"]
 
 [dependencies]
 # Crates
@@ -45,6 +47,7 @@ anyhow = { version = "1.0.95" }
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
 
+
 # Tracing
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = [
@@ -53,6 +56,7 @@ tracing-subscriber = { version = "0.3.19", features = [
     "local-time",
     "time",
 ] }
+tracing-appender = "0.2.3"
 
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }
