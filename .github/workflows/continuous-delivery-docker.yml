@@ -158,7 +158,7 @@ jobs:
 
       - run : |
           sudo apt update -y && \
-          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev libmysqlclient-dev gcc-10 pkg-config
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev libmysqlclient-dev gcc pkg-config
 
       - name: Test binary
         if: matrix.feature == 'full'
