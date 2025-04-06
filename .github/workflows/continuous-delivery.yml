@@ -107,6 +107,8 @@ jobs:
       - run : |
           sudo apt update -y && \
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev gcc pkg-config libmysqlclient-dev
+          mysql_config
+          mysql_config --libs --cflags
 
       # - run : |
       #     brew update
@@ -123,5 +125,3 @@ jobs:
           features: ${{ contains(matrix.target, '-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name == 'pull_request' }}
-        env:
-          BINDGEN_EXTRA_CLANG_ARGS: --include-directory=/usr/include/mysql/
