@@ -123,3 +123,5 @@ jobs:
           features: ${{ contains(matrix.target, '-musl') && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name == 'pull_request' }}
+        env:
+          BINDGEN_EXTRA_CLANG_ARGS: --include-directory=/usr/include/mysql/
