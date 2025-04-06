@@ -12,7 +12,7 @@ bindgen = ["mysqlclient-sys/buildtime_bindgen"]
 vendored = [
     "pq-sys/bundled",
     "libsqlite3-sys/bundled",
-    "mysqlclient-sys/bindgen",
+    "mysqlclient-sys/buildtime_bindgen",
 ]
 
 [dependencies]
