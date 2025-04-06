@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
+bindgen = ["autopulse-database/bindgen"]
 sqlite = ["autopulse-database/sqlite"]
 postgres = ["autopulse-database/postgres"]
 mysql = ["autopulse-database/mysql"]

@@ -180,7 +180,12 @@
 
           shellHook = ''
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath commonArgs.buildInputs}
-          '';
+          '' + lib.optionals
+            (pkgs.lib.elem "sqlite" features)
+            ''
+              export BINDGEN_EXTRA_CLANG_ARGS="--include-directory=${pkgs.libmysqlclient.dev}/include/mariadb"
+              export CARGO_FEATURE_BINDGEN=1  
+            '';
         };
       }
     );

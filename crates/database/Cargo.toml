@@ -8,6 +8,7 @@ build = "src/build.rs"
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "mysqlclient-sys"]
+bindgen = ["mysqlclient-sys/buildtime_bindgen"]
 vendored = [
     "pq-sys/bundled",
     "libsqlite3-sys/bundled",
