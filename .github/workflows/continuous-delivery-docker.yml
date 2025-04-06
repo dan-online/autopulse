@@ -158,13 +158,13 @@ jobs:
 
       - run : |
           sudo apt update -y && \
-          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev libmysqlclient-dev gcc pkg-config
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev libmysqlclient-dev gcc-10 pkg-config
 
       - name: Test binary
         if: matrix.feature == 'full'
         run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      - name: Build binary
+      - name: Build binary  
         if: matrix.feature == 'full'
         run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 

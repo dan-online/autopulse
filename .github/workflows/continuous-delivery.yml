@@ -106,7 +106,7 @@ jobs:
 
       - run : |
           sudo apt update -y && \
-          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev gcc pkg-config
+          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev libmysqlclient-dev gcc-10 pkg-config
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
       # - run : |
