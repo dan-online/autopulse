@@ -84,8 +84,30 @@ struct LibraryMediaContainer {
 #[doc(hidden)]
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+struct SearchResult {
+    metadata: Option<Metadata>,
+}
+
+#[doc(hidden)]
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+struct SearchLibraryMediaContainer {
+    #[serde(default)]
+    search_result: Vec<SearchResult>,
+}
+
+#[doc(hidden)]
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 struct LibraryResponse {
     media_container: LibraryMediaContainer,
+}
+
+#[doc(hidden)]
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+struct SearchLibraryResponse {
+    media_container: SearchLibraryMediaContainer,
 }
 
 fn path_matches(part_file: &str, path: &Path) -> bool {
@@ -215,7 +237,14 @@ impl Plex {
         let mut search_term = self.get_search_term(&rel_path)?;
 
         while !search_term.is_empty() {
-            let mut url = get_url(&self.url)?.join("search")?;
+            let mut url = get_url(&self.url)?.join("library/search")?;
+
+            url.query_pairs_mut().append_pair("includeCollections", "1");
+            url.query_pairs_mut()
+                .append_pair("includeExternalMedia", "1");
+            url.query_pairs_mut()
+                .append_pair("searchTypes", "movies,people,tv");
+            url.query_pairs_mut().append_pair("limit", "100");
 
             trace!("searching for item with term: {}", search_term);
 
@@ -225,44 +254,49 @@ impl Plex {
 
             let res = client.get(url).perform().await?;
 
-            let lib: LibraryResponse = res.json().await?;
+            let lib: SearchLibraryResponse = res.json().await?;
 
             let path_obj = Path::new(path);
 
-            if let Some(mut metadata) = lib.media_container.metadata.clone() {
-                // sort episodes then movies to the front, then the rest
-                metadata.sort_by(|a, b| {
-                    if a.t == "episode" && b.t != "episode" {
-                        std::cmp::Ordering::Less
-                    } else if a.t != "episode" && b.t == "episode" {
-                        std::cmp::Ordering::Greater
-                    } else if a.t == "movie" && b.t != "movie" && b.t != "episode" {
-                        std::cmp::Ordering::Less
-                    } else if a.t != "movie" && a.t != "episode" && b.t == "movie" {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+            let mut metadata = lib
+                .media_container
+                .search_result
+                .into_iter()
+                .filter_map(|s| s.metadata)
+                .collect::<Vec<_>>();
 
-                for item in metadata {
-                    if item.t == "show" {
-                        let episodes = self.get_episodes(&item.key).await?;
+            // sort episodes then movies to the front, then the rest
+            metadata.sort_by(|a, b| {
+                if a.t == "episode" && b.t != "episode" {
+                    std::cmp::Ordering::Less
+                } else if a.t != "episode" && b.t == "episode" {
+                    std::cmp::Ordering::Greater
+                } else if a.t == "movie" && b.t != "movie" && b.t != "episode" {
+                    std::cmp::Ordering::Less
+                } else if a.t != "movie" && a.t != "episode" && b.t == "movie" {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
 
-                        if let Some(episode_metadata) = episodes.media_container.metadata {
-                            for episode in episode_metadata {
-                                if let Some(media) = &episode.media {
-                                    if has_matching_media(media, path_obj) {
-                                        results.push(episode.clone());
-                                    }
+            for item in &metadata {
+                if item.t == "show" {
+                    let episodes = self.get_episodes(&item.key).await?;
+
+                    if let Some(episode_metadata) = episodes.media_container.metadata {
+                        for episode in episode_metadata {
+                            if let Some(media) = &episode.media {
+                                if has_matching_media(media, path_obj) {
+                                    results.push(episode.clone());
                                 }
                             }
                         }
-                    } else if let Some(media) = &item.media {
-                        // For movies and other content types
-                        if has_matching_media(media, path_obj) {
-                            results.push(item.clone());
-                        }
+                    }
+                } else if let Some(media) = &item.media {
+                    // For movies and other content types
+                    if has_matching_media(media, path_obj) {
+                        results.push(item.clone());
                     }
                 }
             }
@@ -270,7 +304,7 @@ impl Plex {
             trace!(
                 "found {} out of {} items matching search",
                 results.len(),
-                lib.media_container.metadata.unwrap_or_default().len()
+                metadata.len()
             );
 
             if results.is_empty() {
