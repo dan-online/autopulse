@@ -388,7 +388,7 @@ impl TargetProcess for Emby {
             for (ev, item) in to_refresh {
                 match self.refresh_item(&item).await {
                     Ok(()) => {
-                        debug!("refreshed item: {}", item.path.unwrap());
+                        debug!("refreshed item: {}", item.id);
                         succeded.push(ev.id.clone());
                     }
                     Err(e) => {

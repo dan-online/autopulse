@@ -11,9 +11,16 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
-tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
+
+# Logs
+tracing-subscriber = { version = "0.3.19", features = [
+    "env-filter",
+    "fmt",
+    "local-time",
+    "time",
+] }
 
 # Hashing
 sha2 = "0.10.8"
