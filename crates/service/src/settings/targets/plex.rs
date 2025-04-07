@@ -205,7 +205,6 @@ impl Plex {
     async fn search_items(&self, _library: &Library, path: &str) -> anyhow::Result<Vec<Metadata>> {
         let client = self.get_client()?;
         // let mut url = get_url(&self.url)?.join(&format!("library/sections/{}/all", library.key))?;
-        let mut url = get_url(&self.url)?.join("search")?;
 
         let mut results = vec![];
 
@@ -213,63 +212,75 @@ impl Plex {
 
         trace!("searching for item with relative path: {}", rel_path);
 
-        let search_term = self.get_search_term(&rel_path)?;
+        let mut search_term = self.get_search_term(&rel_path)?;
 
-        trace!("searching for item with term: {}", search_term);
+        while !search_term.is_empty() {
+            let mut url = get_url(&self.url)?.join("search")?;
 
-        url.query_pairs_mut()
-            // .append_pair("title", search_term.as_str());
-            .append_pair("query", search_term.as_str());
+            trace!("searching for item with term: {}", search_term);
 
-        let res = client.get(url).perform().await?;
+            url.query_pairs_mut()
+                // .append_pair("title", search_term.as_str());
+                .append_pair("query", search_term.as_str());
 
-        let lib: LibraryResponse = res.json().await?;
+            let res = client.get(url).perform().await?;
 
-        let path_obj = Path::new(path);
+            let lib: LibraryResponse = res.json().await?;
 
-        if let Some(mut metadata) = lib.media_container.metadata.clone() {
-            // sort episodes then movies to the front, then the rest
-            metadata.sort_by(|a, b| {
-                if a.t == "episode" && b.t != "episode" {
-                    std::cmp::Ordering::Less
-                } else if a.t != "episode" && b.t == "episode" {
-                    std::cmp::Ordering::Greater
-                } else if a.t == "movie" && b.t != "movie" && b.t != "episode" {
-                    std::cmp::Ordering::Less
-                } else if a.t != "movie" && a.t != "episode" && b.t == "movie" {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            let path_obj = Path::new(path);
 
-            for item in metadata {
-                if item.t == "show" {
-                    let episodes = self.get_episodes(&item.key).await?;
+            if let Some(mut metadata) = lib.media_container.metadata.clone() {
+                // sort episodes then movies to the front, then the rest
+                metadata.sort_by(|a, b| {
+                    if a.t == "episode" && b.t != "episode" {
+                        std::cmp::Ordering::Less
+                    } else if a.t != "episode" && b.t == "episode" {
+                        std::cmp::Ordering::Greater
+                    } else if a.t == "movie" && b.t != "movie" && b.t != "episode" {
+                        std::cmp::Ordering::Less
+                    } else if a.t != "movie" && a.t != "episode" && b.t == "movie" {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
 
-                    if let Some(episode_metadata) = episodes.media_container.metadata {
-                        for episode in episode_metadata {
-                            if let Some(media) = &episode.media {
-                                if has_matching_media(media, path_obj) {
-                                    results.push(episode.clone());
+                for item in metadata {
+                    if item.t == "show" {
+                        let episodes = self.get_episodes(&item.key).await?;
+
+                        if let Some(episode_metadata) = episodes.media_container.metadata {
+                            for episode in episode_metadata {
+                                if let Some(media) = &episode.media {
+                                    if has_matching_media(media, path_obj) {
+                                        results.push(episode.clone());
+                                    }
                                 }
                             }
                         }
-                    }
-                } else if let Some(media) = &item.media {
-                    // For movies and other content types
-                    if has_matching_media(media, path_obj) {
-                        results.push(item.clone());
+                    } else if let Some(media) = &item.media {
+                        // For movies and other content types
+                        if has_matching_media(media, path_obj) {
+                            results.push(item.clone());
+                        }
                     }
                 }
             }
-        }
 
-        trace!(
-            "found {} out of {} items matching search",
-            results.len(),
-            lib.media_container.metadata.unwrap_or_default().len()
-        );
+            trace!(
+                "found {} out of {} items matching search",
+                results.len(),
+                lib.media_container.metadata.unwrap_or_default().len()
+            );
+
+            if results.is_empty() {
+                let mut search_parts = search_term.split_whitespace().collect::<Vec<_>>();
+                search_parts.pop();
+                search_term = search_parts.join(" ");
+            } else {
+                break;
+            }
+        }
 
         // if show + episode then remove duplicates
         results.dedup_by_key(|item| item.key.clone());
@@ -326,6 +337,8 @@ impl Plex {
     async fn analyze_item(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("{key}/analyze"))?;
+
+        println!("analyzing: {url}");
 
         client.put(url).perform().await.map(|_| ())
     }
