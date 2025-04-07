@@ -1,3 +1,4 @@
+use autopulse_utils::Rotation;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -21,6 +22,39 @@ const fn default_cleanup_days() -> u64 {
     10
 }
 
+#[derive(Clone, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LogRotation {
+    Daily,
+    Minutely,
+    Hourly,
+    #[default]
+    Never,
+}
+
+// impl Into<Rotation> for LogRotation {
+//     fn into(self) -> Rotation {
+//         match self {
+//             LogRotation::Daily => Rotation::DAILY,
+//             LogRotation::Minute => Rotation::MINUTELY,
+//             LogRotation::Hour => Rotation::HOURLY,
+//             LogRotation::Never => Rotation::NEVER,
+//         }
+//     }
+// }
+
+// from AutopulseRotation -> Rotation
+impl From<LogRotation> for Rotation {
+    fn from(rotation: LogRotation) -> Self {
+        match rotation {
+            LogRotation::Daily => Rotation::DAILY,
+            LogRotation::Minutely => Rotation::MINUTELY,
+            LogRotation::Hourly => Rotation::HOURLY,
+            LogRotation::Never => Rotation::NEVER,
+        }
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub struct Opts {
     /// Check if the path exists before processing (default: false)
@@ -41,6 +75,10 @@ pub struct Opts {
 
     /// Log file path
     pub log_file: Option<PathBuf>,
+
+    /// Whether to rollover the log file (default: never)
+    #[serde(default)]
+    pub log_file_rollover: LogRotation,
 }
 
 impl Default for Opts {
@@ -51,6 +89,7 @@ impl Default for Opts {
             default_timer_wait: default_default_timer_wait(),
             cleanup_days: default_cleanup_days(),
             log_file: None,
+            log_file_rollover: LogRotation::default(),
         }
     }
 }
