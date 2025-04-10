@@ -13,8 +13,6 @@ pub struct Audiobookshelf {
     pub url: String,
     /// Authentication credentials
     pub auth: Auth,
-    /// Trigger to hit (must be type: manual) (default: manual)
-    pub trigger: Option<String>,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
 }
