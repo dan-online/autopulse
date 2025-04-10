@@ -132,14 +132,14 @@ impl Audiobookshelf {
 
 impl TargetProcess for Audiobookshelf {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let mut succeded = Vec::new();
+        let mut succeeded = Vec::new();
         let token = self.login().await?;
 
         let libraries = self.get_libraries(token.clone()).await?;
 
         if libraries.is_empty() {
             error!("no libraries found");
-            return Ok(succeded);
+            return Ok(succeeded);
         }
 
         for ev in evs {
@@ -148,7 +148,7 @@ impl TargetProcess for Audiobookshelf {
                     if let Err(e) = self.scan(token.clone(), ev, library_id).await {
                         error!("failed to scan audiobookshelf: {}", e);
                     } else {
-                        succeded.push(ev.get_path(&self.rewrite));
+                        succeeded.push(ev.get_path(&self.rewrite));
                     }
                 }
                 Ok(None) => {
@@ -160,6 +160,6 @@ impl TargetProcess for Audiobookshelf {
             }
         }
 
-        Ok(succeded)
+        Ok(succeeded)
     }
 }
