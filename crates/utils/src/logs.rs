@@ -2,6 +2,8 @@ use anyhow::{Context, Ok};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::rolling::RollingFileAppender;
+pub use tracing_appender::rolling::Rotation;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
@@ -46,6 +48,7 @@ impl std::str::FromStr for LogLevel {
 pub fn setup_logs(
     log_level: &LogLevel,
     log_file: &Option<PathBuf>,
+    log_file_rollover: Rotation,
     api_logging: bool,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
@@ -65,11 +68,15 @@ pub fn setup_logs(
     let registry = tracing_subscriber::registry().with(filter);
 
     if let Some(log_file) = log_file {
-        let writer = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_file)
-            .with_context(|| format!("Failed to open log file: {}", log_file.to_string_lossy()))?;
+        let writer = RollingFileAppender::new(
+            log_file_rollover,
+            log_file
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory of log file"))?,
+            log_file
+                .file_name()
+                .ok_or_else(|| anyhow::anyhow!("Failed to get file name of log file"))?,
+        );
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);
         file_guard = Some(guard);

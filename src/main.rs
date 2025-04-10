@@ -16,8 +16,8 @@ use autopulse_database::conn::{get_conn, get_pool, AnyConnection};
 use autopulse_server::get_server;
 use autopulse_service::manager::PulseManager;
 use autopulse_service::settings::Settings;
-use autopulse_utils::setup_logs;
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
+use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
 use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
@@ -105,6 +105,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
             let guard = setup_logs(
                 &settings.app.log_level,
                 &settings.opts.log_file,
+                settings.opts.log_file_rollover.clone().into(),
                 settings.app.api_logging,
             )?;
 
@@ -112,7 +113,12 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
         }
         Err(e) => {
             // still setup logs if settings failed to load
-            setup_logs(&autopulse_utils::LogLevel::Info, &None, false)?;
+            setup_logs(
+                &autopulse_utils::LogLevel::Info,
+                &None,
+                Rotation::NEVER,
+                false,
+            )?;
 
             Err(e)
         }
