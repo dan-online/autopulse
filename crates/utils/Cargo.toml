@@ -11,7 +11,7 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
 serde = { workspace = true }
 
 # Logs

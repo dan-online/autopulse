@@ -18,7 +18,7 @@ autopulse-utils = { workspace = true }
 
 # Core
 anyhow = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing = { workspace = true }
 
 # CLI
