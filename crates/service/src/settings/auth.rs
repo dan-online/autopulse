@@ -20,6 +20,7 @@ const fn default_enabled() -> bool {
 pub struct Auth {
     /// Whether authentication is enabled (default: true)
     #[serde(default = "default_enabled")]
+    #[serde(skip_serializing)]
     pub enabled: bool,
     /// Username for basic auth (default: admin)
     #[serde(default = "default_username")]
