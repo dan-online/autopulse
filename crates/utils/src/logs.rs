@@ -70,12 +70,12 @@ pub fn setup_logs(
     if let Some(log_file) = log_file {
         let writer = RollingFileAppender::new(
             log_file_rollover,
-            log_file.parent().ok_or_else(|| {
-                anyhow::anyhow!("Failed to get parent directory of log file")
-            })?,
-            log_file.file_name().ok_or_else(|| {
-                anyhow::anyhow!("Failed to get file name of log file")
-            })?,
+            log_file
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory of log file"))?,
+            log_file
+                .file_name()
+                .ok_or_else(|| anyhow::anyhow!("Failed to get file name of log file"))?,
         );
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);
