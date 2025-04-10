@@ -18,7 +18,7 @@ autopulse-utils = { workspace = true }
 
 # Core
 anyhow = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing = { workspace = true }
 
 # CLI
@@ -47,23 +47,12 @@ serde_json = "1.0.139"
 
 # Tracing
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = [
-    "env-filter",
-    "fmt",
-    "local-time",
-    "time",
-] }
 
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }
 
 # Asynchronous runtime
-tokio = { version = "1.43.0", features = [
-    "process",
-    "sync",
-    "macros",
-    "rt-multi-thread",
-] }
+tokio = { version = "1.43.0" }
 
 # URL parsing
 url = "2.5.4"
