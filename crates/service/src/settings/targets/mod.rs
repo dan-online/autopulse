@@ -14,7 +14,7 @@
 ///      password: "password"
 /// ```
 ///
-/// See [`Autobookshelf`] for all options
+/// See [`Audiobookshelf`] for all options
 pub mod audiobookshelf;
 /// Autopulse - Autopulse target
 ///
