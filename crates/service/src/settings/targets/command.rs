@@ -83,16 +83,16 @@ impl Command {
 
 impl TargetProcess for Command {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let mut succeded = Vec::new();
+        let mut succeeded = Vec::new();
 
         for ev in evs {
             if let Err(e) = self.run(ev).await {
                 error!("failed to process '{}': {}", ev.get_path(&self.rewrite), e);
             } else {
-                succeded.push(ev.id.clone());
+                succeeded.push(ev.id.clone());
             }
         }
 
-        Ok(succeded)
+        Ok(succeeded)
     }
 }
