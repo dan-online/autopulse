@@ -15,7 +15,7 @@ use autopulse_utils::sha256checksum;
 use autopulse_utils::sify;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{error, info, warn};
+use tracing::{error, info, info_span, warn, Instrument};
 
 pub(super) struct PulseRunner {
     webhooks: Arc<WebhookManager>,
@@ -210,6 +210,7 @@ impl PulseRunner {
                         .collect::<Vec<&ScanEvent>>()
                         .as_slice(),
                 )
+                .instrument(info_span!("process ", target = name))
                 .await;
 
             match res {
