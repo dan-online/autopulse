@@ -201,7 +201,7 @@ jobs:
           push: true
           context: .
           tags: |
-            ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
@@ -214,7 +214,7 @@ jobs:
           push: true
           context: .
           tags: |
-            ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
@@ -254,34 +254,34 @@ jobs:
       - name: Create and push manifests
         run: |
           # Extract digests for each architecture
-          AMD64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
-          ARM64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
+          AMD64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
+          ARM64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
 
-          POSTGRES_AMD64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
-          POSTGRES_ARM64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
+          POSTGRES_AMD64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
+          POSTGRES_ARM64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
 
-          SQLITE_AMD64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
-          SQLITE_ARM64_DIGEST=$(docker manifest inspect ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
+          SQLITE_AMD64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
+          SQLITE_ARM64_DIGEST=$(docker manifest inspect ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
 
           # Root: latest/pr-<number>
-          docker manifest create ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }} \
-              --amend ghcr.io/danonline/autopulse@${AMD64_DIGEST} \
-              --amend ghcr.io/danonline/autopulse@${ARM64_DIGEST}
+          docker manifest create ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }} \
+              --amend ghcr.io/dan-online/autopulse@${AMD64_DIGEST} \
+              --amend ghcr.io/dan-online/autopulse@${ARM64_DIGEST}
 
-          docker manifest push ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}
+          docker manifest push ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}
 
           # Postgres: latest-postgres/pr-<number>-postgres
-          docker manifest create ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres \
-              --amend ghcr.io/danonline/autopulse@${POSTGRES_AMD64_DIGEST} \
-              --amend ghcr.io/danonline/autopulse@${POSTGRES_ARM64_DIGEST}
+          docker manifest create ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-postgres \
+              --amend ghcr.io/dan-online/autopulse@${POSTGRES_AMD64_DIGEST} \
+              --amend ghcr.io/dan-online/autopulse@${POSTGRES_ARM64_DIGEST}
 
-          docker manifest push ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          docker manifest push ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-postgres
 
           # SQLite: latest-sqlite/pr-<number>-sqlite
-          docker manifest create ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite \
-              --amend ghcr.io/danonline/autopulse@${SQLITE_AMD64_DIGEST} \
-              --amend ghcr.io/danonline/autopulse@${SQLITE_ARM64_DIGEST}
+          docker manifest create ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite \
+              --amend ghcr.io/dan-online/autopulse@${SQLITE_AMD64_DIGEST} \
+              --amend ghcr.io/dan-online/autopulse@${SQLITE_ARM64_DIGEST}
 
-          docker manifest push ghcr.io/danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+          docker manifest push ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite
 
 
