@@ -57,8 +57,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract ghcr metadata (labels, tags)
-        id: meta_ghcr
+      - name: Extract metadata (labels, tags)
+        id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
