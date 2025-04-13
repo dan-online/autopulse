@@ -71,7 +71,8 @@ jobs:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
           flavor: |
             latest=false
-            prefix=ui
+            prefix=ui-
+            prefixLatest=true
 
       - name: Build and push (ui)
         uses: docker/build-push-action@v6
