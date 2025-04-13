@@ -8,6 +8,10 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: continuous-delivery-docker
+  cancel-in-progress: false
+
 jobs:
   push_readme:
     name: Push README to Docker Hub
