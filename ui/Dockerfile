@@ -13,7 +13,7 @@ RUN yarn build
 RUN rm -rf node_modules
 RUN yarn workspaces focus --production
 
-FROM node:22-alpine
+FROM public.ecr.aws/docker/library/node:23-alpine
 WORKDIR /app
 COPY --from=builder /app/build build/
 COPY --from=builder /app/node_modules node_modules/
