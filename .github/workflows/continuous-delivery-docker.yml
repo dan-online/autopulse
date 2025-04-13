@@ -63,8 +63,8 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          flavor:
-            prefix=ui
+          flavor: |
+            prefix=ui,onlatest=true
 
       - name: Build and push (ui)
         uses: docker/build-push-action@v6
