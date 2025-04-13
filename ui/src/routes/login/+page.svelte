@@ -4,7 +4,6 @@ import { goto } from "$app/navigation";
 import { page } from "$app/stores";
 import type { ActionData } from "./$types";
 
-
 export let form: ActionData;
 let loading = false;
 

@@ -4,7 +4,7 @@ import {
 	presetIcons,
 	presetTypography,
 	presetWebFonts,
-	presetWind3
+	presetWind3,
 } from "unocss";
 import { presetDaisy } from "unocss-preset-daisyui-next";
 

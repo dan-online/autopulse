@@ -3,7 +3,6 @@ import { goto, invalidateAll } from "$app/navigation";
 import { page } from "$app/state";
 import { onMount } from "svelte";
 
-
 let searchLoading = $state(false);
 // if anyone clicks the magnifying glass, let them bypass the search limit and reduce the delay
 let limiter = $state(true);
@@ -33,12 +32,12 @@ function correctSort(a: [string, unknown], b: [string, unknown]) {
 }
 
 const iconMap: Record<StatNames, string> = {
-    pending: "i-hugeicons-queue-01",
-    total: "i-material-symbols-file-copy-outline-rounded",
-    found: "i-ci-search-magnifying-glass",
-    processed: "i-hugeicons-package-delivered",
-    retrying: "i-pajamas-retry",
-    failed: "i-material-symbols-error",
+	pending: "i-hugeicons-queue-01",
+	total: "i-material-symbols-file-copy-outline-rounded",
+	found: "i-ci-search-magnifying-glass",
+	processed: "i-hugeicons-package-delivered",
+	retrying: "i-pajamas-retry",
+	failed: "i-material-symbols-error",
 };
 
 const descMap: Record<StatNames, string> = {
@@ -53,9 +52,9 @@ const descMap: Record<StatNames, string> = {
 // $: stats = page.data.stats;
 // $: events = page.data.events;
 // $: error = page.data.error;
-let stats = $derived(page.data.stats)
-let events = $derived(page.data.events)
-let error = $derived(page.data.error)
+let stats = $derived(page.data.stats);
+let events = $derived(page.data.events);
+let error = $derived(page.data.error);
 
 // $: sortBy = page.url.searchParams.get("sort") || "created_at";
 // $: searchBy = page.url.searchParams.get("search") || "";
@@ -66,14 +65,18 @@ let error = $derived(page.data.error)
 // 	? Number.parseInt(page.url.searchParams.get("limit") as string)
 // 	: 10;
 // $: statusBy = page.url.searchParams.get("status") || "";
-let sortBy = $derived(page.url.searchParams.get("sort")|| "created_at");
-let searchBy = $derived(page.url.searchParams.get("search")|| "");
-let pageBy = $derived(page.url.searchParams.get("page")
-    ? Number.parseInt(page.url.searchParams.get("page") as string)
-    : 1);
-let limitBy = $derived(page.url.searchParams.get("limit")
-    ? Number.parseInt(page.url.searchParams.get("limit") as string)
-    : 10);
+let sortBy = $derived(page.url.searchParams.get("sort") || "created_at");
+let searchBy = $derived(page.url.searchParams.get("search") || "");
+let pageBy = $derived(
+	page.url.searchParams.get("page")
+		? Number.parseInt(page.url.searchParams.get("page") as string)
+		: 1,
+);
+let limitBy = $derived(
+	page.url.searchParams.get("limit")
+		? Number.parseInt(page.url.searchParams.get("limit") as string)
+		: 10,
+);
 let statusBy = $derived(page.url.searchParams.get("status") || "");
 
 const fields = [
@@ -146,16 +149,16 @@ const updateBasedOn = (
 
 	if (key === "page") {
 		if (e instanceof Event) {
-            pageIndex = Number.parseInt((e.target as HTMLInputElement).value);
-        } else if (typeof e === "number") {
-            pageIndex = e;
-        } else {
-            pageIndex = pageBy;
-        }
+			pageIndex = Number.parseInt((e.target as HTMLInputElement).value);
+		} else if (typeof e === "number") {
+			pageIndex = e;
+		} else {
+			pageIndex = pageBy;
+		}
 
-        if (Number.isNaN(pageIndex) || pageIndex < 1) {
-            pageIndex = 1;
-        }
+		if (Number.isNaN(pageIndex) || pageIndex < 1) {
+			pageIndex = 1;
+		}
 	} else {
 		pageIndex = pageBy;
 	}
@@ -184,7 +187,9 @@ const updateBasedOn = (
 			if (sortOrder !== sortBy) {
 				sortOrder = sortOrder.split("-").join("");
 			} else {
-				sortOrder = sortOrder.startsWith("-") ? sortOrder.slice(1) : `-${sortOrder}`;
+				sortOrder = sortOrder.startsWith("-")
+					? sortOrder.slice(1)
+					: `-${sortOrder}`;
 			}
 		}
 
@@ -221,7 +226,7 @@ const updateBasedOn = (
 			clearTimeout(updateTimeout);
 
 			await goto(updateUrl, {
-                replaceState: true,
+				replaceState: true,
 				invalidateAll: true,
 				keepFocus: true,
 				noScroll: true,

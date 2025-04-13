@@ -6,7 +6,7 @@ import { onMount } from "svelte";
 import { enhance } from "$app/forms";
 import TimeAgo from "$lib/components/core/TimeAgo.svelte";
 
-let ev = $derived(page.data.ev)
+let ev = $derived(page.data.ev);
 
 let updateTimeout: number;
 
