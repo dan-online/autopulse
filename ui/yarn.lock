@@ -1355,7 +1355,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/adapter-cloudflare@npm:^5.0.3":
+"@sveltejs/adapter-cloudflare@npm:^5.1.0":
   version: 5.1.0
   resolution: "@sveltejs/adapter-cloudflare@npm:5.1.0"
   dependencies:
@@ -1383,7 +1383,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/kit@npm:^2.17.3":
+"@sveltejs/kit@npm:^2.20.5":
   version: 2.20.5
   resolution: "@sveltejs/kit@npm:2.20.5"
   dependencies:
@@ -3849,7 +3849,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte-check@npm:^4.1.4":
+"svelte-check@npm:^4.1.6":
   version: 4.1.6
   resolution: "svelte-check@npm:4.1.6"
   dependencies:
@@ -3867,7 +3867,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte@npm:^5.20.4":
+"svelte@npm:^5.26.2":
   version: 5.26.2
   resolution: "svelte@npm:5.26.2"
   dependencies:
@@ -3943,7 +3943,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.7.3":
+"typescript@npm:^5.8.3":
   version: 5.8.3
   resolution: "typescript@npm:5.8.3"
   bin:
@@ -3953,7 +3953,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.8.3#optional!builtin<compat/typescript>":
   version: 5.8.3
   resolution: "typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"
   bin:
@@ -3985,21 +3985,21 @@ __metadata:
     "@iconify-json/ph": "npm:^1.2.2"
     "@iconify-json/svg-spinners": "npm:^1.2.2"
     "@sveltejs/adapter-auto": "npm:4.0.0"
-    "@sveltejs/adapter-cloudflare": "npm:^5.0.3"
+    "@sveltejs/adapter-cloudflare": "npm:^5.1.0"
     "@sveltejs/adapter-node": "npm:^5.2.12"
-    "@sveltejs/kit": "npm:^2.17.3"
+    "@sveltejs/kit": "npm:^2.20.5"
     "@sveltejs/vite-plugin-svelte": "npm:^5.0.3"
     "@unocss/core": "npm:66.0.0"
     "@unocss/extractor-svelte": "npm:66.0.0"
     "@unocss/reset": "npm:66.0.0"
     daisyui: "npm:^4.12.24"
-    svelte: "npm:^5.20.4"
-    svelte-check: "npm:^4.1.4"
-    typescript: "npm:^5.7.3"
+    svelte: "npm:^5.26.2"
+    svelte-check: "npm:^4.1.6"
+    typescript: "npm:^5.8.3"
     unocss: "npm:66.0.0"
     unocss-preset-daisyui-next: "npm:^0.1.2"
-    vite: "npm:^6.2.0"
-    wrangler: "npm:^3.109.3"
+    vite: "npm:^6.2.6"
+    wrangler: "npm:^3.114.5"
   languageName: unknown
   linkType: soft
 
@@ -4128,7 +4128,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.2.0":
+"vite@npm:^6.2.6":
   version: 6.2.6
   resolution: "vite@npm:6.2.6"
   dependencies:
@@ -4259,7 +4259,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrangler@npm:^3.109.3":
+"wrangler@npm:^3.114.5":
   version: 3.114.5
   resolution: "wrangler@npm:3.114.5"
   dependencies:
