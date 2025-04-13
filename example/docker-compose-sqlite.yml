@@ -1,6 +1,6 @@
 services:
   autopulse:
-    image: danonline/autopulse
+    image: ghcr.io/dan-online/autopulse
     container_name: autopulse
     restart: always
     ports:
