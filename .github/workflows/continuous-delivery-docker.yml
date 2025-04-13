@@ -9,7 +9,7 @@ on:
     types: [published]
 
 concurrency:
-  group: continuous-delivery-docker
+  group: continuous-delivery-docker-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
