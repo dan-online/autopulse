@@ -325,29 +325,30 @@ jobs:
           docker manifest create ${GHCR_BASE}:${TAG} \
               --amend ${GHCR_BASE}@${AMD64_DIGEST} \
               --amend ${GHCR_BASE}@${ARM64_DIGEST}
-          docker manifest push ${GHCR_BASE}:${TAG}
           
           # Postgres manifest
           docker manifest create ${GHCR_BASE}:${TAG}-postgres \
               --amend ${GHCR_BASE}@${POSTGRES_AMD64_DIGEST} \
               --amend ${GHCR_BASE}@${POSTGRES_ARM64_DIGEST}
-          docker manifest push ${GHCR_BASE}:${TAG}-postgres
           
           # SQLite manifest
           docker manifest create ${GHCR_BASE}:${TAG}-sqlite \
               --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
               --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
+
+          docker manifest push ${GHCR_BASE}:${TAG}-postgres
           docker manifest push ${GHCR_BASE}:${TAG}-sqlite
+          docker manifest push ${GHCR_BASE}:${TAG}
           
           echo "Copy images over to Docker Hub..."
-          docker pull ${GHCR_BASE}:${TAG}
-          docker pull ${GHCR_BASE}:${TAG}-postgres
-          docker pull ${GHCR_BASE}:${TAG}-sqlite
+          docker pull ${GHCR_BASE}:${TAG} -q
+          docker pull ${GHCR_BASE}:${TAG}-postgres -q
+          docker pull ${GHCR_BASE}:${TAG}-sqlite -q
 
           docker tag ${GHCR_BASE}:${TAG} ${DOCKERHUB_BASE}:${TAG}
           docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
           docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
           
-          docker push ${DOCKERHUB_BASE}:${TAG}
           docker push ${DOCKERHUB_BASE}:${TAG}-postgres
           docker push ${DOCKERHUB_BASE}:${TAG}-sqlite
+          docker push ${DOCKERHUB_BASE}:${TAG}
