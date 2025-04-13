@@ -36,7 +36,7 @@
 		"unocss": "66.0.0",
 		"unocss-preset-daisyui-next": "^0.1.2",
 		"vite": "^6.2.6",
-		"wrangler": "^3.114.5"
+		"wrangler": "^4.10.0"
 	},
 	"type": "module",
 	"packageManager": "yarn@4.9.1"
