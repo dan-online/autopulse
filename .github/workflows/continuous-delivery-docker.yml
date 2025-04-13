@@ -16,6 +16,12 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
 jobs:
   push_readme:
     name: Push README to Docker Hub
@@ -83,11 +89,6 @@ jobs:
 
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
     strategy:
       matrix:
         feature:
@@ -125,9 +126,9 @@ jobs:
       - name: Identify suffix
         run: |
           if [ "${{ matrix.feature }}" == "full" ]; then
-            echo "tag=${{ matrix.platform.tag }}" >> "$GITHUB_OUTPUT"
+            echo "tag==${{ matrix.platform.tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ matrix.platform.tag }}-${{ matrix.feature }}" >> "$GITHUB_OUTPUT"
+            echo "tag=-${{ matrix.platform.tag }}-${{ matrix.feature }}" >> "$GITHUB_OUTPUT"
           fi
         id: tag
 
@@ -251,13 +252,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
 
   # Push a manifest for arm/amd64
   # manifest:
