@@ -21,7 +21,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - uses: chipkent/action-cleanup-package@v1.0.1
+      - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           delete-tags: pr-${{ github.event.number }}*
           token: ${{ secrets.GITHUB_TOKEN }}
