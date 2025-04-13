@@ -1007,22 +1007,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@matthiesenxyz/unocss-preset-daisyui@npm:^0.1.2":
-  version: 0.1.2
-  resolution: "@matthiesenxyz/unocss-preset-daisyui@npm:0.1.2"
-  dependencies:
-    autoprefixer: "npm:^10.4.19"
-    camelcase: "npm:^8.0.0"
-    parsel-js: "npm:^1.1.2"
-    postcss: "npm:^8.4.38"
-    postcss-js: "npm:^4.0.1"
-  peerDependencies:
-    daisyui: ^4.12.10
-    unocss: ^0.62.3
-  checksum: 10c0/7c0b927c92ea58a9aec50ff24bd9ecdf560aaf31015db6d1f3cc3b3ff015c6ea97e4b8f63751cd187858d85b0774f55f136b1d549c68e3dec502c5431c035caa
-  languageName: node
-  linkType: hard
-
 "@npmcli/agent@npm:^3.0.0":
   version: 3.0.0
   resolution: "@npmcli/agent@npm:3.0.0"
@@ -1737,21 +1721,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"autoprefixer@npm:^10.4.19":
-  version: 10.4.20
-  resolution: "autoprefixer@npm:10.4.20"
+"autoprefixer@npm:^10.4.20":
+  version: 10.4.21
+  resolution: "autoprefixer@npm:10.4.21"
   dependencies:
-    browserslist: "npm:^4.23.3"
-    caniuse-lite: "npm:^1.0.30001646"
+    browserslist: "npm:^4.24.4"
+    caniuse-lite: "npm:^1.0.30001702"
     fraction.js: "npm:^4.3.7"
     normalize-range: "npm:^0.1.2"
-    picocolors: "npm:^1.0.1"
+    picocolors: "npm:^1.1.1"
     postcss-value-parser: "npm:^4.2.0"
   peerDependencies:
     postcss: ^8.1.0
   bin:
     autoprefixer: bin/autoprefixer
-  checksum: 10c0/e1f00978a26e7c5b54ab12036d8c13833fad7222828fc90914771b1263f51b28c7ddb5803049de4e77696cbd02bb25cfc3634e80533025bb26c26aacdf938940
+  checksum: 10c0/de5b71d26d0baff4bbfb3d59f7cf7114a6030c9eeb66167acf49a32c5b61c68e308f1e0f869d92334436a221035d08b51cd1b2f2c4689b8d955149423c16d4d4
   languageName: node
   linkType: hard
 
@@ -1801,7 +1785,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"browserslist@npm:^4.23.3":
+"browserslist@npm:^4.24.4":
   version: 4.24.4
   resolution: "browserslist@npm:4.24.4"
   dependencies:
@@ -1856,10 +1840,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.30001646, caniuse-lite@npm:^1.0.30001688":
-  version: 1.0.30001700
-  resolution: "caniuse-lite@npm:1.0.30001700"
-  checksum: 10c0/3d391bcdd193208166d3ad759de240b9c18ac3759dbd57195770f0fcd2eedcd47d5e853609aba1eee5a2def44b0a14eee457796bdb3451a27de0c8b27355017c
+"caniuse-lite@npm:^1.0.30001688, caniuse-lite@npm:^1.0.30001702":
+  version: 1.0.30001713
+  resolution: "caniuse-lite@npm:1.0.30001713"
+  checksum: 10c0/f5468abfe73ce30e29cc8bde2ea67df2aab69032bdd93345e0640efefb76b7901c84fe1d28d591a797e65fe52fc24cae97060bb5552f9f9740322aff95ce2f9d
   languageName: node
   linkType: hard
 
@@ -1963,9 +1947,9 @@ __metadata:
   linkType: hard
 
 "consola@npm:^3.4.0":
-  version: 3.4.0
-  resolution: "consola@npm:3.4.0"
-  checksum: 10c0/bc7f7ad46514375109a80f3ae8330097eb1e5d89232a24eb830f3ac383e22036a62c53d33561cd73d7cda4b3691fba85e3dcf35229ef7721b324aae291ceb40c
+  version: 3.4.2
+  resolution: "consola@npm:3.4.2"
+  checksum: 10c0/7cebe57ecf646ba74b300bcce23bff43034ed6fbec9f7e39c27cee1dc00df8a21cd336b466ad32e304ea70fba04ec9e890c200270de9a526ce021ba8a7e4c11a
   languageName: node
   linkType: hard
 
@@ -2030,7 +2014,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"daisyui@npm:^4.12.24":
+"daisyui@npm:^4.12.23, daisyui@npm:^4.12.24":
   version: 4.12.24
   resolution: "daisyui@npm:4.12.24"
   dependencies:
@@ -2076,9 +2060,9 @@ __metadata:
   linkType: hard
 
 "destr@npm:^2.0.3":
-  version: 2.0.3
-  resolution: "destr@npm:2.0.3"
-  checksum: 10c0/10e7eff5149e2839a4dd29a1e9617c3c675a3b53608d78d74fc6f4abc31daa977e6de08e0eea78965527a0d5a35467ae2f9624e0a4646d54aa1162caa094473e
+  version: 2.0.5
+  resolution: "destr@npm:2.0.5"
+  checksum: 10c0/efabffe7312a45ad90d79975376be958c50069f1156b94c181199763a7f971e113bd92227c26b94a169c71ca7dbc13583b7e96e5164743969fc79e1ff153e646
   languageName: node
   linkType: hard
 
@@ -2111,9 +2095,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.5.73":
-  version: 1.5.104
-  resolution: "electron-to-chromium@npm:1.5.104"
-  checksum: 10c0/f58d9836607fba37b393aa86bd1bbc01721c32328b3c80e86bc39e3e636cc30ee70f97e652f611a38ab3de219cf16aca85ebda4774094bf43723e671290c344d
+  version: 1.5.136
+  resolution: "electron-to-chromium@npm:1.5.136"
+  checksum: 10c0/6a207e397638b0428b31c87d409a73f6bd953598cb7359ee4c3c175e645c3ae0cc99fc5128eaca19e2f1052200fd016eb4bb1012a55e5824eb1dce85b0396184
   languageName: node
   linkType: hard
 
@@ -3161,7 +3145,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parsel-js@npm:^1.1.2":
+"parsel-js@npm:^1.2.1":
   version: 1.2.1
   resolution: "parsel-js@npm:1.2.1"
   checksum: 10c0/f5daf5bc9058d10c4101c0bb126d1e3af8a148757d22e475f520c4e5d970fe884b053e62c15e0730e140751897da79d7dbb577d61691062bd6bdedc5fc18282d
@@ -3220,7 +3204,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"picocolors@npm:^1, picocolors@npm:^1.0.0, picocolors@npm:^1.0.1, picocolors@npm:^1.1.1":
+"picocolors@npm:^1, picocolors@npm:^1.0.0, picocolors@npm:^1.1.1":
   version: 1.1.1
   resolution: "picocolors@npm:1.1.1"
   checksum: 10c0/e2e3e8170ab9d7c7421969adaa7e1b31434f789afb9b3f115f6b96d91945041ac3ceb02e9ec6fe6510ff036bcc0bf91e69a1772edc0b707e12b19c0f2d6bcf58
@@ -3270,7 +3254,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.4.38, postcss@npm:^8.5.2, postcss@npm:^8.5.3":
+"postcss@npm:^8.4.49, postcss@npm:^8.5.2, postcss@npm:^8.5.3":
   version: 8.5.3
   resolution: "postcss@npm:8.5.3"
   dependencies:
@@ -3873,12 +3857,12 @@ __metadata:
   dependencies:
     "@biomejs/biome": "npm:^1.9.4"
     "@iconify/json": "npm:^2.2.310"
-    "@matthiesenxyz/unocss-preset-daisyui": "npm:^0.1.2"
     "@sveltejs/adapter-auto": "npm:4.0.0"
     "@sveltejs/adapter-cloudflare": "npm:^5.0.3"
     "@sveltejs/adapter-node": "npm:^5.2.12"
     "@sveltejs/kit": "npm:^2.17.3"
     "@sveltejs/vite-plugin-svelte": "npm:^5.0.3"
+    "@unocss/core": "npm:66.0.0"
     "@unocss/extractor-svelte": "npm:66.0.0"
     "@unocss/reset": "npm:66.0.0"
     daisyui: "npm:^4.12.24"
@@ -3886,6 +3870,7 @@ __metadata:
     svelte-check: "npm:^4.1.4"
     typescript: "npm:^5.7.3"
     unocss: "npm:66.0.0"
+    unocss-preset-daisyui-next: "npm:^0.1.2"
     unplugin-icons: "npm:^22.1.0"
     vite: "npm:^6.2.0"
     wrangler: "npm:^3.109.3"
@@ -3940,6 +3925,22 @@ __metadata:
   dependencies:
     imurmurhash: "npm:^0.1.4"
   checksum: 10c0/d324c5a44887bd7e105ce800fcf7533d43f29c48757ac410afd42975de82cc38ea2035c0483f4de82d186691bf3208ef35c644f73aa2b1b20b8e651be5afd293
+  languageName: node
+  linkType: hard
+
+"unocss-preset-daisyui-next@npm:^0.1.2":
+  version: 0.1.2
+  resolution: "unocss-preset-daisyui-next@npm:0.1.2"
+  dependencies:
+    autoprefixer: "npm:^10.4.20"
+    camelcase: "npm:^8.0.0"
+    daisyui: "npm:^4.12.23"
+    parsel-js: "npm:^1.2.1"
+    postcss: "npm:^8.4.49"
+    postcss-js: "npm:^4.0.1"
+  peerDependencies:
+    "@unocss/core": ^66.0.0
+  checksum: 10c0/c93b709eb39b21c84ea072b86ca444523f1e3468ca5a93fed8bd92c3a13b80110f0a36b26c15ed06cec4506292adadf3df7dbb95034395b89cf3d9afda7a7fc7
   languageName: node
   linkType: hard
 
@@ -4031,8 +4032,8 @@ __metadata:
   linkType: hard
 
 "update-browserslist-db@npm:^1.1.1":
-  version: 1.1.2
-  resolution: "update-browserslist-db@npm:1.1.2"
+  version: 1.1.3
+  resolution: "update-browserslist-db@npm:1.1.3"
   dependencies:
     escalade: "npm:^3.2.0"
     picocolors: "npm:^1.1.1"
@@ -4040,7 +4041,7 @@ __metadata:
     browserslist: ">= 4.21.0"
   bin:
     update-browserslist-db: cli.js
-  checksum: 10c0/9cb353998d6d7d6ba1e46b8fa3db888822dd972212da4eda609d185eb5c3557a93fd59780ceb757afd4d84240518df08542736969e6a5d6d6ce2d58e9363aac6
+  checksum: 10c0/682e8ecbf9de474a626f6462aa85927936cdd256fe584c6df2508b0df9f7362c44c957e9970df55dfe44d3623807d26316ea2c7d26b80bb76a16c56c37233c32
   languageName: node
   linkType: hard
 

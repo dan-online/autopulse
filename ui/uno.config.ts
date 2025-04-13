@@ -1,4 +1,3 @@
-import { presetDaisy } from "@matthiesenxyz/unocss-preset-daisyui";
 import extractorSvelte from "@unocss/extractor-svelte";
 import {
 	defineConfig,
@@ -6,6 +5,7 @@ import {
 	presetUno,
 	presetWebFonts,
 } from "unocss";
+import { presetDaisy } from "unocss-preset-daisyui-next";
 
 export default defineConfig({
 	extractors: [extractorSvelte()],
