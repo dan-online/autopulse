@@ -14,38 +14,14 @@ jobs:
   merge_job:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Login to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Remove tag
-        run: |
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            pr_number="${{ github.event.inputs.pr_number }}"
-          else
-            pr_number="${{ github.event.number }}"
-          fi
-
-          features=(postgres sqlite)
-          tags=(none amd64 arm64)
-
-          # pr-${pr_number}/pr-${pr_number}-arm64/pr-${pr_number}-amd64/ui-pr-${pr_number}
-          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} \
-            danonline/autopulse:pr-${pr_number} \
-            danonline/autopulse:pr-${pr_number}-arm64 \
-            danonline/autopulse:pr-${pr_number}-amd64 \
-            danonline/autopulse:ui-pr-${pr_number} || true
-
-          # pr-${pr_number}-postgres/pr-${pr_number}-postgres-arm64/pr-${pr_number}-postgres-amd64
-          # pr-${pr_number}-sqlite/pr-${pr_number}-sqlite-arm64/pr-${pr_number}-sqlite-amd64
-          for feature in "${features[@]}"; do
-            for tag in "${tags[@]}"; do
-              if [ "$tag" == "none" ]; then
-                docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number}-${feature} || true
-              else
-                docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number}-${feature}-${tag} || true
-              fi
-            done
-          done
+      - uses: chipkent/action-cleanup-package@v1.0.1
+        with:
+          delete-tags: pr-${{ github.event.number }}*
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -173,7 +173,7 @@ jobs:
 
       - name: Test binary
         if: matrix.feature == 'full'
-        run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }}
+        run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }} --workspace
 
       - name: Build binary
         if: matrix.feature == 'full'
@@ -181,7 +181,7 @@ jobs:
 
       - name: Test binary
         if: matrix.feature != 'full'
-        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
+        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
 
       - name: Build binary
         if: matrix.feature != 'full'
