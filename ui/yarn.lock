@@ -1180,17 +1180,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/adapter-cloudflare@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "@sveltejs/adapter-cloudflare@npm:5.1.0"
+"@sveltejs/adapter-cloudflare@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "@sveltejs/adapter-cloudflare@npm:7.0.1"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20250312.0"
-    esbuild: "npm:^0.24.0"
     worktop: "npm:0.8.0-next.18"
   peerDependencies:
     "@sveltejs/kit": ^2.0.0
-    wrangler: ^3.87.0 || ^4.0.0
-  checksum: 10c0/98bd1fc9b4b360c34a6f8930f4822b76e11fc4aeeef757bd2300efadbea70f5c1e116f6974898fcd56e5b451577eec15409849b9b4420a067015fc96f8eb4055
+    wrangler: ^4.0.0
+  checksum: 10c0/0dfe24c8fdc5ba36966b989fa1a158412f6304e0b3fdfc517a7df9c0edece0133dbc4f2aa328e9268ab8c895db919240ee9db8b7ad0a423141f4157176097d92
   languageName: node
   linkType: hard
 
@@ -2070,7 +2069,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:0.24.2, esbuild@npm:^0.24.0":
+"esbuild@npm:0.24.2":
   version: 0.24.2
   resolution: "esbuild@npm:0.24.2"
   dependencies:
@@ -3674,7 +3673,7 @@ __metadata:
     "@iconify-json/ph": "npm:^1.2.2"
     "@iconify-json/svg-spinners": "npm:^1.2.2"
     "@sveltejs/adapter-auto": "npm:6.0.0"
-    "@sveltejs/adapter-cloudflare": "npm:^5.1.0"
+    "@sveltejs/adapter-cloudflare": "npm:^7.0.1"
     "@sveltejs/adapter-node": "npm:^5.2.12"
     "@sveltejs/kit": "npm:^2.20.5"
     "@sveltejs/vite-plugin-svelte": "npm:^5.0.3"
