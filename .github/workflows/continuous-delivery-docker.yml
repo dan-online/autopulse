@@ -12,9 +12,6 @@ concurrency:
   group: continuous-delivery-docker-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  REGISTRY: ghcr.io
-
 permissions:
   contents: read
   packages: write
@@ -306,37 +303,39 @@ jobs:
 
       - name: Create and push manifests
         run: |
-          BASES="ghcr.io/dan-online/autopulse danonline/autopulse"
+          GHCR_BASE="ghcr.io/dan-online/autopulse"
+          DOCKERHUB_BASE="danonline/autopulse"
+          BASES="$GHCR_BASE $DOCKERHUB_BASE"
 
           for base in $BASES; do
             # Extract digests for each architecture
-            AMD64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
-            ARM64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
+            AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-amd64 | jq -r '.manifests[0].digest')
+            ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-arm64 | jq -r '.manifests[0].digest')
 
-            POSTGRES_AMD64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
-            POSTGRES_ARM64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
+            POSTGRES_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-postgres-amd64 | jq -r '.manifests[0].digest')
+            POSTGRES_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-postgres-arm64 | jq -r '.manifests[0].digest')
 
-            SQLITE_AMD64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
-            SQLITE_ARM64_DIGEST=$(docker manifest inspect ${base}:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
+            SQLITE_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-sqlite-amd64 | jq -r '.manifests[0].digest')
+            SQLITE_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${{ steps.tag.outputs.tag }}-sqlite-arm64 | jq -r '.manifests[0].digest')
 
             # Root: latest/pr-<number>
             docker manifest create ${base}:${{ steps.tag.outputs.tag }} \
-                --amend ${base}@${AMD64_DIGEST} \
-                --amend ${base}@${ARM64_DIGEST}
+                --amend ${GHCR_BASE}@${AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${ARM64_DIGEST}
 
             docker manifest push ${base}:${{ steps.tag.outputs.tag }}
 
             # Postgres: latest-postgres/pr-<number>-postgres
             docker manifest create ${base}:${{ steps.tag.outputs.tag }}-postgres \
-                --amend ${base}@${POSTGRES_AMD64_DIGEST} \
-                --amend ${base}@${POSTGRES_ARM64_DIGEST}
+                --amend ${GHCR_BASE}@${POSTGRES_AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${POSTGRES_ARM64_DIGEST}
 
             docker manifest push ${base}:${{ steps.tag.outputs.tag }}-postgres
 
             # SQLite: latest-sqlite/pr-<number>-sqlite
             docker manifest create ${base}:${{ steps.tag.outputs.tag }}-sqlite \
-                --amend ${base}@${SQLITE_AMD64_DIGEST} \
-                --amend ${base}@${SQLITE_ARM64_DIGEST}
+                --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
 
             docker manifest push ${base}:${{ steps.tag.outputs.tag }}-sqlite
 
