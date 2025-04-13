@@ -1,15 +1,12 @@
 <script lang="ts">
 import { invalidateAll } from "$app/navigation";
-import { page } from "$app/stores";
+import { page } from "$app/state";
 import { onMount } from "svelte";
-
-import IcBaselineInsertDriveFile from "~icons/ic/baseline-insert-drive-file";
-import IcRoundFolder from "~icons/ic/round-folder";
 
 import { enhance } from "$app/forms";
 import TimeAgo from "$lib/components/core/TimeAgo.svelte";
 
-$: ev = $page.data.ev;
+let ev = $derived(page.data.ev)
 
 let updateTimeout: number;
 
@@ -33,9 +30,9 @@ onMount(() => {
     <div class="flex">
         <div class="mx-auto h-30 w-30 p-4 rounded-full bg-base-200">
             {#if !ev.file_path.endsWith("/")}
-                <IcBaselineInsertDriveFile class="w-full h-full text-primary" />
+                 <i class="block i-ic-baseline-insert-drive-file w-full h-full text-primary"></i>
             {:else}
-                <IcRoundFolder class="w-full h-full text-primary" />
+                 <i class="block i-ic-round-folder w-full h-full text-primary"></i>
             {/if}
         </div>
     </div>

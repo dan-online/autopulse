@@ -1,14 +1,12 @@
 <script lang="ts">
 import { browser } from "$app/environment";
 import { replaceState } from "$app/navigation";
-import { page } from "$app/stores";
+import { page } from "$app/state";
 import icon from "$lib/assets/images/logo-tiny.webp";
-import IcBaselineWbSunny from "~icons/ic/baseline-wb-sunny";
-import MaterialSymbolsLightNightsStay from "~icons/material-symbols-light/nights-stay";
 
-$: path = $page.url.pathname;
-$: colorMode = $page.data.colorMode;
-$: forceAuth = $page.data.forceAuth;
+$: path = page.url.pathname;
+$: colorMode = page.data.colorMode;
+$: forceAuth = page.data.forceAuth;
 
 $: {
 	if (browser) {
@@ -17,7 +15,7 @@ $: {
 
 			url.searchParams.delete("colorMode");
 
-			replaceState(url.toString(), $page.state);
+			replaceState(url.toString(), page.state);
 		}
 	}
 }
@@ -52,11 +50,13 @@ $: {
           {/if}
           {#if colorMode === "dark"}
             <a class="btn btn-ghost btn-circle" href="?colorMode=light" data-sveltekit-preload-data="off">
-              <IcBaselineWbSunny class="w-6 h-6" />
+              <!-- <IcBaselineWbSunny class="w-6 h-6" /> -->
+               <i class="w-6 h-6 i-ic-baseline-wb-sunny"></i>
             </a>
           {:else}
             <a class="btn btn-ghost btn-circle" href="?colorMode=dark" data-sveltekit-preload-data="off">
-              <MaterialSymbolsLightNightsStay class="w-6 h-6 -mt-0.25" />
+              <!-- <MaterialSymbolsLightNightsStay class="w-6 h-6 -mt-0.25" /> -->
+                <i class="w-6 h-6 i-material-symbols-light-nights-stay"></i>
             </a>
           {/if}
         </div>

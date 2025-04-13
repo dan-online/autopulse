@@ -4,7 +4,6 @@ import { goto } from "$app/navigation";
 import { page } from "$app/stores";
 import type { ActionData } from "./$types";
 
-import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
 
 export let form: ActionData;
 let loading = false;
@@ -99,7 +98,8 @@ $: error = form?.error;
                     {#if !loading}
                         <span>Sign in</span>
                     {:else}
-                        <SvgSpinners90RingWithBg class="w-6 h-6" />
+                        <!-- <SvgSpinners90RingWithBg class="w-6 h-6" /> -->
+                         <i class="i-svg-spinners-90-ring-with-bg w-6 h-6 animate-spin"></i>
                     {/if}
                 </button>
             </div>

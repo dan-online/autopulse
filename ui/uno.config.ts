@@ -1,16 +1,18 @@
 import extractorSvelte from "@unocss/extractor-svelte";
 import {
 	defineConfig,
+	presetIcons,
 	presetTypography,
-	presetUno,
 	presetWebFonts,
+	presetWind3
 } from "unocss";
 import { presetDaisy } from "unocss-preset-daisyui-next";
 
 export default defineConfig({
 	extractors: [extractorSvelte()],
 	presets: [
-		presetUno(),
+		presetWind3(),
+		presetIcons(),
 		presetWebFonts({
 			provider: "bunny",
 			fonts: {
