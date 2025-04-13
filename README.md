@@ -77,7 +77,7 @@ We use the following terminology:
 
 ### Docker
 
-The easiest way to get started with autopulse is to use the provided [docker image](https://hub.docker.com/r/danonline/autopulse)
+The easiest way to get started with autopulse is to use the provided docker image on [ghcr.io](https://github.com/dan-online/autopulse/pkgs/container/autopulse) or [Docker Hub](https://hub.docker.com/r/danonline/autopulse)
 
 #### Tags
 
@@ -100,12 +100,12 @@ $ docker network create autopulse
 
 # postgres database
 $ docker run -d --net autopulse --name postgres -e POSTGRES_PASSWORD=autopulse -e POSTGRES_DB=autopulse postgres
-$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse danonline/autopulse
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postgres:autopulse@postgresql/autopulse --name autopulse ghcr.io/dan-online/autopulse
 
 # sqlite database
-$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse danonline/autopulse
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse ghcr.io/dan-online/autopulse
 # or in-memory
-$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory: --name autopulse danonline/autopulse
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory: --name autopulse ghcr.io/dan-online/autopulse
 ```
 
 ### Documentation
