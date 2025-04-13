@@ -58,10 +58,10 @@ jobs:
   ghcr:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to the Container registry
+      - name: Login to GHCR
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
