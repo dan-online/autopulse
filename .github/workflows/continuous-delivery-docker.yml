@@ -219,7 +219,25 @@ jobs:
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
 
-  # Push a manifest for arm/amd64
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Push Docker Image
+        if: matrix.feature == 'full'
+        run: |
+          docker tag ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }} danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+          docker push danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+
+      - name: Push Docker Image
+        if: matrix.feature != 'full'
+        run: |
+          docker tag ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }} danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+          docker push danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+
   manifest:
     name: Push manifest
     runs-on: ubuntu-latest
@@ -284,4 +302,22 @@ jobs:
 
           docker manifest push ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Push Docker Image
+        run: |
+          # Root: latest/pr-<number>
+          docker tag ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }} danonline/autopulse:${{ steps.tag.outputs.tag }}
+          docker push danonline/autopulse:${{ steps.tag.outputs.tag }}
 
+          # Postgres: latest-postgres/pr-<number>-postgres
+          docker tag ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-postgres danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+          docker push danonline/autopulse:${{ steps.tag.outputs.tag }}-postgres
+
+          # SQLite: latest-sqlite/pr-<number>-sqlite
+          docker tag ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-sqlite danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
+          docker push danonline/autopulse:${{ steps.tag.outputs.tag }}-sqlite
