@@ -16,7 +16,46 @@ permissions:
   id-token: write
 
 jobs:
-  merge_job:
+  docker_hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Remove tag
+        run: |
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            pr_number="${{ github.event.inputs.pr_number }}"
+          else
+            pr_number="${{ github.event.number }}"
+          fi
+
+          features=(postgres sqlite)
+          tags=(none amd64 arm64)
+
+          # pr-${pr_number}/pr-${pr_number}-arm64/pr-${pr_number}-amd64/ui-pr-${pr_number}
+          docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} \
+            danonline/autopulse:pr-${pr_number} \
+            danonline/autopulse:pr-${pr_number}-arm64 \
+            danonline/autopulse:pr-${pr_number}-amd64 \
+            danonline/autopulse:ui-pr-${pr_number} || true
+
+          # pr-${pr_number}-postgres/pr-${pr_number}-postgres-arm64/pr-${pr_number}-postgres-amd64
+          # pr-${pr_number}-sqlite/pr-${pr_number}-sqlite-arm64/pr-${pr_number}-sqlite-amd64
+          for feature in "${features[@]}"; do
+            for tag in "${tags[@]}"; do
+              if [ "$tag" == "none" ]; then
+                docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number}-${feature} || true
+              else
+                docker run --rm lumir/remove-dockerhub-tag --user ${{ secrets.DOCKERHUB_USERNAME }} --password ${{ secrets.DOCKERHUB_TOKEN }} danonline/autopulse:pr-${pr_number}-${feature}-${tag} || true
+              fi
+            done
+          done
+
+  ghcr:
     runs-on: ubuntu-latest
     steps:
       - name: Login to the Container registry
@@ -25,8 +64,19 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Identify tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            pr_number="${{ github.event.inputs.pr_number }}"
+          else
+            pr_number="${{ github.event.number }}"
+          fi
+
+          echo "tag=pr-${pr_number}" >> $GITHUB_OUTPUT
           
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          delete-tags: pr-${{ github.event.number }}*
+          delete-tags: ${{ steps.tag.outputs.tag }}*
           token: ${{ secrets.GITHUB_TOKEN }}
