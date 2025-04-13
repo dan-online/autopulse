@@ -10,7 +10,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: continuous-delivery
+  group: continuous-delivery-${{ github.ref }}
   cancel-in-progress: false
 
 env:
