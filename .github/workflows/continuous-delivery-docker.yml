@@ -12,6 +12,11 @@ concurrency:
   group: continuous-delivery-docker-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 jobs:
   push_readme:
     name: Push README to Docker Hub
