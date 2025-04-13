@@ -340,7 +340,10 @@ jobs:
           docker manifest push ${GHCR_BASE}:${TAG}-sqlite
           
           echo "Copy images over to Docker Hub..."
-          
+          docker pull ${GHCR_BASE}:${TAG}
+          docker pull ${GHCR_BASE}:${TAG}-postgres
+          docker pull ${GHCR_BASE}:${TAG}-sqlite
+
           docker tag ${GHCR_BASE}:${TAG} ${DOCKERHUB_BASE}:${TAG}
           docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
           docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
