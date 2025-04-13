@@ -349,6 +349,6 @@ jobs:
           docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
           docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
           
-          docker push ${DOCKERHUB_BASE}:${TAG}-postgres
-          docker push ${DOCKERHUB_BASE}:${TAG}-sqlite
-          docker push ${DOCKERHUB_BASE}:${TAG}
+          docker push ${DOCKERHUB_BASE}:${TAG}-postgres -q
+          docker push ${DOCKERHUB_BASE}:${TAG}-sqlite -q
+          docker push ${DOCKERHUB_BASE}:${TAG} -q
