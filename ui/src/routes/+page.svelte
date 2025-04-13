@@ -1,21 +1,11 @@
 <script lang="ts">
 import { goto, invalidateAll } from "$app/navigation";
-import { page } from "$app/stores";
-import { type Component, onMount } from "svelte";
+import { page } from "$app/state";
+import { onMount } from "svelte";
 
-import CiSearchMagnifyingGlass from "~icons/ci/search-magnifying-glass";
-import HugeiconsPackageDelivered from "~icons/hugeicons/package-delivered";
-import HugeiconsQueue01 from "~icons/hugeicons/queue-01";
-import LineMdChevronDown from "~icons/line-md/chevron-down";
-import MaterialSymbolsError from "~icons/material-symbols/error";
-import MaterialSymbolsFileCopyOutlineRounded from "~icons/material-symbols/file-copy-outline-rounded";
-import PajamasRetry from "~icons/pajamas/retry";
-import PhMagnifyingGlassBold from "~icons/ph/magnifying-glass-bold";
-import SvgSpinners90RingWithBg from "~icons/svg-spinners/90-ring-with-bg";
-
-let searchLoading = false;
+let searchLoading = $state(false);
 // if anyone clicks the magnifying glass, let them bypass the search limit and reduce the delay
-let limiter = true;
+let limiter = $state(true);
 
 type StatNames =
 	| "pending"
@@ -41,13 +31,13 @@ function correctSort(a: [string, unknown], b: [string, unknown]) {
 	return aIdx - bIdx;
 }
 
-const iconMap: Record<StatNames, Component> = {
-	pending: HugeiconsQueue01,
-	total: MaterialSymbolsFileCopyOutlineRounded,
-	found: CiSearchMagnifyingGlass,
-	processed: HugeiconsPackageDelivered,
-	retrying: PajamasRetry,
-	failed: MaterialSymbolsError,
+const iconMap: Record<StatNames, string> = {
+	pending: "i-hugeicons-queue-01",
+	total: "i-material-symbols-file-copy-outline-rounded",
+	found: "i-ci-search-magnifying-glass",
+	processed: "i-hugeicons-package-delivered",
+	retrying: "i-pajamas-retry",
+	failed: "i-material-symbols-error",
 };
 
 const descMap: Record<StatNames, string> = {
@@ -59,19 +49,35 @@ const descMap: Record<StatNames, string> = {
 	total: "Total scan events",
 };
 
-$: stats = $page.data.stats;
-$: events = $page.data.events;
-$: error = $page.data.error;
+// $: stats = page.data.stats;
+// $: events = page.data.events;
+// $: error = page.data.error;
+let stats = $derived(page.data.stats);
+let events = $derived(page.data.events);
+let error = $derived(page.data.error);
 
-$: sortBy = $page.url.searchParams.get("sort") || "created_at";
-$: searchBy = $page.url.searchParams.get("search") || "";
-$: pageBy = $page.url.searchParams.get("page")
-	? Number.parseInt($page.url.searchParams.get("page") as string)
-	: 1;
-$: limitBy = $page.url.searchParams.get("limit")
-	? Number.parseInt($page.url.searchParams.get("limit") as string)
-	: 10;
-$: statusBy = $page.url.searchParams.get("status") || "";
+// $: sortBy = page.url.searchParams.get("sort") || "created_at";
+// $: searchBy = page.url.searchParams.get("search") || "";
+// $: pageBy = page.url.searchParams.get("page")
+// 	? Number.parseInt(page.url.searchParams.get("page") as string)
+// 	: 1;
+// $: limitBy = page.url.searchParams.get("limit")
+// 	? Number.parseInt(page.url.searchParams.get("limit") as string)
+// 	: 10;
+// $: statusBy = page.url.searchParams.get("status") || "";
+let sortBy = $derived(page.url.searchParams.get("sort") || "created_at");
+let searchBy = $derived(page.url.searchParams.get("search") || "");
+let pageBy = $derived(
+	page.url.searchParams.get("page")
+		? Number.parseInt(page.url.searchParams.get("page") as string)
+		: 1,
+);
+let limitBy = $derived(
+	page.url.searchParams.get("limit")
+		? Number.parseInt(page.url.searchParams.get("limit") as string)
+		: 10,
+);
+let statusBy = $derived(page.url.searchParams.get("status") || "");
 
 const fields = [
 	{
@@ -122,34 +128,44 @@ const updateBasedOn = (
 ) => {
 	const url = new URL(window.location.href);
 
-	let search = "";
-	let sort = "";
-	let page = 1;
+	let searchTerm = "";
+	let sortOrder = "";
+	let pageIndex = 1;
 	let limit = 10;
 	let status = "";
 
 	if (key === "search" && e instanceof Event) {
 		const val = (e.target as HTMLInputElement).value;
-		search = val;
+		searchTerm = val;
 	} else {
-		search = searchBy;
+		searchTerm = searchBy;
 	}
 
 	if (key === "sort") {
-		sort = e as string;
+		sortOrder = e as string;
 	} else {
-		sort = sortBy;
+		sortOrder = sortBy;
 	}
 
 	if (key === "page") {
-		page = e as number;
+		if (e instanceof Event) {
+			pageIndex = Number.parseInt((e.target as HTMLInputElement).value);
+		} else if (typeof e === "number") {
+			pageIndex = e;
+		} else {
+			pageIndex = pageBy;
+		}
+
+		if (Number.isNaN(pageIndex) || pageIndex < 1) {
+			pageIndex = 1;
+		}
 	} else {
-		page = pageBy;
+		pageIndex = pageBy;
 	}
 
 	if (key === "limit" && e instanceof Event) {
 		limit = Number.parseInt((e.target as HTMLInputElement).value);
-		page = 1;
+		pageIndex = 1;
 	} else {
 		limit = limitBy;
 	}
@@ -160,28 +176,30 @@ const updateBasedOn = (
 		status = statusBy;
 	}
 
-	if (search) {
-		url.searchParams.set("search", search);
+	if (searchTerm) {
+		url.searchParams.set("search", searchTerm);
 	} else {
 		url.searchParams.delete("search");
 	}
 
-	if (sort) {
+	if (sortOrder) {
 		if (key === "sort") {
-			if (sort !== sortBy) {
-				sort = sort.split("-").join("");
+			if (sortOrder !== sortBy) {
+				sortOrder = sortOrder.split("-").join("");
 			} else {
-				sort = sort.startsWith("-") ? sort.slice(1) : `-${sort}`;
+				sortOrder = sortOrder.startsWith("-")
+					? sortOrder.slice(1)
+					: `-${sortOrder}`;
 			}
 		}
 
-		url.searchParams.set("sort", sort);
+		url.searchParams.set("sort", sortOrder);
 	} else {
 		url.searchParams.delete("sort");
 	}
 
 	if (pageBy) {
-		url.searchParams.set("page", page.toString());
+		url.searchParams.set("page", pageIndex.toString());
 	} else {
 		url.searchParams.delete("page");
 	}
@@ -208,6 +226,7 @@ const updateBasedOn = (
 			clearTimeout(updateTimeout);
 
 			await goto(updateUrl, {
+				replaceState: true,
 				invalidateAll: true,
 				keepFocus: true,
 				noScroll: true,
@@ -229,10 +248,13 @@ const updateBasedOn = (
         {#each Object.entries(stats.stats).sort(correctSort) as [key, val], idx}
             <div class="stat" class:md:border-l={idx !== 0}>
                 <div class="stat-figure text-primary">
-                    <svelte:component
+                    <!-- <svelte:component
                         this={iconMap[key as StatNames]}
                         class="mt-4 lg:mt-0 inline-block h-8 w-8"
-                    />
+                    /> -->
+                    <i
+                        class={iconMap[key as StatNames] + " mt-4 lg:mt-0 inline-block h-8 w-8"}
+                        ></i>
                 </div>
                 <div class="stat-title">
                     {key[0].toUpperCase() + key.slice(1)}
@@ -253,7 +275,7 @@ const updateBasedOn = (
                 <div class="flex md:flex-row flex-col gap-x-2 gap-y-3">
                     <h2 class="card-title">Events</h2>
                     <select
-                        on:input={(e) => updateBasedOn("status", e)}
+                        oninput={(e) => updateBasedOn("status", e)}
                         class="md:ml-4 select select-bordered select-sm"
                     >
                         <option value="">All</option>
@@ -267,17 +289,17 @@ const updateBasedOn = (
                             title={limiter
                                 ? "Disable Limiter"
                                 : "Enable Limiter"}
-                            on:click={() => {
+                            onclick={() => {
                                 limiter = !limiter;
                             }}
-                            class="transition bg-transparent absolute left-3.5 opacity-80 -mt-0.25"
+                            class="transition w-4 h-4 bg-transparent absolute left-3.5 opacity-80 -mt-0.25"
                         >
                             {#if searchLoading}
-                                <SvgSpinners90RingWithBg class="w-4 h-4" />
+                                <!-- <SvgSpinners90RingWithBg class="w-4 h-4" /> -->
+                                 <i class="block i-svg-spinners-90-ring-with-bg w-4 h-4"></i>
                             {:else}
-                                <span class:text-primary={!limiter}>
-                                    <PhMagnifyingGlassBold class="w-4 h-4" />
-                                </span>
+                                <i class:text-primary={!limiter} class="block i-ph-magnifying-glass-bold w-4 h-4">
+                                </i>
                             {/if}
                         </button>
                         <input
@@ -285,7 +307,7 @@ const updateBasedOn = (
                             class="input input-bordered pl-10 w-full input-sm"
                             placeholder="Search..."
                             value={searchBy}
-                            on:input={(e) => updateBasedOn("search", e)}
+                            oninput={(e) => updateBasedOn("search", e)}
                         />
                     </div>
                 </div>
@@ -297,7 +319,7 @@ const updateBasedOn = (
                                 {#each fields as field}
                                     <th>
                                         <button
-                                            on:click={() =>
+                                            onclick={() =>
                                                 updateBasedOn(
                                                     "sort",
                                                     field.key,
@@ -313,9 +335,10 @@ const updateBasedOn = (
                                                     sortBy}
                                             >
                                                 {#if field.key != "id"}
-                                                    <LineMdChevronDown
+                                                    <!-- <LineMdChevronDown
                                                         class="ml-auto w-4 h-4"
-                                                    />
+                                                    /> -->
+                                                    <i class="i-line-md-chevron-down ml-auto w-4 h-4"></i>
                                                 {/if}
                                             </span>
                                         </button>
@@ -328,7 +351,7 @@ const updateBasedOn = (
                             {#each events as event}
                                 <tr
                                     class="cursor-pointer hover:bg-base-300 rounded-md"
-                                    on:click={() => goto(`/status/${event.id}`)}
+                                    onclick={() => goto(`/status/${event.id}`)}
                                 >
                                     {#each fields as field}
                                         {#if field.key === "created_at" || field.key === "updated_at"}
@@ -362,34 +385,43 @@ const updateBasedOn = (
                 </div>
 
                 <div class="card-actions justify-between">
-                    <div>
+                    <div class="flex gap-2 items-center">
                         <input
                             type="number"
                             value={limitBy}
                             class="input input-bordered input-sm"
                             max={100}
                             min={1}
-                            on:change={(e) => updateBasedOn("limit", e)}
+                            onchange={(e) => updateBasedOn("limit", e)}
                         />
                     </div>
                     <div class="flex gap-2">
                         <button
                             class="btn btn-sm"
-                            disabled={pageBy <= 1}
-                            on:click={() => {
+                            disabled={pageBy <= 1  || searchLoading}
+                            onclick={() => {
                                 updateBasedOn("page", Math.max(1, pageBy - 1));
                             }}
+                            aria-label="Previous Page"
                         >
-                            Previous
+                            <i class="i-line-md-chevron-left w-4 h-4"></i>
                         </button>
+                        <input 
+                            value={pageBy}
+                            class="input input-bordered input-sm w-12 text-center"
+                            max={Math.ceil(events.length / limitBy)}
+                            min={1}
+                            onchange={(e) => updateBasedOn("page", e)}
+                        />
                         <button
                             class="btn btn-sm"
-                            disabled={events.length < limitBy}
-                            on:click={() => {
+                            disabled={events.length < limitBy || searchLoading}
+                            onclick={() => {
                                 updateBasedOn("page", pageBy + 1);
                             }}
+                            aria-label="Next Page"
                         >
-                            Next
+                            <i class="i-line-md-chevron-right w-4 h-4"></i>
                         </button>
                     </div>
                 </div>

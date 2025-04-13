@@ -737,13 +737,84 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify/json@npm:^2.2.310":
-  version: 2.2.326
-  resolution: "@iconify/json@npm:2.2.326"
+"@iconify-json/ci@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@iconify-json/ci@npm:1.2.2"
   dependencies:
     "@iconify/types": "npm:*"
-    pathe: "npm:^1.1.2"
-  checksum: 10c0/0cf5b80681d91ed6865bbcaf860404a3d618f2e611fcd28da4063fa3f30e6bcc83026b82585e6b4d4636e52695f637ae0425813d23949efd765de53eeed4e242
+  checksum: 10c0/63be58cb69d6fc8bb6756239fdadd99d658cec922d6def1d65b866dd9d473a1fe273d479641e71a4586d50008364ceba510a6e88bc16d36d7c1ed292ab9d6062
+  languageName: node
+  linkType: hard
+
+"@iconify-json/hugeicons@npm:^1.2.4":
+  version: 1.2.4
+  resolution: "@iconify-json/hugeicons@npm:1.2.4"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/645dc1785ad9ea3aa4d0816c5392eb0b6529e25510b9f2f98cf610fba8172545779d54cc44271fdfebc6f72a072851b370e9390efc754c6e88793dd5a2586d0b
+  languageName: node
+  linkType: hard
+
+"@iconify-json/ic@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@iconify-json/ic@npm:1.2.2"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/2c31ecded4d03300468d69fd15dac391242dcce80c6468313ec6a25e032e7e9996573bba683fe84524d6b52aa0e6e0a67dcbaabd7f8a1ec04a031d4ebefa2811
+  languageName: node
+  linkType: hard
+
+"@iconify-json/line-md@npm:^1.2.7":
+  version: 1.2.7
+  resolution: "@iconify-json/line-md@npm:1.2.7"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/50093d1a2f9625ce474aad16e023ec2679f326f41afe4f5270c44f4b2ab25f45e134c09dcc81ecb07fa114655e435035dbce68322a7826fb4d46968cb088fd05
+  languageName: node
+  linkType: hard
+
+"@iconify-json/material-symbols-light@npm:^1.2.19":
+  version: 1.2.19
+  resolution: "@iconify-json/material-symbols-light@npm:1.2.19"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/2ed17a7055a733ec7f5f4190ef55543c5a412600363e3f391f26aa913af81467e433084439f24a7119a4517275f50e03267f111a3a14b6eb764b14bd1cf1916c
+  languageName: node
+  linkType: hard
+
+"@iconify-json/material-symbols@npm:^1.2.19":
+  version: 1.2.19
+  resolution: "@iconify-json/material-symbols@npm:1.2.19"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/4343973ca155441a92f0f86c30990467b68b87b8c15e2b49037a5484433b50a4d30df5af662995fdbc8506fd7a1420e323c086b66a626abd0d865696e7a096aa
+  languageName: node
+  linkType: hard
+
+"@iconify-json/pajamas@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@iconify-json/pajamas@npm:1.2.5"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/d7915e50a9c6311983cde25ac2c4dfe6e676a0db8bb563f5d981acb98e02812cb4710c55d7cfe33af5a1e45d0939ee5a5f43961de98b323688c67d43ff691006
+  languageName: node
+  linkType: hard
+
+"@iconify-json/ph@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@iconify-json/ph@npm:1.2.2"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/a8e3a276364a125bdaefab07ae78425113baa34c11b22b4c33ab8ac01fd13c5ee8afccbb26f1a1aaaabd1681ed68dc6eb791df2d41d18724cab1362c61d3cd37
+  languageName: node
+  linkType: hard
+
+"@iconify-json/svg-spinners@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@iconify-json/svg-spinners@npm:1.2.2"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/61869963c21bc03052d64cd19155f9d596ffc71b3934ccdb468f5b5a1d3f003089c87744bf76145d8b1e946c45a88e1439e1f9470fcfc3a847b88262f1d71c76
   languageName: node
   linkType: hard
 
@@ -1678,7 +1749,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn@npm:^8.12.1, acorn@npm:^8.14.0, acorn@npm:^8.14.1":
+"acorn@npm:^8.12.1, acorn@npm:^8.14.0":
   version: 8.14.1
   resolution: "acorn@npm:8.14.1"
   bin:
@@ -3228,13 +3299,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pathe@npm:^1.1.2":
-  version: 1.1.2
-  resolution: "pathe@npm:1.1.2"
-  checksum: 10c0/64ee0a4e587fb0f208d9777a6c56e4f9050039268faaaaecd50e959ef01bf847b7872785c36483fa5cdcdbdfdb31fef2ff222684d4fc21c330ab60395c681897
-  languageName: node
-  linkType: hard
-
 "pathe@npm:^2.0.1, pathe@npm:^2.0.2, pathe@npm:^2.0.3":
   version: 2.0.3
   resolution: "pathe@npm:2.0.3"
@@ -3911,7 +3975,15 @@ __metadata:
   resolution: "ui@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^1.9.4"
-    "@iconify/json": "npm:^2.2.310"
+    "@iconify-json/ci": "npm:^1.2.2"
+    "@iconify-json/hugeicons": "npm:^1.2.4"
+    "@iconify-json/ic": "npm:^1.2.2"
+    "@iconify-json/line-md": "npm:^1.2.7"
+    "@iconify-json/material-symbols": "npm:^1.2.19"
+    "@iconify-json/material-symbols-light": "npm:^1.2.19"
+    "@iconify-json/pajamas": "npm:^1.2.5"
+    "@iconify-json/ph": "npm:^1.2.2"
+    "@iconify-json/svg-spinners": "npm:^1.2.2"
     "@sveltejs/adapter-auto": "npm:4.0.0"
     "@sveltejs/adapter-cloudflare": "npm:^5.0.3"
     "@sveltejs/adapter-node": "npm:^5.2.12"
@@ -3926,7 +3998,6 @@ __metadata:
     typescript: "npm:^5.7.3"
     unocss: "npm:66.0.0"
     unocss-preset-daisyui-next: "npm:^0.1.2"
-    unplugin-icons: "npm:^22.1.0"
     vite: "npm:^6.2.0"
     wrangler: "npm:^3.109.3"
   languageName: unknown
@@ -4033,39 +4104,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unplugin-icons@npm:^22.1.0":
-  version: 22.1.0
-  resolution: "unplugin-icons@npm:22.1.0"
-  dependencies:
-    "@antfu/install-pkg": "npm:^1.0.0"
-    "@iconify/utils": "npm:^2.3.0"
-    debug: "npm:^4.4.0"
-    local-pkg: "npm:^1.0.0"
-    unplugin: "npm:^2.2.0"
-  peerDependencies:
-    "@svgr/core": ">=7.0.0"
-    "@svgx/core": ^1.0.1
-    "@vue/compiler-sfc": ^3.0.2 || ^2.7.0
-    svelte: ^3.0.0 || ^4.0.0 || ^5.0.0
-    vue-template-compiler: ^2.6.12
-    vue-template-es2015-compiler: ^1.9.0
-  peerDependenciesMeta:
-    "@svgr/core":
-      optional: true
-    "@svgx/core":
-      optional: true
-    "@vue/compiler-sfc":
-      optional: true
-    svelte:
-      optional: true
-    vue-template-compiler:
-      optional: true
-    vue-template-es2015-compiler:
-      optional: true
-  checksum: 10c0/febed00f6e65bc0ef0e07005d7bef3ec0dbb7a8077bd73c7ad798c705814a40b3172d5f3e7df0d9f9fdfda1b6dd1a31922c0f9f32123623872bb7117c35545cc
-  languageName: node
-  linkType: hard
-
 "unplugin-utils@npm:^0.2.4":
   version: 0.2.4
   resolution: "unplugin-utils@npm:0.2.4"
@@ -4073,17 +4111,6 @@ __metadata:
     pathe: "npm:^2.0.2"
     picomatch: "npm:^4.0.2"
   checksum: 10c0/b5ab2db37823f5b4c8ee8719caa4b5a50b2da33c74c8110d46deb7a2399dfa15cbcaa0cff62aa6400c76e778e42becd9195c09b6502c0c007d03610f432c875f
-  languageName: node
-  linkType: hard
-
-"unplugin@npm:^2.2.0":
-  version: 2.3.2
-  resolution: "unplugin@npm:2.3.2"
-  dependencies:
-    acorn: "npm:^8.14.1"
-    picomatch: "npm:^4.0.2"
-    webpack-virtual-modules: "npm:^0.6.2"
-  checksum: 10c0/157a50072601b9bfbf3ab27a76a04685fb0af0c1a579d958787ffcb28a4d64e09acf42f0176e8767ccd940f27ee52d97a7f6aa6ce2e1e0dbe666ec26519750ef
   languageName: node
   linkType: hard
 
@@ -4171,13 +4198,6 @@ __metadata:
   peerDependencies:
     vue: ^3.4.37
   checksum: 10c0/49d7ebb1ae9b839c5778d0e4fd3a1a513046b8ed874bfcb14c00505d015e4f989437246bd0cf58d25dbfe4d765cc219717d9d8a1f0a366d4a98c25fc8f99bca2
-  languageName: node
-  linkType: hard
-
-"webpack-virtual-modules@npm:^0.6.2":
-  version: 0.6.2
-  resolution: "webpack-virtual-modules@npm:0.6.2"
-  checksum: 10c0/5ffbddf0e84bf1562ff86cf6fcf039c74edf09d78358a6904a09bbd4484e8bb6812dc385fe14330b715031892dcd8423f7a88278b57c9f5002c84c2860179add
   languageName: node
   linkType: hard
 
