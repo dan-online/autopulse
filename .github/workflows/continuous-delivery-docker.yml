@@ -46,35 +46,40 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull Request suffix
-        run: |
-          if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}"
-            echo "uitag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "Release tag: ${{ github.event.release.tag_name }}"
-            echo "uitag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "Not a PR branch"
-            echo "uitag=ui" >> "$GITHUB_OUTPUT"
-          fi
-        id: tag
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            prefix=ui
 
       - name: Build and push (ui)
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+          # tags: danonline/autopulse:${{ steps.tag.outputs.uitag }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           context: ui/
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
@@ -119,9 +124,23 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
+        if: matrix.feature == 'full'
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=${{ matrix.platform.tag }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        if: matrix.feature != 'full'
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=${{ matrix.platform.tag }}-${{ matrix.feature }}
 
       - name: Cargo Cache
         if: matrix.feature == 'full'
@@ -151,19 +170,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-full-
 
-      - name: Pull Request suffix
-        run: |
-          if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}"
-            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "Release tag: ${{ github.event.release.tag_name }}"
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "Not a PR branch"
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-        id: tag
+      # - name: Pull Request suffix
+      #   run: |
+      #     if [ -n "${{ github.event.number }}" ]; then
+      #       echo "PR number: ${{ github.event.number }}"
+      #       echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+      #     elif [ -n "${{ github.event.release.tag_name }}" ]; then
+      #       echo "Release tag: ${{ github.event.release.tag_name }}"
+      #       echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+      #     else
+      #       echo "Not a PR branch"
+      #       echo "tag=latest" >> "$GITHUB_OUTPUT"
+      #     fi
+      #   id: tag
 
       - uses: taiki-e/github-actions/install-rust@main
         with:
