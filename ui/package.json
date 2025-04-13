@@ -7,7 +7,7 @@
 		"build": "yarn prepare && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync",
-		"check": "syarn prepare && svelte-check --tsconfig ./tsconfig.json",
+		"check": "yarn prepare && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "yarn prepare && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
