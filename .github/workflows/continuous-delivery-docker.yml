@@ -12,6 +12,10 @@ concurrency:
   group: continuous-delivery-docker-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 permissions:
   contents: read
   packages: write
