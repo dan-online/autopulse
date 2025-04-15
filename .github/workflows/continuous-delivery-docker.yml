@@ -339,16 +339,28 @@ jobs:
           docker manifest push ${GHCR_BASE}:${TAG}-postgres
           docker manifest push ${GHCR_BASE}:${TAG}-sqlite
           docker manifest push ${GHCR_BASE}:${TAG}
+
+          docker buildx imagetools create \
+            --tag danonline/autopulse:${TAG} \
+            ghcr.io/dan-online/autopulse:${TAG}
+
+          docker buildx imagetools create \
+            --tag danonline/autopulse:${TAG}-postgres \
+            ghcr.io/dan-online/autopulse:${TAG}-postgres
+
+          docker buildx imagetools create \
+            --tag danonline/autopulse:${TAG}-sqlite \
+            ghcr.io/dan-online/autopulse:${TAG}-sqlite
           
           echo "Copy images over to Docker Hub..."
-          docker pull ${GHCR_BASE}:${TAG} -q
-          docker pull ${GHCR_BASE}:${TAG}-postgres -q
-          docker pull ${GHCR_BASE}:${TAG}-sqlite -q
+          # docker pull ${GHCR_BASE}:${TAG} -q
+          # docker pull ${GHCR_BASE}:${TAG}-postgres -q
+          # docker pull ${GHCR_BASE}:${TAG}-sqlite -q
 
-          docker tag ${GHCR_BASE}:${TAG} ${DOCKERHUB_BASE}:${TAG}
-          docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
-          docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
+          # docker tag ${GHCR_BASE}:${TAG} ${DOCKERHUB_BASE}:${TAG}
+          # docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
+          # docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
           
-          docker push ${DOCKERHUB_BASE}:${TAG}-postgres -q
-          docker push ${DOCKERHUB_BASE}:${TAG}-sqlite -q
-          docker push ${DOCKERHUB_BASE}:${TAG} -q
+          # docker push ${DOCKERHUB_BASE}:${TAG}-postgres -q
+          # docker push ${DOCKERHUB_BASE}:${TAG}-sqlite -q
+          # docker push ${DOCKERHUB_BASE}:${TAG} -q
