@@ -237,6 +237,8 @@ const updateBasedOn = (
 		limiter ? 500 : 1,
 	);
 };
+
+let splut = $derived(Object.entries(stats.stats).sort(correctSort) as [StatNames, string][])
 </script>
 
 {#if error}
@@ -245,7 +247,7 @@ const updateBasedOn = (
 
 {#if stats}
     <div class="flex flex-col lg:flex-row mt-4">
-        {#each Object.entries(stats.stats).sort(correctSort) as [key, val], idx}
+        {#each splut as [key, val], idx}
             <div class="stat" class:md:border-l={idx !== 0}>
                 <div class="stat-figure text-primary">
                     <!-- <svelte:component
@@ -253,7 +255,7 @@ const updateBasedOn = (
                         class="mt-4 lg:mt-0 inline-block h-8 w-8"
                     /> -->
                     <i
-                        class={iconMap[key as StatNames] + " mt-4 lg:mt-0 inline-block h-8 w-8"}
+                        class={iconMap[key] + " mt-4 lg:mt-0 inline-block h-8 w-8"}
                         ></i>
                 </div>
                 <div class="stat-title">
