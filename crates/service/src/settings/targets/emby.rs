@@ -106,13 +106,12 @@ impl Emby {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
+        headers.insert("X-Emby-Token", self.token.parse()?);
         headers.insert(
             "Authorization",
-            format!("MediaBrowser Token=\"{}\"", self.token)
-                .parse()
-                .unwrap(),
+            format!("MediaBrowser Token=\"{}\"", self.token).parse()?,
         );
-        headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("Accept", "application/json".parse()?);
 
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
