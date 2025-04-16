@@ -56,7 +56,6 @@ let stats = $derived(page.data.stats);
 let events = $derived(page.data.events);
 let error = $derived(page.data.error);
 
-
 let statsSorted = $derived(
 	Object.entries(stats.stats).sort(correctSort) as [StatNames, string][],
 );
