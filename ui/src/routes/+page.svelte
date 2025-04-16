@@ -56,6 +56,11 @@ let stats = $derived(page.data.stats);
 let events = $derived(page.data.events);
 let error = $derived(page.data.error);
 
+
+let statsSorted = $derived(
+	Object.entries(stats.stats).sort(correctSort) as [StatNames, string][],
+);
+
 // $: sortBy = page.url.searchParams.get("sort") || "created_at";
 // $: searchBy = page.url.searchParams.get("search") || "";
 // $: pageBy = page.url.searchParams.get("page")
@@ -237,8 +242,6 @@ const updateBasedOn = (
 		limiter ? 500 : 1,
 	);
 };
-
-let splut = $derived(Object.entries(stats.stats).sort(correctSort) as [StatNames, string][])
 </script>
 
 {#if error}
@@ -247,7 +250,7 @@ let splut = $derived(Object.entries(stats.stats).sort(correctSort) as [StatNames
 
 {#if stats}
     <div class="flex flex-col lg:flex-row mt-4">
-        {#each splut as [key, val], idx}
+        {#each statsSorted as [key, val], idx}
             <div class="stat" class:md:border-l={idx !== 0}>
                 <div class="stat-figure text-primary">
                     <!-- <svelte:component
