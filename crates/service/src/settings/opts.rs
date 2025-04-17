@@ -47,10 +47,10 @@ pub enum LogRotation {
 impl From<LogRotation> for Rotation {
     fn from(rotation: LogRotation) -> Self {
         match rotation {
-            LogRotation::Daily => Rotation::DAILY,
-            LogRotation::Minutely => Rotation::MINUTELY,
-            LogRotation::Hourly => Rotation::HOURLY,
-            LogRotation::Never => Rotation::NEVER,
+            LogRotation::Daily => Self::DAILY,
+            LogRotation::Minutely => Self::MINUTELY,
+            LogRotation::Hourly => Self::HOURLY,
+            LogRotation::Never => Self::NEVER,
         }
     }
 }

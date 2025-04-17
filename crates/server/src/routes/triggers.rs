@@ -1,3 +1,4 @@
+use crate::middleware::auth::check_auth;
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
@@ -12,9 +13,7 @@ use autopulse_service::{
 };
 use autopulse_utils::sify;
 use std::sync::Arc;
-use tracing::info;
-
-use crate::middleware::auth::check_auth;
+use tracing::{debug_span, info};
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
@@ -102,12 +101,9 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            info!(
-                "added {} file{} from {} trigger",
-                scan_events.len(),
-                sify(&scan_events),
-                trigger
-            );
+            debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+                info!("added {} file{}", scan_events.len(), sify(&scan_events));
+            });
 
             if scan_events.len() != paths.len() {
                 return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
@@ -174,10 +170,16 @@ pub async fn trigger_get(
 
             manager
                 .webhooks
-                .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
+                .add_event(
+                    EventType::New,
+                    Some(trigger.to_string()),
+                    &[file_path.clone()],
+                )
                 .await;
 
-            info!("added 1 file from {} trigger", trigger);
+            debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+                info!("added 1 file");
+            });
 
             let scan_event = scan_event.unwrap();
 
