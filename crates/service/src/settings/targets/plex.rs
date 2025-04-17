@@ -372,8 +372,6 @@ impl Plex {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("{key}/analyze"))?;
 
-        println!("analyzing: {url}");
-
         client.put(url).perform().await.map(|_| ())
     }
 

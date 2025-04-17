@@ -12,7 +12,7 @@ use autopulse_service::{
 };
 use autopulse_utils::sify;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::info;
 
 use crate::middleware::auth::check_auth;
 
@@ -102,7 +102,7 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            debug!(
+            info!(
                 "added {} file{} from {} trigger",
                 scan_events.len(),
                 sify(&scan_events),
@@ -177,7 +177,7 @@ pub async fn trigger_get(
                 .add_event(EventType::New, Some(trigger.to_string()), &[file_path])
                 .await;
 
-            debug!("added 1 file from {} trigger", trigger);
+            info!("added 1 file from {} trigger", trigger);
 
             let scan_event = scan_event.unwrap();
 
