@@ -1770,7 +1770,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"daisyui@npm:^4.12.23, daisyui@npm:^4.12.24":
+"daisyui@npm:^4.12.23":
   version: 4.12.24
   resolution: "daisyui@npm:4.12.24"
   dependencies:
@@ -1779,6 +1779,13 @@ __metadata:
     picocolors: "npm:^1"
     postcss-js: "npm:^4"
   checksum: 10c0/a5865e05b543965c21a934264da2c576f0760137344cb270e2d27183f03c9c51ae1b0af8ebe530fcd31ba4602711d57a5ddbf59c6c9461c53fdd73d53ed61375
+  languageName: node
+  linkType: hard
+
+"daisyui@npm:^5.0.27":
+  version: 5.0.27
+  resolution: "daisyui@npm:5.0.27"
+  checksum: 10c0/704f90839c140efd655e16823073ca9023151c79b0a17798b5109954a8ee888a5a083f24024d8e79e553ff0cd305bbda0101e39e0adc96a30c301ba61f65c849
   languageName: node
   linkType: hard
 
@@ -3419,7 +3426,7 @@ __metadata:
     "@unocss/core": "npm:66.0.0"
     "@unocss/extractor-svelte": "npm:66.0.0"
     "@unocss/reset": "npm:66.0.0"
-    daisyui: "npm:^4.12.24"
+    daisyui: "npm:^5.0.27"
     svelte: "npm:^5.28.1"
     svelte-check: "npm:^4.1.6"
     typescript: "npm:^5.8.3"
