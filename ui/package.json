@@ -29,7 +29,7 @@
 		"@unocss/core": "66.0.0",
 		"@unocss/extractor-svelte": "66.0.0",
 		"@unocss/reset": "66.0.0",
-		"daisyui": "^4.12.24",
+		"daisyui": "^5.0.27",
 		"svelte": "^5.28.1",
 		"svelte-check": "^4.1.6",
 		"typescript": "^5.8.3",
