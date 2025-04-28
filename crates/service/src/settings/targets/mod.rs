@@ -281,12 +281,25 @@ impl RequestBuilderPerform for RequestBuilder {
                 Ok(response)
             }
 
-            Err(e) => Err(anyhow::anyhow!(
-                "failed to {} {}: {}",
-                built.method(),
-                built.url(),
-                e,
-            )),
+            Err(e) => {
+                let status = e.status();
+                if let Some(status) = status {
+                    return Err(anyhow::anyhow!(
+                        "failed to {} {}: {} - {}",
+                        built.method(),
+                        built.url(),
+                        status,
+                        e
+                    ));
+                }
+
+                Err(anyhow::anyhow!(
+                    "failed to {} {}: {}",
+                    built.method(),
+                    built.url(),
+                    e,
+                ))
+            }
         }
     }
 }
