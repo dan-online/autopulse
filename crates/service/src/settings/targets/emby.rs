@@ -352,7 +352,7 @@ impl TargetProcess for Emby {
             .await
             .context("failed to fetch libraries")?;
 
-        let mut succeded = Vec::new();
+        let mut succeeded = Vec::new();
 
         let mut to_find = HashMap::new();
         let mut to_refresh = Vec::new();
@@ -388,7 +388,7 @@ impl TargetProcess for Emby {
                 match self.refresh_item(&item).await {
                     Ok(()) => {
                         debug!("refreshed item: {}", item.id);
-                        succeded.push(ev.id.clone());
+                        succeeded.push(ev.id.clone());
                     }
                     Err(e) => {
                         error!("failed to refresh item: {}", e);
@@ -407,8 +407,8 @@ impl TargetProcess for Emby {
             }
         }
 
-        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
+        succeeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
 
-        Ok(succeded)
+        Ok(succeeded)
     }
 }
