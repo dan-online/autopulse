@@ -427,7 +427,7 @@ impl TargetProcess for Plex {
                                             ev_path
                                         );
 
-                                        *succeeded_entry |= false;
+                                        *succeeded_entry &= false;
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
@@ -472,7 +472,7 @@ impl TargetProcess for Plex {
                                         }
 
                                         if all_success {
-                                            *succeeded_entry = true;
+                                            *succeeded_entry &= true;
                                         }
                                     }
                                 }
@@ -481,7 +481,7 @@ impl TargetProcess for Plex {
                                 }
                             };
                         } else {
-                            *succeeded_entry = true;
+                            *succeeded_entry &= true;
                         }
                     }
                     Err(e) => {
