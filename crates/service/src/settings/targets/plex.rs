@@ -6,7 +6,7 @@ use autopulse_database::models::ScanEvent;
 use autopulse_utils::{get_url, squash_directory, what_is, PathType};
 use reqwest::header;
 use serde::Deserialize;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
@@ -152,7 +152,7 @@ impl Plex {
         Ok(libraries.media_container.directory.unwrap())
     }
 
-    fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
+    fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
         let ev_path = Path::new(path);
         let mut matches: Vec<(usize, &Library)> = vec![];
 
@@ -165,13 +165,13 @@ impl Plex {
             }
         }
 
+        // Sort the best matched library first
         matches.sort_by(|(len_a, _), (len_b, _)| len_b.cmp(len_a));
 
-        // Return the most specific match
         matches
             .into_iter()
-            .next()
             .map(|(_, library)| library.clone())
+            .collect()
     }
 
     async fn get_episodes(&self, key: &str) -> anyhow::Result<LibraryResponse> {
@@ -398,13 +398,22 @@ impl TargetProcess for Plex {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await.context("failed to get libraries")?;
 
-        let mut succeeded = Vec::new();
+        let mut succeeded: HashMap<String, bool> = HashMap::new();
 
         for ev in evs {
-            let ev_path = ev.get_path(&self.rewrite);
+            let succeeded_entry = succeeded.entry(ev.id.clone()).or_default();
 
-            if let Some(library) = self.get_library(&libraries, &ev_path) {
+            let ev_path = ev.get_path(&self.rewrite);
+            let matched_libraries = self.get_libraries(&libraries, &ev_path);
+
+            if matched_libraries.is_empty() {
+                error!("no matching library for {ev_path}");
+                continue;
+            }
+
+            for library in matched_libraries {
                 trace!("found library '{}' for {ev_path}", library.title);
+
                 match self.scan(ev, &library).await {
                     Ok(()) => {
                         debug!("scanned '{}'", ev_path);
@@ -417,7 +426,8 @@ impl TargetProcess for Plex {
                                             "failed to find items for file: '{}', leaving at scan",
                                             ev_path
                                         );
-                                        succeeded.push(ev.id.clone());
+
+                                        *succeeded_entry = false;
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
@@ -462,7 +472,7 @@ impl TargetProcess for Plex {
                                         }
 
                                         if all_success {
-                                            succeeded.push(ev.id.clone());
+                                            *succeeded_entry = true;
                                         }
                                     }
                                 }
@@ -471,19 +481,20 @@ impl TargetProcess for Plex {
                                 }
                             };
                         } else {
-                            succeeded.push(ev.id.clone());
+                            *succeeded_entry = true;
                         }
                     }
                     Err(e) => {
                         error!("failed to scan file '{}': {}", ev_path, e);
                     }
                 }
-            } else {
-                error!("failed to find library for file: {}", ev_path);
             }
         }
 
-        Ok(succeeded)
+        Ok(succeeded
+            .into_iter()
+            .filter_map(|(k, v)| if v { Some(k) } else { None })
+            .collect())
     }
 }
 
@@ -545,8 +556,8 @@ mod tests {
         }];
 
         let path = "/media/movies/Inception.mkv";
-        let library = plex.get_library(&libraries, path).unwrap();
-        assert!(library.key == "library_key_movies");
+        let libraries = plex.get_libraries(&libraries, path);
+        assert!(libraries[0].key == "library_key_movies");
 
         let nested_libraries = [
             Library {
@@ -567,7 +578,8 @@ mod tests {
 
         let path = "/media/movies/4k/Inception.mkv";
 
-        let library = plex.get_library(&nested_libraries, path).unwrap();
-        assert!(library.key == "library_key_movies_4k");
+        let libraries = plex.get_libraries(&nested_libraries, path);
+        assert!(libraries[0].key == "library_key_movies_4k");
+        assert!(libraries[1].key == "library_key_movies");
     }
 }

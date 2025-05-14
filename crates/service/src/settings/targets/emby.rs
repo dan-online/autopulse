@@ -129,20 +129,21 @@ impl Emby {
         Ok(res.json().await?)
     }
 
-    fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
+    fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
         let ev_path = Path::new(path);
+        let mut matched: Vec<Library> = vec![];
 
         for library in libraries {
             for location in &library.locations {
                 let path = Path::new(location);
 
                 if ev_path.starts_with(path) {
-                    return Some(library.clone());
+                    matched.push(library.clone());
                 }
             }
         }
 
-        None
+        matched
     }
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
@@ -362,10 +363,20 @@ impl TargetProcess for Emby {
             for ev in evs {
                 let ev_path = ev.get_path(&self.rewrite);
 
-                if let Some(library) = self.get_library(&libraries, &ev_path) {
-                    to_find.entry(library).or_insert_with(Vec::new).push(*ev);
-                } else {
+                // if let Some(library) = self.get_libraries(&libraries, &ev_path) {
+                //     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
+                // } else {
+                //     error!("failed to find library for file: {}", ev_path);
+                // }
+                let matched_librares = self.get_libraries(&libraries, &ev_path);
+
+                if matched_librares.is_empty() {
                     error!("failed to find library for file: {}", ev_path);
+                    continue;
+                }
+
+                for library in matched_librares {
+                    to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 }
             }
 
