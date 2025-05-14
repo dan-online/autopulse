@@ -368,14 +368,14 @@ impl TargetProcess for Emby {
                 // } else {
                 //     error!("failed to find library for file: {}", ev_path);
                 // }
-                let matched_librares = self.get_libraries(&libraries, &ev_path);
+                let matched_libraries = self.get_libraries(&libraries, &ev_path);
 
-                if matched_librares.is_empty() {
+                if matched_libraries.is_empty() {
                     error!("failed to find library for file: {}", ev_path);
                     continue;
                 }
 
-                for library in matched_librares {
+                for library in matched_libraries {
                     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 }
             }
