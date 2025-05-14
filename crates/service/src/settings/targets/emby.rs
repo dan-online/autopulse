@@ -353,7 +353,7 @@ impl TargetProcess for Emby {
             .await
             .context("failed to fetch libraries")?;
 
-        let mut succeded = Vec::new();
+        let mut succeeded: HashMap<String, bool> = HashMap::new();
 
         let mut to_find = HashMap::new();
         let mut to_refresh = Vec::new();
@@ -363,11 +363,6 @@ impl TargetProcess for Emby {
             for ev in evs {
                 let ev_path = ev.get_path(&self.rewrite);
 
-                // if let Some(library) = self.get_libraries(&libraries, &ev_path) {
-                //     to_find.entry(library).or_insert_with(Vec::new).push(*ev);
-                // } else {
-                //     error!("failed to find library for file: {}", ev_path);
-                // }
                 let matched_libraries = self.get_libraries(&libraries, &ev_path);
 
                 if matched_libraries.is_empty() {
@@ -399,10 +394,11 @@ impl TargetProcess for Emby {
                 match self.refresh_item(&item).await {
                     Ok(()) => {
                         debug!("refreshed item: {}", item.id);
-                        succeded.push(ev.id.clone());
+                        *succeeded.entry(ev.id.clone()).or_default() &= true;
                     }
                     Err(e) => {
                         error!("failed to refresh item: {}", e);
+                        *succeeded.entry(ev.id.clone()).or_default() &= false;
                     }
                 }
             }
@@ -411,15 +407,23 @@ impl TargetProcess for Emby {
         }
 
         if !to_scan.is_empty() {
-            self.scan(&to_scan).await.context("failed to scan files")?;
+            match self.scan(&to_scan).await {
+                Ok(()) => {
+                    for file in &to_scan {
+                        debug!("scanned file: {}", file.file_path);
 
-            for file in &to_scan {
-                debug!("scanned file: {}", file.file_path);
+                        *succeeded.entry(file.id.clone()).or_default() &= true;
+                    }
+                }
+                Err(e) => {
+                    error!("failed to scan items: {}", e);
+                }
             }
         }
 
-        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
-
-        Ok(succeded)
+        Ok(succeeded
+            .iter()
+            .filter_map(|(k, v)| if *v { Some(k.clone()) } else { None })
+            .collect())
     }
 }
