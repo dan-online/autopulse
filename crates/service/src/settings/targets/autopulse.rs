@@ -54,12 +54,12 @@ impl Autopulse {
 
 impl TargetProcess for Autopulse {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
-        let mut succeded = Vec::new();
+        let mut succeeded = Vec::new();
 
         for ev in evs {
             match self.scan(ev).await {
                 Ok(()) => {
-                    succeded.push(ev.id.clone());
+                    succeeded.push(ev.id.clone());
                     debug!("file scanned: {}", ev.get_path(&self.rewrite));
                 }
                 Err(e) => {
@@ -68,6 +68,6 @@ impl TargetProcess for Autopulse {
             }
         }
 
-        Ok(succeded)
+        Ok(succeeded)
     }
 }
