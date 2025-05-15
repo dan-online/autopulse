@@ -172,7 +172,7 @@ impl Emby {
 
         let res = client.get(url).perform().await?;
 
-        // Possibly uneeded unless we can use streams
+        // Possibly unneeded unless we can use streams
         let bytes = res.bytes().await?;
 
         let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
