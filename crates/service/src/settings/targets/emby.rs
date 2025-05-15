@@ -398,7 +398,7 @@ impl TargetProcess for Emby {
                     }
                     Err(e) => {
                         error!("failed to refresh item: {}", e);
-                        *succeeded.entry(ev.id.clone()).or_insert(true) &= false;
+                        succeeded.insert(ev.id.clone(), false);
                     }
                 }
             }
@@ -419,7 +419,7 @@ impl TargetProcess for Emby {
                     error!("failed to scan items: {}", e);
 
                     for ev in &to_scan {
-                        *succeeded.entry(ev.id.clone()).or_insert(true) &= false;
+                        succeeded.insert(ev.id.clone(), false);
                     }
                 }
             }

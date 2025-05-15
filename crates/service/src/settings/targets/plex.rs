@@ -409,7 +409,7 @@ impl TargetProcess for Plex {
             if matched_libraries.is_empty() {
                 error!("no matching library for {ev_path}");
 
-                *succeeded_entry &= false;
+                *succeeded_entry = false;
 
                 continue;
             }
@@ -430,7 +430,7 @@ impl TargetProcess for Plex {
                                             ev_path
                                         );
 
-                                        *succeeded_entry &= false;
+                                        *succeeded_entry = false;
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
