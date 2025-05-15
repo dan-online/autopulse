@@ -401,13 +401,16 @@ impl TargetProcess for Plex {
         let mut succeeded: HashMap<String, bool> = HashMap::new();
 
         for ev in evs {
-            let succeeded_entry = succeeded.entry(ev.id.clone()).or_default();
+            let succeeded_entry = succeeded.entry(ev.id.clone()).or_insert(true);
 
             let ev_path = ev.get_path(&self.rewrite);
             let matched_libraries = self.get_libraries(&libraries, &ev_path);
 
             if matched_libraries.is_empty() {
                 error!("no matching library for {ev_path}");
+
+                *succeeded_entry &= false;
+
                 continue;
             }
 

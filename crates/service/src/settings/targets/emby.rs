@@ -394,11 +394,11 @@ impl TargetProcess for Emby {
                 match self.refresh_item(&item).await {
                     Ok(()) => {
                         debug!("refreshed item: {}", item.id);
-                        *succeeded.entry(ev.id.clone()).or_default() &= true;
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= true;
                     }
                     Err(e) => {
                         error!("failed to refresh item: {}", e);
-                        *succeeded.entry(ev.id.clone()).or_default() &= false;
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= false;
                     }
                 }
             }
@@ -409,14 +409,18 @@ impl TargetProcess for Emby {
         if !to_scan.is_empty() {
             match self.scan(&to_scan).await {
                 Ok(()) => {
-                    for file in &to_scan {
-                        debug!("scanned file: {}", file.file_path);
+                    for ev in &to_scan {
+                        debug!("scanned file: {}", ev.file_path);
 
-                        *succeeded.entry(file.id.clone()).or_default() &= true;
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= true;
                     }
                 }
                 Err(e) => {
                     error!("failed to scan items: {}", e);
+
+                    for ev in &to_scan {
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= false;
+                    }
                 }
             }
         }
