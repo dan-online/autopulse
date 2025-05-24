@@ -48,7 +48,7 @@ impl Timer {
 /// **Note: These timers apply on top of the original timer**
 ///
 /// Example:
-/// ```
+/// ```yaml
 /// event_timers:
 ///   download:
 ///     wait: 10
