@@ -9,7 +9,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn chain(&self, link: Self) -> Self {
+    pub fn chain(&self, link: &Self) -> Self {
         Self {
             wait: self
                 .wait
