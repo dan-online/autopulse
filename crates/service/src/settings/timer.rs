@@ -19,7 +19,11 @@ impl Timer {
     }
 }
 
+/// Event timers
+///
 /// Define timers that apply to only specific events
+///
+/// Note: Keys are case insensitive
 ///
 /// -rr events:
 /// - `Download` - when a download is completed
@@ -42,6 +46,19 @@ impl Timer {
 /// - `EpisodeFileDelete` - when an episode file is deleted
 ///
 /// **Note: These timers apply on top of the original timer**
+///
+/// Example:
+/// ```
+/// event_timers:
+///   download:
+///     wait: 10
+///   
+///   seriesdelete:
+///     wait: 5
+///
+///   EpisodeFileDelete:
+///     wait: 2
+/// ```
 #[derive(Clone)]
 pub struct EventTimers {
     timers: HashMap<String, Timer>,
