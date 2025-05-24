@@ -242,7 +242,6 @@ impl Trigger {
             Self::Readarr(trigger) => event_name
                 .as_ref()
                 .and_then(|event| trigger.event_timers.get(event)),
-
             _ => None,
         };
 
