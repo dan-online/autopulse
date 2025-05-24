@@ -69,3 +69,31 @@ impl<'de> Deserialize<'de> for EventTimers {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_timer_chain() {
+        let timer1 = Timer { wait: Some(10) };
+        let timer2 = Timer { wait: Some(5) };
+        let chained_timer = timer1.chain(&timer2);
+
+        assert_eq!(chained_timer.wait, Some(15));
+    }
+
+    #[test]
+    fn test_event_timers_get() {
+        let mut event_timers = EventTimers {
+            timers: HashMap::new(),
+        };
+
+        event_timers
+            .timers
+            .insert("download".to_string(), Timer { wait: Some(10) });
+
+        assert_eq!(event_timers.get("download").unwrap().wait, Some(10));
+        assert!(event_timers.get("unknown").is_none());
+    }
+}
