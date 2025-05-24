@@ -42,7 +42,6 @@ impl Timer {
 /// - `EpisodeFileDelete` - when an episode file is deleted
 ///
 /// **Note: These timers apply on top of the original timer**
-#[doc(hidden)]
 #[derive(Clone)]
 pub struct EventTimers {
     timers: HashMap<String, Timer>,
