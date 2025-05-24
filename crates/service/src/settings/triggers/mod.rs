@@ -219,27 +219,38 @@ impl Trigger {
         }
     }
 
-    pub fn get_timer(&self, event_name: Option<String>) -> &Timer {
-        match &self {
+    pub fn get_timer(&self, event_name: Option<String>) -> Timer {
+        let mut base_timer = match self.clone() {
+            Self::Sonarr(trigger) => trigger.timer,
+            Self::Radarr(trigger) => trigger.timer,
+            Self::Lidarr(trigger) => trigger.timer,
+            Self::Readarr(trigger) => trigger.timer,
+            Self::Manual(trigger) => trigger.timer,
+            Self::Notify(trigger) => trigger.timer,
+        };
+
+        let event_specific_timer = match &self {
             Self::Sonarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event))
-                .unwrap_or(&trigger.timer),
+                .and_then(|event| trigger.event_timers.get(event)),
             Self::Radarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event))
-                .unwrap_or(&trigger.timer),
+                .and_then(|event| trigger.event_timers.get(event)),
             Self::Lidarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event))
-                .unwrap_or(&trigger.timer),
+                .and_then(|event| trigger.event_timers.get(event)),
             Self::Readarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event))
-                .unwrap_or(&trigger.timer),
-            Self::Manual(trigger) => &trigger.timer,
-            Self::Notify(trigger) => &trigger.timer,
+                .and_then(|event| trigger.event_timers.get(event)),
+
+            _ => None,
+        };
+
+        if let Some(event_timer) = event_specific_timer {
+            base_timer = base_timer.chain(event_timer);
         }
+
+        base_timer
     }
 
     pub fn paths(&self, body: serde_json::Value) -> anyhow::Result<(String, Vec<(String, bool)>)> {
