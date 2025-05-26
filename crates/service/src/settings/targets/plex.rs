@@ -6,7 +6,10 @@ use autopulse_database::models::ScanEvent;
 use autopulse_utils::{get_url, squash_directory, what_is, PathType};
 use reqwest::header;
 use serde::Deserialize;
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 use tracing::{debug, error, trace};
 
 #[derive(Deserialize, Clone)]
@@ -414,6 +417,8 @@ impl TargetProcess for Plex {
                 continue;
             }
 
+            let mut processed_items = HashSet::new();
+
             for library in matched_libraries {
                 trace!("found library '{}' for {ev_path}", library.title);
 
@@ -438,6 +443,14 @@ impl TargetProcess for Plex {
 
                                         for item in items {
                                             let mut item_success = true;
+
+                                            if processed_items.contains(&item.key) {
+                                                debug!(
+                                                    "already processed item '{}' earlier, skipping",
+                                                    item.key
+                                                );
+                                                continue;
+                                            }
 
                                             if self.refresh {
                                                 match self.refresh_item(&item.key).await {
@@ -472,6 +485,8 @@ impl TargetProcess for Plex {
                                             if !item_success {
                                                 all_success = false;
                                             }
+
+                                            processed_items.insert(item.key);
                                         }
 
                                         if all_success {
