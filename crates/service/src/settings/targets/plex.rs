@@ -435,7 +435,7 @@ impl TargetProcess for Plex {
                                             ev_path
                                         );
 
-                                        *succeeded_entry = false;
+                                        *succeeded_entry = true;
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
