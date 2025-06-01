@@ -13,7 +13,7 @@ use autopulse_service::{
 };
 use autopulse_utils::sify;
 use std::sync::Arc;
-use tracing::{debug_span, info};
+use tracing::{debug_span, error, info};
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
@@ -45,14 +45,16 @@ pub async fn trigger_post(
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
-            let timer = trigger_settings.get_timer();
-            let paths = trigger_settings.paths(body.into_inner());
+            let decoded = trigger_settings.paths(body.into_inner());
 
-            if paths.is_err() {
-                return Ok(HttpResponse::BadRequest().body("Invalid request"));
+            if let Err(e) = decoded {
+                error!("failed to decode request: {e}");
+
+                return Ok(HttpResponse::InternalServerError().body("Unable to parse request"));
             }
 
-            let paths = paths.unwrap();
+            let (event_name, paths) = decoded.unwrap();
+            let timer = trigger_settings.get_timer(Some(event_name));
 
             let mut scan_events = vec![];
 

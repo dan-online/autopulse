@@ -1,5 +1,5 @@
 use crate::settings::rewrite::Rewrite;
-use crate::settings::timer::Timer;
+use crate::settings::timer::{EventTimers, Timer};
 use crate::settings::triggers::TriggerRequest;
 use autopulse_utils::join_path;
 use serde::Deserialize;
@@ -14,6 +14,8 @@ pub struct Radarr {
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
+    /// Event-specific timers
+    pub event_timers: EventTimers,
 }
 
 #[derive(Deserialize, Clone)]
