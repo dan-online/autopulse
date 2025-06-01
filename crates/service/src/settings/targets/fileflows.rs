@@ -130,7 +130,7 @@ impl FileFlows {
         Ok(files.first().cloned())
     }
 
-    async fn reprocess_library_filse(&self, evs: Vec<&FileFlowsLibraryFile>) -> anyhow::Result<()> {
+    async fn reprocess_library_file(&self, evs: Vec<&FileFlowsLibraryFile>) -> anyhow::Result<()> {
         let client = self.get_client()?;
 
         let url = get_url(&self.url)?.join("api/library-file/reprocess")?;
@@ -274,7 +274,7 @@ impl TargetProcess for FileFlows {
 
             if !processed.is_empty() {
                 match self
-                    .reprocess_library_filse(
+                    .reprocess_library_file(
                         processed
                             .iter()
                             .filter_map(|(_, file)| file.as_ref())

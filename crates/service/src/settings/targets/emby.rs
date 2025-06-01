@@ -129,20 +129,21 @@ impl Emby {
         Ok(res.json().await?)
     }
 
-    fn get_library(&self, libraries: &[Library], path: &str) -> Option<Library> {
+    fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
         let ev_path = Path::new(path);
+        let mut matched: Vec<Library> = vec![];
 
         for library in libraries {
             for location in &library.locations {
                 let path = Path::new(location);
 
                 if ev_path.starts_with(path) {
-                    return Some(library.clone());
+                    matched.push(library.clone());
                 }
             }
         }
 
-        None
+        matched
     }
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
@@ -171,7 +172,7 @@ impl Emby {
 
         let res = client.get(url).perform().await?;
 
-        // Possibly uneeded unless we can use streams
+        // Possibly unneeded unless we can use streams
         let bytes = res.bytes().await?;
 
         let mut json_reader = JsonStreamReader::new(Cursor::new(bytes));
@@ -352,7 +353,7 @@ impl TargetProcess for Emby {
             .await
             .context("failed to fetch libraries")?;
 
-        let mut succeded = Vec::new();
+        let mut succeeded: HashMap<String, bool> = HashMap::new();
 
         let mut to_find = HashMap::new();
         let mut to_refresh = Vec::new();
@@ -362,10 +363,15 @@ impl TargetProcess for Emby {
             for ev in evs {
                 let ev_path = ev.get_path(&self.rewrite);
 
-                if let Some(library) = self.get_library(&libraries, &ev_path) {
-                    to_find.entry(library).or_insert_with(Vec::new).push(*ev);
-                } else {
+                let matched_libraries = self.get_libraries(&libraries, &ev_path);
+
+                if matched_libraries.is_empty() {
                     error!("failed to find library for file: {}", ev_path);
+                    continue;
+                }
+
+                for library in matched_libraries {
+                    to_find.entry(library).or_insert_with(Vec::new).push(*ev);
                 }
             }
 
@@ -388,10 +394,11 @@ impl TargetProcess for Emby {
                 match self.refresh_item(&item).await {
                     Ok(()) => {
                         debug!("refreshed item: {}", item.id);
-                        succeded.push(ev.id.clone());
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= true;
                     }
                     Err(e) => {
                         error!("failed to refresh item: {}", e);
+                        succeeded.insert(ev.id.clone(), false);
                     }
                 }
             }
@@ -400,15 +407,27 @@ impl TargetProcess for Emby {
         }
 
         if !to_scan.is_empty() {
-            self.scan(&to_scan).await.context("failed to scan files")?;
+            match self.scan(&to_scan).await {
+                Ok(()) => {
+                    for ev in &to_scan {
+                        debug!("scanned file: {}", ev.file_path);
 
-            for file in &to_scan {
-                debug!("scanned file: {}", file.file_path);
+                        *succeeded.entry(ev.id.clone()).or_insert(true) &= true;
+                    }
+                }
+                Err(e) => {
+                    error!("failed to scan items: {}", e);
+
+                    for ev in &to_scan {
+                        succeeded.insert(ev.id.clone(), false);
+                    }
+                }
             }
         }
 
-        succeded.extend(to_scan.iter().map(|ev| ev.id.clone()));
-
-        Ok(succeded)
+        Ok(succeeded
+            .iter()
+            .filter_map(|(k, v)| if *v { Some(k.clone()) } else { None })
+            .collect())
     }
 }
