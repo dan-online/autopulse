@@ -1,4 +1,5 @@
 use crate::settings::rewrite::Rewrite;
+use crate::settings::timer::EventTimers;
 use crate::settings::{timer::Timer, triggers::TriggerRequest};
 use serde::Deserialize;
 
@@ -12,6 +13,8 @@ pub struct Lidarr {
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
+    /// Event-specific timers
+    pub event_timers: EventTimers,
 }
 
 #[derive(Deserialize, Clone)]
