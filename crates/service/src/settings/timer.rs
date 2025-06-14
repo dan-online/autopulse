@@ -59,7 +59,7 @@ impl Timer {
 ///   EpisodeFileDelete:
 ///     wait: 2
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct EventTimers {
     timers: HashMap<String, Timer>,
 }

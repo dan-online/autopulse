@@ -14,6 +14,7 @@ pub struct Lidarr {
     #[serde(default)]
     pub excludes: Vec<String>,
     /// Event-specific timers
+    #[serde(default)]
     pub event_timers: EventTimers,
 }
 
