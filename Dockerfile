@@ -1,4 +1,4 @@
-ARG IMAGE_TAG=3.21
+ARG IMAGE_TAG=3.22
 FROM ghcr.io/linuxserver/baseimage-alpine:${IMAGE_TAG} AS runtime
 
 WORKDIR /app
