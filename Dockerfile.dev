@@ -1,4 +1,4 @@
-ARG IMAGE_TAG=3.21
+ARG IMAGE_TAG=3.22
 FROM nixos/nix:latest AS builder
 
 WORKDIR /tmp/build
