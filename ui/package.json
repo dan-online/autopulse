@@ -11,7 +11,7 @@
 		"check:watch": "yarn prepare && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.0.4",
 		"@iconify-json/ci": "^1.2.2",
 		"@iconify-json/hugeicons": "^1.2.5",
 		"@iconify-json/ic": "^1.2.2",
