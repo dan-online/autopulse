@@ -1,9 +1,5 @@
 {
-    "biome.projects": [
-        {
-            "folder": "ui"
-        }
-    ],
+    "biome.configurationPath": "ui/biome.json",
     "[svelte]": {
         "editor.defaultFormatter": "biomejs.biome"
     },

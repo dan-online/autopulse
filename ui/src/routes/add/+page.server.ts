@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	add: async ({ request, locals, url }) => {
+	add: async ({ request, locals }) => {
 		if (!locals.auth) {
 			return redirect(302, "/login");
 		}
