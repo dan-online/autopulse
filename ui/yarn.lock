@@ -1214,9 +1214,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/kit@npm:^2.21.5":
-  version: 2.21.5
-  resolution: "@sveltejs/kit@npm:2.21.5"
+"@sveltejs/kit@npm:^2.22.0":
+  version: 2.22.0
+  resolution: "@sveltejs/kit@npm:2.22.0"
   dependencies:
     "@sveltejs/acorn-typescript": "npm:^1.0.5"
     "@types/cookie": "npm:^0.6.0"
@@ -1232,12 +1232,12 @@ __metadata:
     sirv: "npm:^3.0.0"
     vitefu: "npm:^1.0.6"
   peerDependencies:
-    "@sveltejs/vite-plugin-svelte": ^3.0.0 || ^4.0.0-next.1 || ^5.0.0
+    "@sveltejs/vite-plugin-svelte": ^3.0.0 || ^4.0.0-next.1 || ^5.0.0 || ^6.0.0-next.0
     svelte: ^4.0.0 || ^5.0.0-next.0
-    vite: ^5.0.3 || ^6.0.0
+    vite: ^5.0.3 || ^6.0.0 || ^7.0.0-beta.0
   bin:
     svelte-kit: svelte-kit.js
-  checksum: 10c0/56728cad376f20811d1b519d25bfe5a05f58513059b369afb430cb9f6213771d71c58904ebdabbaa0a8d321c8fd392922370c902d86f43b87887db3f04c48630
+  checksum: 10c0/79593dadc1a8a1f4363be9a94027521fefd15bbad6e3a4abb54ab91b12029390e2e57923e6e4c2e8cffe7a1c875913d914a3581fecf62ed64766ac00cba003ce
   languageName: node
   linkType: hard
 
@@ -2757,9 +2757,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"miniflare@npm:4.20250617.1":
-  version: 4.20250617.1
-  resolution: "miniflare@npm:4.20250617.1"
+"miniflare@npm:4.20250617.3":
+  version: 4.20250617.3
+  resolution: "miniflare@npm:4.20250617.3"
   dependencies:
     "@cspotcode/source-map-support": "npm:0.8.1"
     acorn: "npm:8.14.0"
@@ -2775,7 +2775,7 @@ __metadata:
     zod: "npm:3.22.3"
   bin:
     miniflare: bootstrap.js
-  checksum: 10c0/7d5ef3db2938c2d36e1e1a0d90231b7c2b8951ac990d445afc0c61acd5b5861caf3c344a7e4df101352ba7b8a92002b31b582de6f33dd7520b291337170524fb
+  checksum: 10c0/ed4ede8ed849819c27ed3ce4187c777cef822a6733861120db0bac5a33acce35927240babd4ca669a5d6ce56a735424e25df33af4d66d805d7ed41c3819d898e
   languageName: node
   linkType: hard
 
@@ -3752,7 +3752,7 @@ __metadata:
     "@sveltejs/adapter-auto": "npm:6.0.1"
     "@sveltejs/adapter-cloudflare": "npm:^7.0.4"
     "@sveltejs/adapter-node": "npm:^5.2.12"
-    "@sveltejs/kit": "npm:^2.21.5"
+    "@sveltejs/kit": "npm:^2.22.0"
     "@sveltejs/vite-plugin-svelte": "npm:^5.1.0"
     "@unocss/core": "npm:66.2.3"
     "@unocss/extractor-svelte": "npm:66.2.3"
@@ -3764,7 +3764,7 @@ __metadata:
     unocss: "npm:66.2.3"
     unocss-preset-daisyui-next: "npm:^0.1.2"
     vite: "npm:^6.3.5"
-    wrangler: "npm:^4.20.3"
+    wrangler: "npm:^4.20.5"
   languageName: unknown
   linkType: soft
 
@@ -4029,16 +4029,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrangler@npm:^4.20.3":
-  version: 4.20.3
-  resolution: "wrangler@npm:4.20.3"
+"wrangler@npm:^4.20.5":
+  version: 4.20.5
+  resolution: "wrangler@npm:4.20.5"
   dependencies:
     "@cloudflare/kv-asset-handler": "npm:0.4.0"
     "@cloudflare/unenv-preset": "npm:2.3.3"
     blake3-wasm: "npm:2.1.5"
     esbuild: "npm:0.25.4"
     fsevents: "npm:~2.3.2"
-    miniflare: "npm:4.20250617.1"
+    miniflare: "npm:4.20250617.3"
     path-to-regexp: "npm:6.3.0"
     unenv: "npm:2.0.0-rc.17"
     workerd: "npm:1.20250617.0"
@@ -4053,7 +4053,7 @@ __metadata:
   bin:
     wrangler: bin/wrangler.js
     wrangler2: bin/wrangler.js
-  checksum: 10c0/3e453c71d803e20cc75f09a7932eed8365628d4c1646a9c515250741a129299b0d9b9cf0571ee7fc1d6f426613cfca1fd217139710cf9d8c871255c3879d6e66
+  checksum: 10c0/8f8d397b6878b5b767abc98ed6cfcb5119aef5dcb7db25832cf1f056cf378afa79efe787668f4caf8bc6f88e88253dc1676d05e8ef2d820cd964dbde1b529a55
   languageName: node
   linkType: hard
 

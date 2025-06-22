@@ -24,7 +24,7 @@
 		"@sveltejs/adapter-auto": "6.0.1",
 		"@sveltejs/adapter-cloudflare": "^7.0.4",
 		"@sveltejs/adapter-node": "^5.2.12",
-		"@sveltejs/kit": "^2.21.5",
+		"@sveltejs/kit": "^2.22.0",
 		"@sveltejs/vite-plugin-svelte": "^5.1.0",
 		"@unocss/core": "66.2.3",
 		"@unocss/extractor-svelte": "66.2.3",
@@ -36,7 +36,7 @@
 		"unocss": "66.2.3",
 		"unocss-preset-daisyui-next": "^0.1.2",
 		"vite": "^6.3.5",
-		"wrangler": "^4.20.3"
+		"wrangler": "^4.20.5"
 	},
 	"type": "module",
 	"packageManager": "yarn@4.9.2"
