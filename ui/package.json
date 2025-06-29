@@ -35,7 +35,7 @@
 		"typescript": "^5.8.3",
 		"unocss": "66.3.2",
 		"unocss-preset-daisyui-next": "^0.1.2",
-		"vite": "^6.3.5",
+		"vite": "^7.0.0",
 		"wrangler": "^4.22.0"
 	},
 	"type": "module",
