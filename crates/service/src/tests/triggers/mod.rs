@@ -1,3 +1,4 @@
+pub mod a_train;
 pub mod lidarr;
 pub mod notify;
 pub mod radarr;
