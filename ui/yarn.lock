@@ -598,21 +598,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/material-symbols-light@npm:^1.2.28":
-  version: 1.2.28
-  resolution: "@iconify-json/material-symbols-light@npm:1.2.28"
+"@iconify-json/material-symbols-light@npm:^1.2.29":
+  version: 1.2.29
+  resolution: "@iconify-json/material-symbols-light@npm:1.2.29"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/aeebccd744c7d50f585a7c43d059f9b5cd6936d4fafd15176eb8b7f1c320a68de8d3b4742cae886e6c963edeead427a9dfdc696c7cd685ba1944a129256e2cd2
+  checksum: 10c0/6a6c1e55e9233d83ad558e57aee759e339dfbe979cd62c2bf896b6f207b28e1b8446a24557302942ec44e3b00cd0fb371259cdc9e6842d3dc7049c9f5da768cf
   languageName: node
   linkType: hard
 
-"@iconify-json/material-symbols@npm:^1.2.28":
-  version: 1.2.28
-  resolution: "@iconify-json/material-symbols@npm:1.2.28"
+"@iconify-json/material-symbols@npm:^1.2.29":
+  version: 1.2.29
+  resolution: "@iconify-json/material-symbols@npm:1.2.29"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/bff6a11cbafdbf55a2de6eb3e4b63ee185a3f24bb17a59ba4e48064dc3593a52d100c6b61d466785c45bb1a530872bc8b9a89c5123cd3f77351e4519416de00c
+  checksum: 10c0/308055815d2a2e5db414e564a59b3258c465d157a0f51d659cbf4c293ae856e5e206bdd801129cc87b3e52c2d3d1b0b7c1cb5961cccf823ce7cd95a7f43b7245
   languageName: node
   linkType: hard
 
@@ -2442,12 +2442,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esrap@npm:^1.4.8":
-  version: 1.4.9
-  resolution: "esrap@npm:1.4.9"
+"esrap@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "esrap@npm:2.1.0"
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.4.15"
-  checksum: 10c0/21b4c58f358360ada596ea46b8dbf47771c6d7734277add55e7cd1d5655126dea25591788712452ed8575a99acd388eae756bf941bab31d7b9fb424620c10c40
+  checksum: 10c0/42f9f8b49972989a58082dda58c3862689c9c45f3245fd9bfa7e84a00de9cdc422d73621fad1c5d4872c12875869bd770cda80be20ffb1244e6c27b192a3f7b0
   languageName: node
   linkType: hard
 
@@ -2916,9 +2916,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"miniflare@npm:4.20250617.4":
-  version: 4.20250617.4
-  resolution: "miniflare@npm:4.20250617.4"
+"miniflare@npm:4.20250617.5":
+  version: 4.20250617.5
+  resolution: "miniflare@npm:4.20250617.5"
   dependencies:
     "@cspotcode/source-map-support": "npm:0.8.1"
     acorn: "npm:8.14.0"
@@ -2934,7 +2934,7 @@ __metadata:
     zod: "npm:3.22.3"
   bin:
     miniflare: bootstrap.js
-  checksum: 10c0/4ac2036c111b4f502a76f1cc8e463caf052bf5c754a9dc0129dc71c8088e7ff0e12f1bec6d548cbf2cd2ca73a9f89f0fe3887119cfd5295d6690b6d32ac1549a
+  checksum: 10c0/32e09f15a6c2b51e81cd87460e687a63469a71eb3b3de739b43c8b892bfea94d71ec5a6c74b6144d35ca1fc727d376bb8d7a6a8ccf67f8a5be09923e44090781
   languageName: node
   linkType: hard
 
@@ -3846,9 +3846,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte@npm:^5.34.9":
-  version: 5.34.9
-  resolution: "svelte@npm:5.34.9"
+"svelte@npm:^5.35.2":
+  version: 5.35.2
+  resolution: "svelte@npm:5.35.2"
   dependencies:
     "@ampproject/remapping": "npm:^2.3.0"
     "@jridgewell/sourcemap-codec": "npm:^1.5.0"
@@ -3859,12 +3859,12 @@ __metadata:
     axobject-query: "npm:^4.1.0"
     clsx: "npm:^2.1.1"
     esm-env: "npm:^1.2.1"
-    esrap: "npm:^1.4.8"
+    esrap: "npm:^2.1.0"
     is-reference: "npm:^3.0.3"
     locate-character: "npm:^3.0.0"
     magic-string: "npm:^0.30.11"
     zimmerframe: "npm:^1.1.2"
-  checksum: 10c0/e68fcc99905bf4d57dab2b03afd82c765e56ea2e052da6c515866ac05487397ea49e81fb46cdd0f589b60e1f374c8bf2d14393f8b581568f4d735f85998a318d
+  checksum: 10c0/4b6ce33c911fff062137b59f77db0b01a9c00f3ee93aa931e8219d65dffa0e933a60739af56a2165cc869d8892d05f91aaff7a09cd908547d9be2ceacb33e092
   languageName: node
   linkType: hard
 
@@ -3968,8 +3968,8 @@ __metadata:
     "@iconify-json/hugeicons": "npm:^1.2.5"
     "@iconify-json/ic": "npm:^1.2.2"
     "@iconify-json/line-md": "npm:^1.2.8"
-    "@iconify-json/material-symbols": "npm:^1.2.28"
-    "@iconify-json/material-symbols-light": "npm:^1.2.28"
+    "@iconify-json/material-symbols": "npm:^1.2.29"
+    "@iconify-json/material-symbols-light": "npm:^1.2.29"
     "@iconify-json/pajamas": "npm:^1.2.11"
     "@iconify-json/ph": "npm:^1.2.2"
     "@iconify-json/svg-spinners": "npm:^1.2.2"
@@ -3982,13 +3982,13 @@ __metadata:
     "@unocss/extractor-svelte": "npm:66.3.2"
     "@unocss/reset": "npm:66.3.2"
     daisyui: "npm:^5.0.43"
-    svelte: "npm:^5.34.9"
+    svelte: "npm:^5.35.2"
     svelte-check: "npm:^4.2.2"
     typescript: "npm:^5.8.3"
     unocss: "npm:66.3.2"
     unocss-preset-daisyui-next: "npm:^0.1.2"
-    vite: "npm:^7.0.0"
-    wrangler: "npm:^4.22.0"
+    vite: "npm:^7.0.2"
+    wrangler: "npm:^4.23.0"
   languageName: unknown
   linkType: soft
 
@@ -4119,9 +4119,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^7.0.0":
-  version: 7.0.0
-  resolution: "vite@npm:7.0.0"
+"vite@npm:^7.0.2":
+  version: 7.0.2
+  resolution: "vite@npm:7.0.2"
   dependencies:
     esbuild: "npm:^0.25.0"
     fdir: "npm:^6.4.6"
@@ -4170,7 +4170,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10c0/860838d223f877dd8e04bd2b8f33cf67a38706643bdf07e3153e2857d7c0d33c3ee94cea7e86e60937cc91b3793272912cc7af14565641476f814bd61b3a1374
+  checksum: 10c0/a68c0302c820b39fe1119c2bc9dda865f48f6abd1629346c189e4983aef7d30e698c55ffff879d4ca6858cb3650c94b085a822215af9bd74d1eb8ceb2ce3e8c6
   languageName: node
   linkType: hard
 
@@ -4253,16 +4253,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrangler@npm:^4.22.0":
-  version: 4.22.0
-  resolution: "wrangler@npm:4.22.0"
+"wrangler@npm:^4.23.0":
+  version: 4.23.0
+  resolution: "wrangler@npm:4.23.0"
   dependencies:
     "@cloudflare/kv-asset-handler": "npm:0.4.0"
     "@cloudflare/unenv-preset": "npm:2.3.3"
     blake3-wasm: "npm:2.1.5"
     esbuild: "npm:0.25.4"
     fsevents: "npm:~2.3.2"
-    miniflare: "npm:4.20250617.4"
+    miniflare: "npm:4.20250617.5"
     path-to-regexp: "npm:6.3.0"
     unenv: "npm:2.0.0-rc.17"
     workerd: "npm:1.20250617.0"
@@ -4277,7 +4277,7 @@ __metadata:
   bin:
     wrangler: bin/wrangler.js
     wrangler2: bin/wrangler.js
-  checksum: 10c0/a1d5deab6f600d1e3807c94ca5f0fbe1884a34d76ec0d2880c1fb2f9125a3b4e8607502bf8c06cc6ef960ea85d93a587f00a36b5e4e479b8daffd3f5237e053c
+  checksum: 10c0/798abc0d4b575ada5813a044da7f5d20767766dd791ce3bb6634391c57143a4750d3e430c20ba037d7551cc1f3a32c4252dce5ecf0196cbaefabbf80c8d7b366
   languageName: node
   linkType: hard
 
