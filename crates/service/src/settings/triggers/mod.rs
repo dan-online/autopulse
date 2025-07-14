@@ -1,3 +1,31 @@
+/// A-Train - A-Train trigger
+///
+/// This trigger is used to process a file from A-Train
+///
+/// # Example
+///
+/// ```yml
+/// triggers:
+///   my_a_train:
+///     type: a_train
+/// ```
+///
+/// or
+///
+/// ```yml
+/// triggers:
+///   my_a_train:
+///     type: a_train
+///     rewrite:
+///       from: "/downloads/a_train"
+///       to: "/a_train"
+///     timer:
+///       wait: 30
+///     excludes: [ "ignored_target" ]
+/// ```
+///
+/// See [`ATrain`] for all options
+pub mod a_train;
 /// Lidarr - Lidarr trigger
 ///
 /// This trigger is used to process a file from Lidarr
@@ -176,10 +204,12 @@ pub mod readarr;
 /// See [`Sonarr`] for all options
 pub mod sonarr;
 
+use serde::Deserialize;
+
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
-use serde::Deserialize;
 use {
+    a_train::{ATrain, ATrainRequest},
     lidarr::{Lidarr, LidarrRequest},
     manual::Manual,
     notify::Notify,
@@ -206,6 +236,7 @@ pub enum Trigger {
     Lidarr(Lidarr),
     Readarr(Readarr),
     Notify(Notify),
+    ATrain(ATrain),
 }
 
 impl Trigger {
@@ -215,6 +246,7 @@ impl Trigger {
             Self::Radarr(trigger) => trigger.rewrite.as_ref(),
             Self::Lidarr(trigger) => trigger.rewrite.as_ref(),
             Self::Readarr(trigger) => trigger.rewrite.as_ref(),
+            Self::ATrain(trigger) => trigger.rewrite.as_ref(),
             Self::Manual(_) | Self::Notify(_) => None,
         }
     }
@@ -227,6 +259,7 @@ impl Trigger {
             Self::Readarr(trigger) => trigger.timer,
             Self::Manual(trigger) => trigger.timer,
             Self::Notify(trigger) => trigger.timer,
+            Self::ATrain(trigger) => trigger.timer,
         };
 
         let event_specific_timer = match &self {
@@ -260,6 +293,7 @@ impl Trigger {
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
+            Self::ATrain(_) => Ok(ATrainRequest::from_json(body)?.paths()),
             Self::Manual(_) | Self::Notify(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
@@ -276,6 +310,7 @@ impl Trigger {
             Self::Lidarr(trigger) => &trigger.excludes,
             Self::Readarr(trigger) => &trigger.excludes,
             Self::Notify(trigger) => &trigger.excludes,
+            Self::ATrain(trigger) => &trigger.excludes,
         }
     }
 }
