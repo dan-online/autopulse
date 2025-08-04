@@ -243,6 +243,10 @@ const updateBasedOn = (
 };
 </script>
 
+<svelte:head>
+    <title>autopulse | home</title>
+</svelte:head>
+
 {#if error}
     <div class="alert alert-error mt-4">{error}</div>
 {/if}

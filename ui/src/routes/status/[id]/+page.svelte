@@ -25,6 +25,10 @@ onMount(() => {
 });
 </script>
 
+<svelte:head>
+    <title>autopulse | status - {ev.file_path}</title>
+</svelte:head>
+
 <div class="flex flex-col mt-6 gap-6">
     <div class="flex">
         <div class="mx-auto h-30 w-30 p-4 rounded-full bg-base-200">

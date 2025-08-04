@@ -8,6 +8,10 @@ let loading = false;
 $: error = form?.error;
 </script>
 
+<svelte:head>
+    <title>autopulse | add</title>
+</svelte:head>
+
 <div
     class="flex lg:w-2/3 mx-auto min-h-full flex-col justify-center px-6 py-12 lg:px-8"
 >
