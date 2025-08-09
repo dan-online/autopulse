@@ -1,24 +1,24 @@
-/// Autoscan - Autoscan trigger TODO
+/// Autoscan - autoscan compatibility trigger
 ///
-/// This trigger is used to process a file from Lidarr
+/// Provides a trigger with compatibility for applications that are built for autoscan
 ///
 /// # Example
 ///
 /// ```yml
 /// triggers:
-///   my_lidarr:
-///     type: lidarr
+///   my_autoscan:
+///     type: autoscan
 /// ```
 ///
 /// or
 ///
 /// ```yml
 /// triggers:
-///   my_lidarr:
-///     type: lidarr
+///   my_autoscan:
+///     type: autoscan
 ///     rewrite:
-///       from: "/downloads/music"
-///       to: "/music"
+///       from: "/downloads/all"
+///       to: "/all"
 ///     timer:
 ///       wait: 30
 ///     excludes: [ "ignored_target" ]
