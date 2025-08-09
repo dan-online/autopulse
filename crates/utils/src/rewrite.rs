@@ -46,7 +46,7 @@ impl<'de> Deserialize<'de> for Rewrite {
             Inner::Multiple(multiple) => multiple,
         };
 
-        Ok(Rewrite { rewrites })
+        Ok(Self { rewrites })
     }
 }
 
@@ -72,7 +72,7 @@ impl Rewrite {
 
     #[cfg(test)]
     pub fn single(from: &str, to: &str) -> Self {
-        Rewrite {
+        Self {
             rewrites: vec![SingleRewrite {
                 from: from.to_string(),
                 to: to.to_string(),
@@ -82,7 +82,7 @@ impl Rewrite {
 
     #[cfg(test)]
     pub fn multiple(rewrites: Vec<(&str, &str)>) -> Self {
-        Rewrite {
+        Self {
             rewrites: rewrites
                 .into_iter()
                 .map(|(from, to)| SingleRewrite {

@@ -6,14 +6,22 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_database::models::{FoundStatus, NewScanEvent};
-use autopulse_service::settings::triggers::Trigger;
+use autopulse_service::settings::triggers::{autoscan::AutoscanQueryParams, Trigger};
 use autopulse_service::{
     manager::PulseManager, settings::triggers::manual::ManualQueryParams,
     settings::webhooks::EventType,
 };
 use autopulse_utils::sify;
+use serde::Deserialize;
 use std::sync::Arc;
 use tracing::{debug_span, error, info};
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum TriggerQueryParams {
+    Manual(ManualQueryParams),
+    Autoscan(AutoscanQueryParams),
+}
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
@@ -118,7 +126,7 @@ pub async fn trigger_post(
 
 #[get("/triggers/{trigger}")]
 pub async fn trigger_get(
-    query: Query<ManualQueryParams>,
+    query: Query<TriggerQueryParams>,
     trigger: Path<String>,
     manager: Data<Arc<PulseManager>>,
     auth: Option<BasicAuth>,
@@ -141,52 +149,98 @@ pub async fn trigger_get(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Manual(trigger_settings) => {
-            let mut file_path = query.path.clone();
+        Trigger::Manual(trigger_settings) => match query.into_inner() {
+            TriggerQueryParams::Manual(query) => {
+                let mut file_path = query.path.clone();
 
-            if let Some(rewrite) = &trigger_settings.rewrite {
-                // file_path = rewrite_path(file_path, rewrite);
-                file_path = rewrite.rewrite_path(file_path);
+                if let Some(rewrite) = &trigger_settings.rewrite {
+                    // file_path = rewrite_path(file_path, rewrite);
+                    file_path = rewrite.rewrite_path(file_path);
+                }
+
+                let new_scan_event = NewScanEvent {
+                    event_source: trigger.to_string(),
+                    file_path: file_path.clone(),
+                    file_hash: query.hash.clone(),
+                    can_process: chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(
+                            trigger_settings
+                                .timer
+                                .wait
+                                .unwrap_or(manager.settings.opts.default_timer_wait)
+                                as i64,
+                        ),
+                    ..Default::default()
+                };
+
+                let scan_event = manager.add_event(&new_scan_event);
+
+                if let Err(e) = scan_event {
+                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                }
+
+                manager
+                    .webhooks
+                    .add_event(
+                        EventType::New,
+                        Some(trigger.to_string()),
+                        &[file_path.clone()],
+                    )
+                    .await;
+
+                debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+                    info!("added 1 file");
+                });
+
+                let scan_event = scan_event.unwrap();
+
+                Ok(HttpResponse::Ok().json(scan_event))
             }
+            _ => Ok(HttpResponse::BadRequest().body("Invalid query parameters")),
+        },
+        Trigger::Autoscan(trigger_settings) => match query.into_inner() {
+            TriggerQueryParams::Autoscan(query) => {
+                let dir_path = query.dir.clone();
 
-            let new_scan_event = NewScanEvent {
-                event_source: trigger.to_string(),
-                file_path: file_path.clone(),
-                file_hash: query.hash.clone(),
-                can_process: chrono::Utc::now().naive_utc()
-                    + chrono::Duration::seconds(
-                        trigger_settings
-                            .timer
-                            .wait
-                            .unwrap_or(manager.settings.opts.default_timer_wait)
-                            as i64,
-                    ),
-                ..Default::default()
-            };
+                let new_scan_event = NewScanEvent {
+                    event_source: trigger.to_string(),
+                    file_path: dir_path.clone(),
+                    can_process: chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(
+                            trigger_settings
+                                .timer
+                                .wait
+                                .unwrap_or(manager.settings.opts.default_timer_wait)
+                                as i64,
+                        ),
+                    ..Default::default()
+                };
 
-            let scan_event = manager.add_event(&new_scan_event);
+                let scan_event = manager.add_event(&new_scan_event);
 
-            if let Err(e) = scan_event {
-                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                if let Err(e) = scan_event {
+                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                }
+
+                manager
+                    .webhooks
+                    .add_event(
+                        EventType::New,
+                        Some(trigger.to_string()),
+                        std::slice::from_ref(&dir_path),
+                    )
+                    .await;
+
+                debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+                    info!("added 1 directory");
+                });
+
+                let scan_event = scan_event.unwrap();
+
+                Ok(HttpResponse::Ok().json(scan_event))
             }
-
-            manager
-                .webhooks
-                .add_event(
-                    EventType::New,
-                    Some(trigger.to_string()),
-                    &[file_path.clone()],
-                )
-                .await;
-
-            debug_span!("", trigger = trigger.to_string()).in_scope(|| {
-                info!("added 1 file");
-            });
-
-            let scan_event = scan_event.unwrap();
-
-            Ok(HttpResponse::Ok().json(scan_event))
-        }
+            _ => Ok(HttpResponse::BadRequest().body("Invalid query parameters")),
+        },
         _ => Ok(HttpResponse::Ok().body("Not implemented")),
     }
 }
