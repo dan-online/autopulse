@@ -227,7 +227,7 @@ pub async fn trigger_get(
                     .add_event(
                         EventType::New,
                         Some(trigger.to_string()),
-                        &[dir_path.clone()],
+                        std::slice::from_ref(&dir_path),
                     )
                     .await;
 

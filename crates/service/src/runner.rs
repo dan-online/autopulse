@@ -142,7 +142,7 @@ impl PulseRunner {
                     .add_event(
                         EventType::Processed,
                         Some(ev.event_source.clone()),
-                        &[ev.file_path.clone()],
+                        std::slice::from_ref(&ev.file_path),
                     )
                     .await;
             }
@@ -156,7 +156,7 @@ impl PulseRunner {
                     .add_event(
                         EventType::Retrying,
                         Some(ev.event_source.clone()),
-                        &[ev.file_path.clone()],
+                        std::slice::from_ref(&ev.file_path),
                     )
                     .await;
             }
@@ -174,7 +174,7 @@ impl PulseRunner {
                     .add_event(
                         EventType::Failed,
                         Some(ev.event_source.clone()),
-                        &[ev.file_path.clone()],
+                        std::slice::from_ref(&ev.file_path),
                     )
                     .await;
             }
