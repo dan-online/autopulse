@@ -17,7 +17,7 @@ pub struct Autoscan {
 /// Autoscan trigger query parameters
 ///
 /// Example:
-/// - /triggers/manual?dir=/path/to/dir
+/// - /triggers/autoscan?dir=/path/to/dir
 #[derive(Deserialize)]
 pub struct AutoscanQueryParams {
     /// Path to the directory
