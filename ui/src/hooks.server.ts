@@ -1,7 +1,7 @@
+import type { Cookies, Handle } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { type Payload, verify } from "$lib/auth";
 import { isForced } from "$lib/forced";
-import type { Cookies, Handle } from "@sveltejs/kit";
 
 const getAuthCookie = async (cookies: Cookies) => {
 	if (isForced) {

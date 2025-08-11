@@ -1,9 +1,9 @@
 <script lang="ts">
+import { onMount } from "svelte";
 import { enhance } from "$app/forms";
 import { invalidateAll } from "$app/navigation";
 import { page } from "$app/state";
 import TimeAgo from "$lib/components/core/TimeAgo.svelte";
-import { onMount } from "svelte";
 
 let ev = $derived(page.data.ev);
 
