@@ -1,5 +1,5 @@
-import { isForced } from "$lib/forced";
 import { redirect } from "@sveltejs/kit";
+import { isForced } from "$lib/forced";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {

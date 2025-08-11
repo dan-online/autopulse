@@ -1,7 +1,7 @@
+import { type Actions, fail, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { sign } from "$lib/auth";
 import { isForced } from "$lib/forced";
-import { type Actions, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 const getURLOptions = (url: URL) => {

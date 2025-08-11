@@ -1,7 +1,7 @@
 <script lang="ts">
+import { onMount } from "svelte";
 import { goto, invalidateAll } from "$app/navigation";
 import { page } from "$app/state";
-import { onMount } from "svelte";
 
 let searchLoading = $state(false);
 // if anyone clicks the magnifying glass, let them bypass the search limit and reduce the delay
