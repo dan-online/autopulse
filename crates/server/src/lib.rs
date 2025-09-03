@@ -7,6 +7,8 @@ use routes::{
 };
 use std::sync::Arc;
 
+use crate::routes::{health::health, triggers::trigger_post_rest};
+
 pub mod routes;
 
 mod middleware {
@@ -22,8 +24,10 @@ pub fn get_server(
         App::new()
             .wrap(Logger::default())
             .service(hello)
+            .service(health)
             .service(trigger_get)
             .service(trigger_post)
+            .service(trigger_post_rest)
             .service(status)
             .service(stats)
             .service(login)
