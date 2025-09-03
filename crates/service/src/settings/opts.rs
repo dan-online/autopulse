@@ -69,7 +69,7 @@ pub struct Opts {
     #[serde(default = "default_default_timer_wait")]
     pub default_timer_wait: u64,
 
-    /// Cleanup events older than x days (default: 10)
+    /// Cleanup not_found events older than x days (default: 10)
     #[serde(default = "default_cleanup_days")]
     pub cleanup_days: u64,
 
