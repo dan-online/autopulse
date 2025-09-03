@@ -1,3 +1,31 @@
+/// A-Train - A-Train trigger
+///
+/// This trigger is used to process a file from A-Train
+///
+/// # Example
+///
+/// ```yml
+/// triggers:
+///   my_a_train:
+///     type: atrain
+/// ```
+///
+/// or
+///
+/// ```yml
+/// triggers:
+///   my_a_train:
+///     type: atrain
+///     rewrite:
+///       from: "/downloads/a_train"
+///       to: "/a_train"
+///     timer:
+///       wait: 30
+///     excludes: [ "ignored_target" ]
+/// ```
+///
+/// See [`ATrain`] for all options
+pub mod a_train;
 /// Autoscan - autoscan compatibility trigger
 ///
 /// Provides a trigger with compatibility for applications that are built for autoscan
@@ -9,7 +37,6 @@
 ///   my_autoscan:
 ///     type: autoscan
 /// ```
-///
 /// or
 ///
 /// ```yml
@@ -204,10 +231,10 @@ pub mod readarr;
 /// See [`Sonarr`] for all options
 pub mod sonarr;
 
-use crate::settings::timer::Timer;
-use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
+use crate::settings::{rewrite::Rewrite, timer::Timer, triggers::autoscan::Autoscan};
 use serde::Deserialize;
 use {
+    a_train::{ATrain, ATrainRequest},
     lidarr::{Lidarr, LidarrRequest},
     manual::Manual,
     notify::Notify,
@@ -235,6 +262,7 @@ pub enum Trigger {
     Lidarr(Lidarr),
     Readarr(Readarr),
     Notify(Notify),
+    ATrain(ATrain),
 }
 
 impl Trigger {
@@ -247,6 +275,7 @@ impl Trigger {
             Self::Autoscan(trigger) => trigger.rewrite.as_ref(),
             Self::Manual(trigger) => trigger.rewrite.as_ref(),
             Self::Notify(trigger) => trigger.rewrite.as_ref(),
+            Self::ATrain(trigger) => trigger.rewrite.as_ref(),
         }
     }
 
@@ -259,6 +288,7 @@ impl Trigger {
             Self::Manual(trigger) => trigger.timer,
             Self::Notify(trigger) => trigger.timer,
             Self::Autoscan(trigger) => trigger.timer,
+            Self::ATrain(trigger) => trigger.timer,
         };
 
         let event_specific_timer = match &self {
@@ -292,6 +322,7 @@ impl Trigger {
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
+            Self::ATrain(_) => Ok(ATrainRequest::from_json(body)?.paths()),
             Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
@@ -309,6 +340,7 @@ impl Trigger {
             Self::Readarr(trigger) => &trigger.excludes,
             Self::Notify(trigger) => &trigger.excludes,
             Self::Autoscan(trigger) => &trigger.excludes,
+            Self::ATrain(trigger) => &trigger.excludes,
         }
     }
 }

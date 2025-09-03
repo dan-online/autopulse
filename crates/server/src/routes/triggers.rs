@@ -23,9 +23,8 @@ enum TriggerQueryParams {
     Autoscan(AutoscanQueryParams),
 }
 
-#[post("/triggers/{trigger}")]
-pub async fn trigger_post(
-    trigger: Path<String>,
+async fn handle_trigger_post(
+    trigger: String,
     manager: Data<Arc<PulseManager>>,
     auth: Option<BasicAuth>,
     body: Json<serde_json::Value>,
@@ -39,7 +38,7 @@ pub async fn trigger_post(
         return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
     }
 
-    let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
+    let trigger_settings = manager.settings.triggers.get(&trigger);
 
     if trigger_settings.is_none() {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
@@ -57,7 +56,6 @@ pub async fn trigger_post(
 
             if let Err(e) = decoded {
                 error!("failed to decode request: {e}");
-
                 return Ok(HttpResponse::InternalServerError().body("Unable to parse request"));
             }
 
@@ -74,7 +72,7 @@ pub async fn trigger_post(
                 }
 
                 let new_scan_event = NewScanEvent {
-                    event_source: trigger.to_string(),
+                    event_source: trigger.clone(),
                     file_path: path.clone(),
                     found_status: if !search {
                         FoundStatus::Found.into()
@@ -102,7 +100,7 @@ pub async fn trigger_post(
                 .webhooks
                 .add_event(
                     EventType::New,
-                    Some(trigger.to_string()),
+                    Some(trigger.clone()),
                     &paths
                         .clone()
                         .into_iter()
@@ -111,7 +109,7 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+            debug_span!("", trigger = trigger.clone()).in_scope(|| {
                 info!("added {} file{}", scan_events.len(), sify(&scan_events));
             });
 
@@ -122,6 +120,27 @@ pub async fn trigger_post(
             Ok(HttpResponse::Ok().json(scan_events))
         }
     }
+}
+
+#[post("/triggers/{trigger}")]
+pub async fn trigger_post(
+    trigger: Path<String>,
+    manager: Data<Arc<PulseManager>>,
+    auth: Option<BasicAuth>,
+    body: Json<serde_json::Value>,
+) -> Result<HttpResponse> {
+    handle_trigger_post(trigger.into_inner(), manager, auth, body).await
+}
+
+#[post("/triggers/{trigger}/{_rest}")]
+pub async fn trigger_post_rest(
+    path: Path<(String, Option<String>)>,
+    manager: Data<Arc<PulseManager>>,
+    auth: Option<BasicAuth>,
+    body: Json<serde_json::Value>,
+) -> Result<HttpResponse> {
+    let (trigger, _) = path.into_inner();
+    handle_trigger_post(trigger, manager, auth, body).await
 }
 
 #[get("/triggers/{trigger}")]
