@@ -39,5 +39,5 @@
 		"wrangler": "^4.33.1"
 	},
 	"type": "module",
-	"packageManager": "yarn@4.9.3"
+	"packageManager": "yarn@4.9.4"
 }
