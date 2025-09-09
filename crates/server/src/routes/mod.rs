@@ -58,6 +58,26 @@ pub mod stats;
 /// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod list;
 
+/// GET &nbsp; - `/health`
+///
+/// Returns ok if online
+///
+/// > Note: mainly for A-Train integration
+///
+/// # Responses
+///
+/// The response will be a JSON object with the following field:
+///
+/// - `ok`: true
+///
+/// # Example Response
+///
+/// ```json
+/// {
+///   "ok": true
+/// }
+/// ```
+pub mod health;
 /// POST - `/login`
 ///
 /// Authenticates the user with the provided credentials and returns ok if successful.
@@ -67,7 +87,6 @@ pub mod list;
 /// - **200 OK**: Returns a JSON object with the field `status` set to `"ok"`.
 /// - **401 Unauthorized**: Returned if the request is not authenticated.
 pub mod login;
-
 /// GET/POST - `/trigger/{name}`
 ///
 /// Triggers a new scan event. Where name is as defined in the settings file.

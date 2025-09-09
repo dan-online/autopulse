@@ -46,6 +46,7 @@ We use the following terminology:
     - MacOS: `FSEvents`
     - Windows: `ReadDirectoryChangesW`
     - Fallback: `polling`
+  - A-Train
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
