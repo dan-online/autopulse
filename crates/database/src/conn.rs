@@ -3,7 +3,7 @@ use anyhow::Context;
 use autopulse_utils::sify;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, QueryResult, RunQueryDsl};
+use diesel::{Connection, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::os::unix::fs::PermissionsExt;
