@@ -27,8 +27,6 @@ impl Autopulse {
             headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
         }
 
-        println!("headers: {headers:?}");
-
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
             .default_headers(headers)
