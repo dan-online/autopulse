@@ -46,6 +46,7 @@ impl PulseRunner {
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
+            .limit(1000)
             .load::<ScanEvent>(&mut get_conn(&self.pool)?)?;
 
         for ev in &mut evs {
@@ -106,6 +107,7 @@ impl PulseRunner {
 
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
         let base_query = scan_events
+            .limit(100)
             .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
             .filter(process_status.ne::<String>(ProcessStatus::Failed.into()))
             .filter(
