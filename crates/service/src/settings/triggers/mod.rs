@@ -231,6 +231,7 @@ pub enum TriggerType {
     Manual,
     Autoscan,
     Radarr,
+    Bazarr,
     Sonarr,
     Lidarr,
     Readarr,
@@ -242,6 +243,7 @@ pub enum TriggerType {
 pub enum Trigger {
     Manual(Manual),
     Autoscan(Autoscan),
+    Bazarr(Manual),
     Radarr(Radarr),
     Sonarr(Sonarr),
     Lidarr(Lidarr),
@@ -255,6 +257,7 @@ impl Trigger {
             Self::Sonarr(trigger) => trigger.rewrite.as_ref(),
             Self::Radarr(trigger) => trigger.rewrite.as_ref(),
             Self::Lidarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Bazarr(trigger) => trigger.rewrite.as_ref(),
             Self::Readarr(trigger) => trigger.rewrite.as_ref(),
             Self::Autoscan(trigger) => trigger.rewrite.as_ref(),
             Self::Manual(trigger) => trigger.rewrite.as_ref(),
@@ -267,6 +270,7 @@ impl Trigger {
             Self::Sonarr(trigger) => trigger.timer,
             Self::Radarr(trigger) => trigger.timer,
             Self::Lidarr(trigger) => trigger.timer,
+            Self::Bazarr(trigger) => trigger.timer,
             Self::Readarr(trigger) => trigger.timer,
             Self::Manual(trigger) => trigger.timer,
             Self::Notify(trigger) => trigger.timer,
@@ -305,7 +309,7 @@ impl Trigger {
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
-            Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) => {
+            Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) | Self::Bazarr(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
         }?;
@@ -319,6 +323,7 @@ impl Trigger {
             Self::Radarr(trigger) => &trigger.excludes,
             Self::Sonarr(trigger) => &trigger.excludes,
             Self::Lidarr(trigger) => &trigger.excludes,
+            Self::Bazarr(trigger) => &trigger.excludes,
             Self::Readarr(trigger) => &trigger.excludes,
             Self::Notify(trigger) => &trigger.excludes,
             Self::Autoscan(trigger) => &trigger.excludes,

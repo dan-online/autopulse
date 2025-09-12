@@ -15,7 +15,7 @@ fn default_trigger_types() -> String {
     "manual".into()
 }
 
-fn default_database_type() -> DatabaseType {
+const fn default_database_type() -> DatabaseType {
     DatabaseType::Sqlite
 }
 
@@ -133,6 +133,7 @@ fn generate_config_template(
             format!("my_{}", serde_json::to_string(trigger)?.replace('"', "")),
             match trigger {
                 TriggerType::Manual => Trigger::Manual(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Bazarr => Trigger::Bazarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Autoscan => Trigger::Autoscan(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Radarr => Trigger::Radarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Sonarr => Trigger::Sonarr(serde_json::from_str(r#"{}"#)?),
@@ -195,7 +196,7 @@ fn generate_config_template(
     };
 
     Ok(TemplateResponse {
-        config: app_config.to_string(),
+        config: app_config,
         version: env!("CARGO_PKG_VERSION").to_string(),
     })
 }
