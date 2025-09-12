@@ -101,3 +101,18 @@ pub mod login;
 /// }
 /// ```
 pub mod triggers;
+
+/// GET - `/api/config-template`
+/// POST - `/api/config-merge`
+///
+/// Provides configuration template API for external applications.
+/// This allows applications like Bazarr to dynamically generate Autopulse
+/// configurations without hardcoding TOML structures.
+///
+/// # Responses
+///
+/// - **200 OK**: Returns configuration template or merged configuration.
+/// - **401 Unauthorized**: Returned if authentication is required and not provided.
+/// - **400 Bad Request**: Returned if the request is invalid.
+pub mod config;
+
