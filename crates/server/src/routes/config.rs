@@ -41,12 +41,6 @@ pub struct TemplateResponse {
     pub version: String,
 }
 
-#[derive(Serialize)]
-pub struct MergeResponse {
-    pub merged_config: String,
-    pub validation_warnings: Vec<String>,
-}
-
 /// GET /api/config-template
 ///
 /// Returns the base Autopulse configuration template with requested components.
