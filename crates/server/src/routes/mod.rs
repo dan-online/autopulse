@@ -115,4 +115,3 @@ pub mod triggers;
 /// - **401 Unauthorized**: Returned if authentication is required and not provided.
 /// - **400 Bad Request**: Returned if the request is invalid.
 pub mod config;
-

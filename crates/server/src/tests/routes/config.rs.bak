@@ -1,0 +1,102 @@
+#[cfg(test)]
+mod tests {
+    use crate::routes::config::{generate_config_template, merge_configurations, MergeRequest};
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_generate_config_template_sqlite() {
+        let trigger_types = vec!["manual", "sonarr"];
+        let target_types = vec!["plex", "jellyfin"];
+        
+        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
+        
+        assert!(response.app_config.contains("sqlite://data/autopulse.db"));
+        assert!(response.trigger_templates.contains_key("manual"));
+        assert!(response.trigger_templates.contains_key("sonarr"));
+        assert!(response.target_templates.contains_key("plex"));
+        assert!(response.target_templates.contains_key("jellyfin"));
+        assert!(response.example_config.is_none());
+        assert_eq!(response.version, "1.3.2");
+    }
+
+    #[test]
+    fn test_generate_config_template_postgres() {
+        let trigger_types = vec!["manual"];
+        let target_types = vec!["plex"];
+        
+        let response = generate_config_template("postgres", &trigger_types, &target_types, true);
+        
+        assert!(response.app_config.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
+        assert!(response.example_config.is_some());
+        let example = response.example_config.unwrap();
+        assert!(example.contains("[triggers.my_manual]"));
+        assert!(example.contains("[targets.my_plex]"));
+    }
+
+    #[test]
+    fn test_generate_config_template_all_types() {
+        let trigger_types = vec!["manual", "sonarr", "radarr"];
+        let target_types = vec!["plex", "jellyfin", "emby"];
+        
+        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
+        
+        assert_eq!(response.trigger_templates.len(), 3);
+        assert_eq!(response.target_templates.len(), 3);
+        assert!(response.trigger_templates.contains_key("radarr"));
+        assert!(response.target_templates.contains_key("emby"));
+    }
+
+    #[test]
+    fn test_merge_configurations() {
+        let mut trigger_configs = HashMap::new();
+        trigger_configs.insert("sonarr".to_string(), "[triggers.my_sonarr]\ntype = \"sonarr\"".to_string());
+        
+        let mut target_configs = HashMap::new();
+        target_configs.insert("plex".to_string(), "[targets.my_plex]\ntype = \"plex\"".to_string());
+        
+        let request = MergeRequest {
+            base_template: "[app]\ndatabase_url = \"sqlite://test.db\"".to_string(),
+            trigger_configs,
+            target_configs,
+        };
+        
+        let response = merge_configurations(&request);
+        
+        assert!(response.merged_config.contains("[app]"));
+        assert!(response.merged_config.contains("database_url"));
+        assert!(response.merged_config.contains("[triggers.my_sonarr]"));
+        assert!(response.merged_config.contains("[targets.my_plex]"));
+        assert!(response.validation_warnings.is_empty());
+    }
+
+    #[test]
+    fn test_merge_configurations_validation_warnings() {
+        let request = MergeRequest {
+            base_template: "# Empty config".to_string(),
+            trigger_configs: HashMap::new(),
+            target_configs: HashMap::new(),
+        };
+        
+        let response = merge_configurations(&request);
+        
+        assert!(response.validation_warnings.len() >= 2);
+        assert!(response.validation_warnings.contains(&"Missing [app] section".to_string()));
+        assert!(response.validation_warnings.contains(&"Missing database_url configuration".to_string()));
+    }
+
+    #[test]
+    fn test_template_placeholders() {
+        let trigger_types = vec!["manual"];
+        let target_types = vec!["plex"];
+        
+        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
+        
+        let plex_template = response.target_templates.get("plex").unwrap();
+        assert!(plex_template.contains("{name}"));
+        assert!(plex_template.contains("{url}"));
+        assert!(plex_template.contains("{token}"));
+        
+        let manual_template = response.trigger_templates.get("manual").unwrap();
+        assert!(manual_template.contains("{name}"));
+    }
+}
