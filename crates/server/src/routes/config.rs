@@ -108,6 +108,18 @@ pub async fn config_merge(
     Ok(HttpResponse::Ok().json(response))
 }
 
+/// Generates configuration templates based on requested database and service types.
+/// 
+/// This function creates the base app configuration for the specified database type
+/// and includes only the requested trigger and target templates. Templates contain
+/// placeholder values (like {name}, {url}, {token}) that consuming applications
+/// can replace with actual values.
+/// 
+/// # Arguments
+/// * `database_type` - "sqlite" or "postgres" for the app configuration
+/// * `trigger_types` - Array of trigger types to include ("manual", "sonarr", "radarr")
+/// * `target_types` - Array of target types to include ("plex", "jellyfin", "emby")
+/// * `include_examples` - Whether to generate a complete example configuration
 fn generate_config_template(
     database_type: &str,
     trigger_types: &[&str],
@@ -256,6 +268,17 @@ analyze = false"#,
     }
 }
 
+/// Merges configuration components into a complete TOML configuration.
+/// 
+/// Takes a base template and merges additional trigger and target configurations.
+/// Performs basic validation to ensure the merged configuration contains required
+/// sections like [app] and database_url.
+/// 
+/// # Arguments
+/// * `req` - Contains base template and additional configs to merge
+/// 
+/// # Returns
+/// A MergeResponse with the merged configuration and any validation warnings
 fn merge_configurations(req: &MergeRequest) -> MergeResponse {
     let mut merged_config = req.base_template.clone();
     let mut warnings = Vec::new();
