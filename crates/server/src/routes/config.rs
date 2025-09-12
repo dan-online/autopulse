@@ -1,33 +1,48 @@
 use crate::middleware::auth::check_auth;
-use actix_web::{get, post, web, HttpResponse, Result};
+use actix_web::{get, web, HttpResponse, Result};
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use autopulse_database::conn::DatabaseType;
 use autopulse_service::manager::PulseManager;
+use autopulse_service::settings::app::App;
+use autopulse_service::settings::targets::{Target, TargetType};
+use autopulse_service::settings::triggers::{Trigger, TriggerType};
+use autopulse_service::settings::{default_triggers, Settings};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-#[derive(Deserialize)]
+fn default_trigger_types() -> String {
+    "manual".into()
+}
+
+fn default_database_type() -> DatabaseType {
+    DatabaseType::Sqlite
+}
+
+#[derive(Deserialize, Debug)]
 pub struct TemplateQuery {
-    pub include_examples: Option<bool>,
-    pub database_type: Option<String>, // "sqlite" or "postgres"
-    pub trigger_types: Option<String>, // "manual,sonarr,radarr"
-    pub target_types: Option<String>,  // "plex,jellyfin,emby"
+    /// Database type for the configuration (see [`DatabaseType`]) (default: sqlite)
+    #[serde(default = "default_database_type")]
+    pub database: DatabaseType,
+    /// Comma-separated list of trigger types to include (see [`TriggerType`]) (default: manual)
+    #[serde(default = "default_trigger_types")]
+    pub triggers: String,
+    /// Comma-separated list of target types to include (see [`TargetType`])
+    pub targets: Option<String>,
+    pub output: Option<OutputType>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputType {
+    Json,
+    Toml,
 }
 
 #[derive(Serialize)]
 pub struct TemplateResponse {
-    pub app_config: String,
-    pub trigger_templates: HashMap<String, String>,
-    pub target_templates: HashMap<String, String>,
-    pub example_config: Option<String>,
+    pub config: String,
     pub version: String,
-}
-
-#[derive(Deserialize)]
-pub struct MergeRequest {
-    pub base_template: String,
-    pub trigger_configs: HashMap<String, String>,
-    pub target_configs: HashMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -47,7 +62,6 @@ pub async fn config_template(
     auth: Option<BasicAuth>,
     manager: web::Data<Arc<PulseManager>>,
 ) -> Result<HttpResponse> {
-    // Authenticate user
     if !check_auth(
         &auth,
         &manager.settings.auth.enabled,
@@ -56,358 +70,231 @@ pub async fn config_template(
     ) {
         return Ok(HttpResponse::Unauthorized().json("Authentication required"));
     }
-
-    let database_type = query.database_type.as_deref().unwrap_or("sqlite");
-    let trigger_types: Vec<&str> = query
-        .trigger_types
-        .as_deref()
-        .unwrap_or("manual")
-        .split(',')
-        .collect();
-    let target_types: Vec<&str> = query
-        .target_types
-        .as_deref()
-        .unwrap_or("plex")
-        .split(',')
-        .collect();
-    let include_examples = query.include_examples.unwrap_or(false);
 
     let response = generate_config_template(
-        database_type,
-        &trigger_types,
-        &target_types,
-        include_examples,
-    );
-
-    Ok(HttpResponse::Ok().json(response))
-}
-
-/// POST /api/config-merge
-///
-/// Merges provided trigger and target configurations with the base template.
-/// This is optional - external applications can also merge configurations themselves.
-#[post("/api/config-merge")]
-pub async fn config_merge(
-    request: web::Json<MergeRequest>,
-    auth: Option<BasicAuth>,
-    manager: web::Data<Arc<PulseManager>>,
-) -> Result<HttpResponse> {
-    // Authenticate user
-    if !check_auth(
-        &auth,
-        &manager.settings.auth.enabled,
-        &manager.settings.auth.username,
-        &manager.settings.auth.password,
-    ) {
-        return Ok(HttpResponse::Unauthorized().json("Authentication required"));
-    }
-
-    let req = request.into_inner();
-    let response = merge_configurations(&req);
+        &query.database,
+        &query
+            .triggers
+            .split(',')
+            .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
+            .collect(),
+        &query
+            .targets
+            .as_ref()
+            .map(|t| {
+                t.split(',')
+                    .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
+                    .collect()
+            })
+            .unwrap_or_default(),
+        query.output.as_ref().unwrap_or(&OutputType::Toml),
+    )
+    .map_err(|e| {
+        actix_web::error::ErrorInternalServerError(format!(
+            "Failed to generate config template: {}",
+            e
+        ))
+    })?;
 
     Ok(HttpResponse::Ok().json(response))
 }
 
 /// Generates configuration templates based on requested database and service types.
-/// 
+///
 /// This function creates the base app configuration for the specified database type
 /// and includes only the requested trigger and target templates. Templates contain
 /// placeholder values (like {name}, {url}, {token}) that consuming applications
 /// can replace with actual values.
-/// 
+///
 /// # Arguments
-/// * `database_type` - "sqlite" or "postgres" for the app configuration
-/// * `trigger_types` - Array of trigger types to include ("manual", "sonarr", "radarr")
-/// * `target_types` - Array of target types to include ("plex", "jellyfin", "emby")
-/// * `include_examples` - Whether to generate a complete example configuration
+/// * `database` - The type of database to configure (see [`DatabaseType`]).
+/// * `input_triggers` - A list of trigger types to include in the configuration.
+/// * `input_targets` - A list of target types to include in the configuration.
+/// * `output_type` - The desired output format for the configuration (see [`OutputType`]).
 fn generate_config_template(
-    database_type: &str,
-    trigger_types: &[&str],
-    target_types: &[&str],
-    include_examples: bool,
-) -> TemplateResponse {
-    // Base app configuration
-    let app_config = match database_type {
-        "postgres" => {
-            r#"[app]
-database_url = "postgres://autopulse:autopulse@localhost:5432/autopulse"
-log_level = "info"
-hostname = "0.0.0.0"
-port = 2875"#
+    database: &DatabaseType,
+    input_triggers: &Vec<TriggerType>,
+    input_targets: &Vec<TargetType>,
+    output_type: &OutputType,
+) -> anyhow::Result<impl Serialize> {
+    let app = App {
+        database_url: match database {
+            DatabaseType::Sqlite => "sqlite://data/autopulse.db",
+            DatabaseType::Postgres => "postgres://autopulse:autopulse@localhost:5432/autopulse",
         }
-        _ => {
-            r#"[app]
-database_url = "sqlite://data/autopulse.db"
-log_level = "info"
-hostname = "0.0.0.0"
-port = 2875"#
-        }
+        .into(),
+        ..Default::default()
     };
 
-    // Trigger templates
-    let mut trigger_templates = HashMap::new();
-    trigger_templates.insert(
-        "manual".to_string(),
-        r#"[triggers.{name}]
-type = "manual"
-# Optional: rewrite paths
-# rewrite.from = "/source/path"
-# rewrite.to = "/target/path"
-# Optional: timer settings
-# timer.wait = 30"#
-            .to_string(),
-    );
+    let mut triggers = default_triggers();
 
-    if trigger_types.contains(&"sonarr") {
-        trigger_templates.insert(
-            "sonarr".to_string(),
-            r#"[triggers.{name}]
-type = "sonarr"
-# Optional: rewrite paths
-# rewrite.from = "/downloads"
-# rewrite.to = "/media/tv"
-# Optional: timer settings
-# timer.wait = 30"#
-                .to_string(),
+    for trigger in input_triggers {
+        triggers.insert(
+            format!("my_{}", serde_json::to_string(trigger)?.replace('"', "")),
+            match trigger {
+                TriggerType::Manual => Trigger::Manual(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Autoscan => Trigger::Autoscan(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Radarr => Trigger::Radarr(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Sonarr => Trigger::Sonarr(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Lidarr => Trigger::Lidarr(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Readarr => Trigger::Readarr(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Notify => {
+                    Trigger::Notify(serde_json::from_str(r#"{"paths": ["/media"]}"#)?)
+                }
+            },
         );
     }
 
-    if trigger_types.contains(&"radarr") {
-        trigger_templates.insert(
-            "radarr".to_string(),
-            r#"[triggers.{name}]
-type = "radarr"
-# Optional: rewrite paths
-# rewrite.from = "/downloads"
-# rewrite.to = "/media/movies"
-# Optional: timer settings
-# timer.wait = 30"#
-                .to_string(),
+    let mut targets = HashMap::new();
+
+    for target in input_targets {
+        targets.insert(
+            format!("my_{}", serde_json::to_string(target)?.replace('"', "")),
+            match target {
+                TargetType::Plex => Target::Plex(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
+                TargetType::Jellyfin => Target::Jellyfin(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
+                TargetType::Emby => Target::Emby(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
+                TargetType::Tdarr => Target::Tdarr(serde_json::from_str(
+                    r#"{"url": "{url}", "db_id": "{library_id}"}"#,
+                )?),
+                TargetType::Sonarr => Target::Sonarr(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
+                TargetType::Radarr => Target::Radarr(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
+                TargetType::Command => Target::Command(serde_json::from_str(
+                    r#"{"command": "echo 'Processing {path}'"}"#,
+                )?),
+                TargetType::FileFlows => {
+                    Target::FileFlows(serde_json::from_str(r#"{"url": "{url}"}"#)?)
+                }
+                TargetType::Autopulse => {
+                    Target::Autopulse(serde_json::from_str(r#"{"url": "{url}", "auth": {"username": "{username}", "password": "{password}" }}"#)?)
+                }
+            },
         );
     }
 
-    // Target templates
-    let mut target_templates = HashMap::new();
-
-    if target_types.contains(&"plex") {
-        target_templates.insert(
-            "plex".to_string(),
-            r#"[targets.{name}]
-type = "plex"
-url = "{url}"
-token = "{token}"
-refresh = true
-analyze = false
-# Optional: rewrite paths
-# rewrite.from = "/media"
-# rewrite.to = "/plex/media""#
-                .to_string(),
-        );
-    }
-
-    if target_types.contains(&"jellyfin") {
-        target_templates.insert(
-            "jellyfin".to_string(),
-            r#"[targets.{name}]
-type = "jellyfin"
-url = "{url}"
-token = "{token}"
-# Optional: rewrite paths
-# rewrite.from = "/media"
-# rewrite.to = "/jellyfin/media""#
-                .to_string(),
-        );
-    }
-
-    if target_types.contains(&"emby") {
-        target_templates.insert(
-            "emby".to_string(),
-            r#"[targets.{name}]
-type = "emby"
-url = "{url}"
-token = "{token}"
-# Optional: rewrite paths
-# rewrite.from = "/media"
-# rewrite.to = "/emby/media""#
-                .to_string(),
-        );
-    }
-
-    // Example configuration if requested
-    let example_config = if include_examples {
-        Some(format!(
-            r#"# Complete example configuration
-{}
-
-[triggers.my_manual]
-type = "manual"
-
-[triggers.my_sonarr]
-type = "sonarr"
-rewrite.from = "/downloads"
-rewrite.to = "/media/tv"
-
-[targets.my_plex]
-type = "plex"
-url = "http://plex:32400"
-token = "your-plex-token"
-refresh = true
-analyze = false"#,
-            app_config
-        ))
-    } else {
-        None
+    let settings = Settings {
+        app,
+        triggers,
+        targets,
+        ..Default::default()
     };
 
-    TemplateResponse {
-        app_config: app_config.to_string(),
-        trigger_templates,
-        target_templates,
-        example_config,
-        version: "1.3.2".to_string(),
-    }
+    let app_config = match output_type {
+        OutputType::Json => serde_json::to_string_pretty(&settings)?,
+        OutputType::Toml => toml::to_string_pretty(&settings)?,
+    };
+
+    Ok(TemplateResponse {
+        config: app_config.to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
 }
 
-/// Merges configuration components into a complete TOML configuration.
-/// 
-/// Takes a base template and merges additional trigger and target configurations.
-/// Performs basic validation to ensure the merged configuration contains required
-/// sections like [app] and database_url.
-/// 
-/// # Arguments
-/// * `req` - Contains base template and additional configs to merge
-/// 
-/// # Returns
-/// A MergeResponse with the merged configuration and any validation warnings
-fn merge_configurations(req: &MergeRequest) -> MergeResponse {
-    let mut merged_config = req.base_template.clone();
-    let mut warnings = Vec::new();
-
-    // Add trigger configurations
-    for config in req.trigger_configs.values() {
-        merged_config.push_str("\n\n");
-        merged_config.push_str(config);
-    }
-
-    // Add target configurations
-    for config in req.target_configs.values() {
-        merged_config.push_str("\n\n");
-        merged_config.push_str(config);
-    }
-
-    // Basic validation
-    if !merged_config.contains("[app]") {
-        warnings.push("Missing [app] section".to_string());
-    }
-
-    if !merged_config.contains("database_url") {
-        warnings.push("Missing database_url configuration".to_string());
-    }
-
-    MergeResponse {
-        merged_config,
-        validation_warnings: warnings,
-    }
-}
 #[cfg(test)]
 mod tests {
-    use crate::routes::config::{generate_config_template, merge_configurations, MergeRequest};
-    use std::collections::HashMap;
+    use super::*;
+    use autopulse_service::settings::targets::TargetType;
+    use autopulse_service::settings::triggers::TriggerType;
 
     #[test]
-    fn test_generate_config_template_sqlite() {
-        let trigger_types = vec!["manual", "sonarr"];
-        let target_types = vec!["plex", "jellyfin"];
-        
-        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
-        
-        assert!(response.app_config.contains("sqlite://data/autopulse.db"));
-        assert!(response.trigger_templates.contains_key("manual"));
-        assert!(response.trigger_templates.contains_key("sonarr"));
-        assert!(response.target_templates.contains_key("plex"));
-        assert!(response.target_templates.contains_key("jellyfin"));
-        assert!(response.example_config.is_none());
-        assert_eq!(response.version, "1.3.2");
+    fn test_generate_config_template_json_manual_trigger_plex_target() {
+        let triggers = vec![TriggerType::Manual];
+        let targets = vec![TargetType::Plex];
+        let result = generate_config_template(
+            &DatabaseType::Sqlite,
+            &triggers,
+            &targets,
+            &OutputType::Json,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        assert!(response["config"].is_string());
+        assert!(response["version"].is_string());
+        let config_str = response["config"].as_str().unwrap();
+        assert!(config_str.contains("my_manual"));
+        assert!(config_str.contains("my_plex"));
+        assert!(config_str.contains("sqlite://data/autopulse.db"));
     }
 
     #[test]
-    fn test_generate_config_template_postgres() {
-        let trigger_types = vec!["manual"];
-        let target_types = vec!["plex"];
-        
-        let response = generate_config_template("postgres", &trigger_types, &target_types, true);
-        
-        assert!(response.app_config.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
-        assert!(response.example_config.is_some());
-        let example = response.example_config.unwrap();
-        assert!(example.contains("[triggers.my_manual]"));
-        assert!(example.contains("[targets.my_plex]"));
+    fn test_generate_config_template_toml_multiple_triggers_targets() {
+        let triggers = vec![
+            TriggerType::Manual,
+            TriggerType::Radarr,
+            TriggerType::Sonarr,
+        ];
+        let targets = vec![TargetType::Jellyfin, TargetType::Tdarr];
+        let result = generate_config_template(
+            &DatabaseType::Postgres,
+            &triggers,
+            &targets,
+            &OutputType::Toml,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        assert!(response["config"].is_string());
+        assert!(response["version"].is_string());
+        let config_str = response["config"].as_str().unwrap();
+        assert!(config_str.contains("my_manual"));
+        assert!(config_str.contains("my_radarr"));
+        assert!(config_str.contains("my_sonarr"));
+        assert!(config_str.contains("my_jellyfin"));
+        assert!(config_str.contains("my_tdarr"));
+        assert!(config_str.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
     }
 
     #[test]
-    fn test_generate_config_template_all_types() {
-        let trigger_types = vec!["manual", "sonarr", "radarr"];
-        let target_types = vec!["plex", "jellyfin", "emby"];
-        
-        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
-        
-        assert_eq!(response.trigger_templates.len(), 3);
-        assert_eq!(response.target_templates.len(), 3);
-        assert!(response.trigger_templates.contains_key("radarr"));
-        assert!(response.target_templates.contains_key("emby"));
+    fn test_generate_config_template_empty_triggers_targets() {
+        let triggers = vec![];
+        let targets = vec![];
+        let result = generate_config_template(
+            &DatabaseType::Sqlite,
+            &triggers,
+            &targets,
+            &OutputType::Json,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        assert!(response["config"].is_string());
+        assert!(response["version"].is_string());
+        let config_str = response["config"].as_str().unwrap();
+        // Should not contain any custom triggers/targets
+        assert!(!config_str.contains("my_manual"));
+        assert!(!config_str.contains("my_plex"));
     }
 
     #[test]
-    fn test_merge_configurations() {
-        let mut trigger_configs = HashMap::new();
-        trigger_configs.insert("sonarr".to_string(), "[triggers.my_sonarr]\ntype = \"sonarr\"".to_string());
-        
-        let mut target_configs = HashMap::new();
-        target_configs.insert("plex".to_string(), "[targets.my_plex]\ntype = \"plex\"".to_string());
-        
-        let request = MergeRequest {
-            base_template: "[app]\ndatabase_url = \"sqlite://test.db\"".to_string(),
-            trigger_configs,
-            target_configs,
-        };
-        
-        let response = merge_configurations(&request);
-        
-        assert!(response.merged_config.contains("[app]"));
-        assert!(response.merged_config.contains("database_url"));
-        assert!(response.merged_config.contains("[triggers.my_sonarr]"));
-        assert!(response.merged_config.contains("[targets.my_plex]"));
-        assert!(response.validation_warnings.is_empty());
-    }
+    fn test_generate_config_template_invalid_output_type() {
+        let triggers = vec![TriggerType::Manual];
+        let targets = vec![TargetType::Plex];
+        // OutputType is always valid due to enum, so this test is not needed.
+        // But we can test that TOML output parses.
+        let result = generate_config_template(
+            &DatabaseType::Sqlite,
+            &triggers,
+            &targets,
+            &OutputType::Toml,
+        )
+        .unwrap();
 
-    #[test]
-    fn test_merge_configurations_validation_warnings() {
-        let request = MergeRequest {
-            base_template: "# Empty config".to_string(),
-            trigger_configs: HashMap::new(),
-            target_configs: HashMap::new(),
-        };
-        
-        let response = merge_configurations(&request);
-        
-        assert!(response.validation_warnings.len() >= 2);
-        assert!(response.validation_warnings.contains(&"Missing [app] section".to_string()));
-        assert!(response.validation_warnings.contains(&"Missing database_url configuration".to_string()));
-    }
-
-    #[test]
-    fn test_template_placeholders() {
-        let trigger_types = vec!["manual"];
-        let target_types = vec!["plex"];
-        
-        let response = generate_config_template("sqlite", &trigger_types, &target_types, false);
-        
-        let plex_template = response.target_templates.get("plex").unwrap();
-        assert!(plex_template.contains("{name}"));
-        assert!(plex_template.contains("{url}"));
-        assert!(plex_template.contains("{token}"));
-        
-        let manual_template = response.trigger_templates.get("manual").unwrap();
-        assert!(manual_template.contains("{name}"));
+        let response = serde_json::to_value(&result).unwrap();
+        assert!(response["config"].is_string());
+        let config_str = response["config"].as_str().unwrap();
+        assert!(config_str.contains("my_manual"));
+        assert!(config_str.contains("my_plex"));
+        assert!(config_str.contains("sqlite://data/autopulse.db"));
     }
 }

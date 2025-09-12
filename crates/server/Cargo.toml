@@ -28,3 +28,4 @@ actix-web = { version = "4.9.0", default-features = false, features = [
     "unicode",
 ] }
 actix-web-httpauth = "0.8.2"
+toml = "0.9.5"

@@ -2,8 +2,8 @@ use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
 use actix_web_httpauth::extractors::basic;
 use autopulse_service::manager::PulseManager;
 use routes::{
-    index::hello, list::list, login::login, stats::stats, status::status, triggers::trigger_get,
-    triggers::trigger_post,
+    config::config_template, index::hello, list::list, login::login, stats::stats, status::status,
+    triggers::trigger_get, triggers::trigger_post,
 };
 use std::sync::Arc;
 
@@ -28,6 +28,7 @@ pub fn get_server(
             .service(stats)
             .service(login)
             .service(list)
+            .service(config_template)
             .app_data(basic::Config::default().realm("Restricted area"))
             .app_data(Data::new(manager_clone.clone()))
     })

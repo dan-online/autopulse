@@ -31,9 +31,9 @@ pub mod manager;
 pub use manager::*;
 
 use discord::DiscordWebhook;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Webhook {
     Discord(DiscordWebhook),

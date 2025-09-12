@@ -2,21 +2,19 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::{EventTimers, Timer};
 use crate::settings::triggers::TriggerRequest;
 use autopulse_utils::join_path;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Sonarr {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,
     /// Timer settings
-    #[serde(default)]
-    pub timer: Timer,
+    pub timer: Option<Timer>,
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
     /// Event-specific timers
-    #[serde(default)]
-    pub event_timers: EventTimers,
+    pub event_timers: Option<EventTimers>,
 }
 
 #[derive(Deserialize, Clone)]

@@ -9,7 +9,7 @@ use tracing::error;
 
 use super::RequestBuilderPerform;
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Radarr {
     /// URL to the Plex server
     pub url: String,

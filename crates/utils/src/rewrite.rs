@@ -1,5 +1,5 @@
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Rewrites
 ///
@@ -20,7 +20,7 @@ use serde::Deserialize;
 ///   - from: '^/old/path/(.*)$'
 ///     to: '/new/path/$1'
 /// ``````
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct Rewrite {
     pub(crate) rewrites: Vec<SingleRewrite>,
 }
@@ -50,7 +50,7 @@ impl<'de> Deserialize<'de> for Rewrite {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SingleRewrite {
     /// Path to rewrite from
     pub from: String,

@@ -206,7 +206,7 @@ pub mod sonarr;
 
 use crate::settings::timer::Timer;
 use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use {
     lidarr::{Lidarr, LidarrRequest},
     manual::Manual,
@@ -225,7 +225,19 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TriggerType {
+    Manual,
+    Autoscan,
+    Radarr,
+    Sonarr,
+    Lidarr,
+    Readarr,
+    Notify,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
     Manual(Manual),
@@ -259,21 +271,22 @@ impl Trigger {
             Self::Manual(trigger) => trigger.timer,
             Self::Notify(trigger) => trigger.timer,
             Self::Autoscan(trigger) => trigger.timer,
-        };
+        }
+        .unwrap_or_default();
 
         let event_specific_timer = match &self {
             Self::Sonarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Radarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Lidarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Readarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             _ => None,
         };
 

@@ -19,7 +19,7 @@ const fn default_true() -> bool {
     true
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize)]
 pub struct Emby {
     /// URL to the Jellyfin/Emby server
     pub url: String,
@@ -36,7 +36,7 @@ pub struct Emby {
 }
 
 /// Metadata refresh mode for Jellyfin/Emby
-#[derive(Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EmbyMetadataRefreshMode {
     /// `none`
