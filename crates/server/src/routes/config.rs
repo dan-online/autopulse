@@ -69,24 +69,32 @@ pub async fn config_template(
 
     let response = generate_config_template(
         &query.database,
-        &query
-            .triggers
-            .as_ref()
-            .map(|t| {
-                t.split(',')
-                    .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
-                    .collect()
-            })
-            .unwrap_or_default(),
-        &query
-            .targets
-            .as_ref()
-            .map(|t| {
-                t.split(',')
-                    .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
-                    .collect()
-            })
-            .unwrap_or_default(),
+        &serde_json::from_str::<Vec<TriggerType>>(&format!(
+            "[{}]",
+            query
+                .triggers
+                .as_ref()
+                .map(|t| t
+                    .split(',')
+                    .map(|s| format!("\"{}\"", s.trim()))
+                    .collect::<Vec<_>>()
+                    .join(","))
+                .unwrap_or_default()
+        ))
+        .map_err(|e| actix_web::error::ErrorBadRequest(format!("Invalid trigger types: {}", e)))?,
+        &serde_json::from_str::<Vec<TargetType>>(&format!(
+            "[{}]",
+            query
+                .targets
+                .as_ref()
+                .map(|t| t
+                    .split(',')
+                    .map(|s| format!("\"{}\"", s.trim()))
+                    .collect::<Vec<_>>()
+                    .join(","))
+                .unwrap_or_default()
+        ))
+        .map_err(|e| actix_web::error::ErrorBadRequest(format!("Invalid target types: {}", e)))?,
         query.output.as_ref().unwrap_or(&OutputType::Toml),
     )
     .map_err(|e| {
