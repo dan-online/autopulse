@@ -11,10 +11,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-fn default_trigger_types() -> String {
-    "manual".into()
-}
-
 const fn default_database_type() -> DatabaseType {
     DatabaseType::Sqlite
 }
@@ -25,10 +21,10 @@ pub struct TemplateQuery {
     #[serde(default = "default_database_type")]
     pub database: DatabaseType,
     /// Comma-separated list of trigger types to include (see [`TriggerType`]) (default: manual)
-    #[serde(default = "default_trigger_types")]
-    pub triggers: String,
+    pub triggers: Option<String>,
     /// Comma-separated list of target types to include (see [`TargetType`])
     pub targets: Option<String>,
+    /// Output format (json or toml) (default: toml)
     pub output: Option<OutputType>,
 }
 
@@ -75,9 +71,13 @@ pub async fn config_template(
         &query.database,
         &query
             .triggers
-            .split(',')
-            .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
-            .collect(),
+            .as_ref()
+            .map(|t| {
+                t.split(',')
+                    .map(|s| serde_json::from_str(format!("\"{s}\"").as_str()).unwrap())
+                    .collect()
+            })
+            .unwrap_or_default(),
         &query
             .targets
             .as_ref()
