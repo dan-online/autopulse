@@ -6,6 +6,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use serde::Deserialize;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use tracing::info;
@@ -17,6 +18,15 @@ const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/po
 #[doc(hidden)]
 #[cfg(feature = "sqlite")]
 const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqlite");
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum DatabaseType {
+    #[cfg(feature = "sqlite")]
+    Sqlite,
+    #[cfg(feature = "postgres")]
+    Postgres,
+}
 
 /// Represents a connection to either a `PostgreSQL` or `SQLite` database.
 #[derive(diesel::MultiConnection)]

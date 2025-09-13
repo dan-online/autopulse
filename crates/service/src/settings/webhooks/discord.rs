@@ -27,7 +27,7 @@ pub struct DiscordEmbedContent {
     pub embeds: Vec<DiscordEmbed>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DiscordWebhook {
     /// Webhook URL
     pub url: String,

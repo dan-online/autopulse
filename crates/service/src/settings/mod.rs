@@ -2,10 +2,9 @@ use app::App;
 use auth::Auth;
 use config::Config;
 use opts::Opts;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 use targets::Target;
-use timer::Timer;
 use triggers::manual::Manual;
 use triggers::Trigger;
 use webhooks::Webhook;
@@ -89,14 +88,14 @@ pub mod targets;
 pub mod webhooks;
 
 #[doc(hidden)]
-fn default_triggers() -> HashMap<String, Trigger> {
+pub fn default_triggers() -> HashMap<String, Trigger> {
     let mut triggers = HashMap::new();
 
     triggers.insert(
         "manual".to_string(),
         Trigger::Manual(Manual {
             rewrite: None,
-            timer: Timer::default(),
+            timer: None,
             excludes: vec![],
         }),
     );
@@ -104,7 +103,7 @@ fn default_triggers() -> HashMap<String, Trigger> {
     triggers
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {
     #[serde(default)]
     pub app: App,
@@ -138,6 +137,20 @@ pub struct Settings {
     pub anchors: Vec<PathBuf>,
 }
 
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            app: App::default(),
+            auth: Auth::default(),
+            opts: Opts::default(),
+            triggers: default_triggers(),
+            targets: HashMap::new(),
+            webhooks: HashMap::new(),
+            anchors: vec![],
+        }
+    }
+}
+
 impl Settings {
     pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
         let mut settings = Config::builder()
@@ -165,7 +178,7 @@ impl Settings {
                 "manual".to_string(),
                 Trigger::Manual(Manual {
                     rewrite: None,
-                    timer: Timer::default(),
+                    timer: None,
                     excludes: vec![],
                 }),
             );

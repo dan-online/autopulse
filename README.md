@@ -213,6 +213,29 @@ $ curl -u 'admin:password' 'http://localhost:2875/triggers/manual?path=/path/to/
 $ curl -H 'Authorization: Basic <base_64_encoded_login>' 'http://localhost:2875/triggers/manual?path=/path/to/file&hash=1234567890'
 ```
 
+
+#### Configuration Template API
+
+autopulse provides a configuration template API that allows external applications to dynamically generate configurations without embedding static TOML files. This is useful for applications like Bazarr that need to configure autopulse programmatically.
+
+##### GET /api/config-template
+
+Returns configuration templates with optional parameters:
+
+```bash
+# Get basic templates
+$ curl -u "admin:password" "http://localhost:2875/api/config-template"
+
+# Get templates with specific types
+$ curl -u "admin:password" "http://localhost:2875/api/config-template?database=postgres&triggers=sonarr,radarr&targets=plex,jellyfin&output=json"
+```
+
+**Query Parameters:**
+- `database`: Database type (`sqlite`, `postgres`)
+- `triggers`: Comma-separated trigger types (`manual`, `sonarr`, `radarr`, etc)
+- `targets`: Comma-separated target types (`plex`, `jellyfin`, `emby`, etc)
+- `output`: Output format (`json`, `toml`)
+
 #### UI
 
 The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI when self-hosting.

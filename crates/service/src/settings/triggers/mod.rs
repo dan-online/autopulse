@@ -206,7 +206,7 @@ pub mod sonarr;
 
 use crate::settings::timer::Timer;
 use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use {
     lidarr::{Lidarr, LidarrRequest},
     manual::Manual,
@@ -225,11 +225,25 @@ pub trait TriggerRequest {
     fn paths(&self) -> Vec<(String, bool)>;
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TriggerType {
+    Manual,
+    Autoscan,
+    Radarr,
+    Bazarr,
+    Sonarr,
+    Lidarr,
+    Readarr,
+    Notify,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Trigger {
     Manual(Manual),
     Autoscan(Autoscan),
+    Bazarr(Manual),
     Radarr(Radarr),
     Sonarr(Sonarr),
     Lidarr(Lidarr),
@@ -243,6 +257,7 @@ impl Trigger {
             Self::Sonarr(trigger) => trigger.rewrite.as_ref(),
             Self::Radarr(trigger) => trigger.rewrite.as_ref(),
             Self::Lidarr(trigger) => trigger.rewrite.as_ref(),
+            Self::Bazarr(trigger) => trigger.rewrite.as_ref(),
             Self::Readarr(trigger) => trigger.rewrite.as_ref(),
             Self::Autoscan(trigger) => trigger.rewrite.as_ref(),
             Self::Manual(trigger) => trigger.rewrite.as_ref(),
@@ -255,25 +270,27 @@ impl Trigger {
             Self::Sonarr(trigger) => trigger.timer,
             Self::Radarr(trigger) => trigger.timer,
             Self::Lidarr(trigger) => trigger.timer,
+            Self::Bazarr(trigger) => trigger.timer,
             Self::Readarr(trigger) => trigger.timer,
             Self::Manual(trigger) => trigger.timer,
             Self::Notify(trigger) => trigger.timer,
             Self::Autoscan(trigger) => trigger.timer,
-        };
+        }
+        .unwrap_or_default();
 
         let event_specific_timer = match &self {
             Self::Sonarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Radarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Lidarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             Self::Readarr(trigger) => event_name
                 .as_ref()
-                .and_then(|event| trigger.event_timers.get(event)),
+                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
             _ => None,
         };
 
@@ -292,7 +309,7 @@ impl Trigger {
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
-            Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) => {
+            Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) | Self::Bazarr(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }
         }?;
@@ -306,6 +323,7 @@ impl Trigger {
             Self::Radarr(trigger) => &trigger.excludes,
             Self::Sonarr(trigger) => &trigger.excludes,
             Self::Lidarr(trigger) => &trigger.excludes,
+            Self::Bazarr(trigger) => &trigger.excludes,
             Self::Readarr(trigger) => &trigger.excludes,
             Self::Notify(trigger) => &trigger.excludes,
             Self::Autoscan(trigger) => &trigger.excludes,

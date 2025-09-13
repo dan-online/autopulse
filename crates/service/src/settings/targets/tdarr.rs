@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::RequestBuilderPerform;
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Tdarr {
     /// URL to the Tdarr server
     pub url: String,
