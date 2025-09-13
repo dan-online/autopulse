@@ -28,6 +28,19 @@ pub enum DatabaseType {
     Postgres,
 }
 
+impl Default for DatabaseType {
+    fn default() -> Self {
+        #[cfg(feature = "sqlite")]
+        {
+            Self::Sqlite
+        }
+        #[cfg(all(not(feature = "sqlite"), feature = "postgres"))]
+        {
+            Self::Postgres
+        }
+    }
+}
+
 impl DatabaseType {
     pub fn default_url(&self) -> String {
         match self {

@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const fn default_database_type() -> DatabaseType {
-    DatabaseType::Sqlite
+fn default_database_type() -> DatabaseType {
+    DatabaseType::default()
 }
 
 #[derive(Deserialize, Debug)]
