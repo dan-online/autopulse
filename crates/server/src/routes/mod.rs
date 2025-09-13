@@ -103,7 +103,6 @@ pub mod login;
 pub mod triggers;
 
 /// GET - `/api/config-template`
-/// POST - `/api/config-merge`
 ///
 /// Provides configuration template API for external applications.
 /// This allows applications like Bazarr to dynamically generate Autopulse
