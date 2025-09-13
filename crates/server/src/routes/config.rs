@@ -131,8 +131,19 @@ fn generate_config_template(
     let mut triggers = default_triggers();
 
     for trigger in input_triggers {
+        let name = serde_json::to_string(trigger)?.replace('"', "");
+
+        let mut count = 0;
+        let mut key = name.clone();
+
+        while triggers.contains_key(&key) {
+            count += 1;
+
+            key = format!("{}_{}", name, count);
+        }
+
         triggers.insert(
-            format!("my_{}", serde_json::to_string(trigger)?.replace('"', "")),
+            key,
             match trigger {
                 TriggerType::Manual => Trigger::Manual(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Bazarr => Trigger::Bazarr(serde_json::from_str(r#"{}"#)?),
@@ -151,8 +162,18 @@ fn generate_config_template(
     let mut targets = HashMap::new();
 
     for target in input_targets {
+        let name = serde_json::to_string(target)?.replace('"', "");
+        let mut count = 0;
+        let mut key = name.clone();
+
+        while targets.contains_key(&key) {
+            count += 1;
+
+            key = format!("{}_{}", name, count);
+        }
+
         targets.insert(
-            format!("my_{}", serde_json::to_string(target)?.replace('"', "")),
+            key,
             match target {
                 TargetType::Plex => Target::Plex(serde_json::from_str(
                     r#"{"url": "{url}", "token": "{token}"}"#,
@@ -225,8 +246,8 @@ mod tests {
         assert!(response["config"].is_string());
         assert!(response["version"].is_string());
         let config_str = response["config"].as_str().unwrap();
-        assert!(config_str.contains("my_manual"));
-        assert!(config_str.contains("my_plex"));
+        assert!(config_str.contains("manual"));
+        assert!(config_str.contains("plex"));
         assert!(config_str.contains("sqlite://data/autopulse.db"));
     }
 
@@ -250,11 +271,11 @@ mod tests {
         assert!(response["config"].is_string());
         assert!(response["version"].is_string());
         let config_str = response["config"].as_str().unwrap();
-        assert!(config_str.contains("my_manual"));
-        assert!(config_str.contains("my_radarr"));
-        assert!(config_str.contains("my_sonarr"));
-        assert!(config_str.contains("my_jellyfin"));
-        assert!(config_str.contains("my_tdarr"));
+        assert!(config_str.contains("manual"));
+        assert!(config_str.contains("radarr"));
+        assert!(config_str.contains("sonarr"));
+        assert!(config_str.contains("jellyfin"));
+        assert!(config_str.contains("tdarr"));
         assert!(config_str.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
     }
 
@@ -275,8 +296,8 @@ mod tests {
         assert!(response["version"].is_string());
         let config_str = response["config"].as_str().unwrap();
         // Should not contain any custom triggers/targets
-        assert!(!config_str.contains("my_manual"));
-        assert!(!config_str.contains("my_plex"));
+        assert!(config_str.contains("manual"));
+        assert!(!config_str.contains("plex"));
     }
 
     #[test]
@@ -296,8 +317,31 @@ mod tests {
         let response = serde_json::to_value(&result).unwrap();
         assert!(response["config"].is_string());
         let config_str = response["config"].as_str().unwrap();
-        assert!(config_str.contains("my_manual"));
-        assert!(config_str.contains("my_plex"));
+        assert!(config_str.contains("manual"));
+        assert!(config_str.contains("plex"));
         assert!(config_str.contains("sqlite://data/autopulse.db"));
+    }
+
+    #[test]
+    fn test_generate_config_template_multiple_same_type() {
+        let triggers = vec![TriggerType::Manual, TriggerType::Manual];
+        let targets = vec![TargetType::Plex, TargetType::Plex];
+        // OutputType is always valid due to enum, so this test is not needed.
+        // But we can test that TOML output parses.
+        let result = generate_config_template(
+            &DatabaseType::Sqlite,
+            &triggers,
+            &targets,
+            &OutputType::Toml,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        assert!(response["config"].is_string());
+        let config_str = response["config"].as_str().unwrap();
+        assert!(config_str.contains("manual"));
+        assert!(config_str.contains("manual_1"));
+        assert!(config_str.contains("plex"));
+        assert!(config_str.contains("plex_1"));
     }
 }
