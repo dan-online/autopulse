@@ -120,11 +120,7 @@ fn generate_config_template(
     output_type: &OutputType,
 ) -> anyhow::Result<impl Serialize> {
     let app = App {
-        database_url: match database {
-            DatabaseType::Sqlite => "sqlite://data/autopulse.db",
-            DatabaseType::Postgres => "postgres://autopulse:autopulse@localhost:5432/autopulse",
-        }
-        .into(),
+        database_url: database.default_url(),
         ..Default::default()
     };
 

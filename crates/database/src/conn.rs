@@ -28,6 +28,17 @@ pub enum DatabaseType {
     Postgres,
 }
 
+impl DatabaseType {
+    pub fn default_url(&self) -> String {
+        match self {
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite => "sqlite://data/autopulse.db".to_string(),
+            #[cfg(feature = "postgres")]
+            Self::Postgres => "postgres://autopulse:autopulse@localhost:5432/autopulse".to_string(),
+        }
+    }
+}
+
 /// Represents a connection to either a `PostgreSQL` or `SQLite` database.
 #[derive(diesel::MultiConnection)]
 pub enum AnyConnection {

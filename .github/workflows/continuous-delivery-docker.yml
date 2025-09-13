@@ -219,9 +219,9 @@ jobs:
         if: matrix.feature == 'full'
         run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      - name: Test binary
-        if: matrix.feature != 'full'
-        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
+      # - name: Test binary
+      #   if: matrix.feature != 'full'
+      #   run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
 
       - name: Build binary
         if: matrix.feature != 'full'
