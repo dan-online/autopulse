@@ -1,5 +1,5 @@
 use autopulse_utils::LogLevel;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[doc(hidden)]
 fn default_hostname() -> String {
@@ -21,7 +21,7 @@ fn default_log_level() -> LogLevel {
     LogLevel::default()
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct App {
     /// Hostname to bind to, (default: 0.0.0.0)
     #[serde(default = "default_hostname")]

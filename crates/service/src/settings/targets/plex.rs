@@ -5,14 +5,14 @@ use anyhow::Context;
 use autopulse_database::models::ScanEvent;
 use autopulse_utils::{get_url, squash_directory, what_is, PathType};
 use reqwest::header;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
 };
 use tracing::{debug, error, trace};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Plex {
     /// URL to the Plex server
     pub url: String,

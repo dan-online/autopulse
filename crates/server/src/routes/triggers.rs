@@ -166,6 +166,8 @@ pub async fn trigger_get(
                         + chrono::Duration::seconds(
                             trigger_settings
                                 .timer
+                                .clone()
+                                .unwrap_or_default()
                                 .wait
                                 .unwrap_or(manager.settings.opts.default_timer_wait)
                                 as i64,
@@ -209,6 +211,8 @@ pub async fn trigger_get(
                         + chrono::Duration::seconds(
                             trigger_settings
                                 .timer
+                                .clone()
+                                .unwrap_or_default()
                                 .wait
                                 .unwrap_or(manager.settings.opts.default_timer_wait)
                                 as i64,

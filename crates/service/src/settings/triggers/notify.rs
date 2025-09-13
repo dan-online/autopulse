@@ -5,12 +5,12 @@ use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::{error, trace};
 
-#[derive(Deserialize, Clone, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
 pub enum NotifyBackendType {
     #[serde(rename = "recommended")]
     /// Uses the recommended backend such as `inotify` on Linux, `FSEvents` on macOS, and `ReadDirectoryChangesW` on Windows
@@ -41,7 +41,7 @@ impl Default for NotifyBackendType {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Notify {
     /// Paths to monitor
     pub paths: Vec<String>,
@@ -61,8 +61,7 @@ pub struct Notify {
     #[serde(default)]
     pub excludes: Vec<String>,
     /// Timer
-    #[serde(default)]
-    pub timer: Timer,
+    pub timer: Option<Timer>,
 }
 
 impl Notify {

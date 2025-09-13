@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::{collections::HashMap, path::Path};
 use tracing::{debug, error, trace};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct FileFlows {
     /// URL to the `FileFlows` server
     pub url: String,

@@ -1,13 +1,13 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 /// Command target
 ///
 /// Note: Either `path` or `raw` must be set but not both
-#[derive(Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize)]
 pub struct Command {
     /// Path to the command to run
     ///

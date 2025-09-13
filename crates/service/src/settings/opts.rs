@@ -1,5 +1,5 @@
 use autopulse_utils::Rotation;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[doc(hidden)]
@@ -22,7 +22,7 @@ const fn default_cleanup_days() -> u64 {
     10
 }
 
-#[derive(Clone, Deserialize, Default)]
+#[derive(Serialize, Clone, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LogRotation {
     Daily,
@@ -55,7 +55,7 @@ impl From<LogRotation> for Rotation {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Opts {
     /// Check if the path exists before processing (default: false)
     #[serde(default = "default_check_path")]

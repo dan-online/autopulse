@@ -1,8 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use serde::Deserialize;
-
-#[derive(Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Timer {
     /// Time to wait before processing
     pub wait: Option<u64>,
@@ -59,7 +58,7 @@ impl Timer {
 ///   EpisodeFileDelete:
 ///     wait: 2
 /// ```
-#[derive(Clone, Default)]
+#[derive(Serialize, Clone, Default)]
 pub struct EventTimers {
     timers: HashMap<String, Timer>,
 }

@@ -240,6 +240,8 @@ impl PulseManager {
                 let cloned_name = name.clone();
                 let timer = service
                     .timer
+                    .clone()
+                    .unwrap_or_default()
                     .wait
                     .unwrap_or(settings.opts.default_timer_wait) as i64;
 

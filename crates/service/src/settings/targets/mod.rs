@@ -171,13 +171,27 @@ pub mod tdarr;
 
 use autopulse_database::models::ScanEvent;
 use reqwest::{RequestBuilder, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use {
     autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
     radarr::Radarr, sonarr::Sonarr, tdarr::Tdarr,
 };
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TargetType {
+    Plex,
+    Jellyfin,
+    Emby,
+    Tdarr,
+    Sonarr,
+    Radarr,
+    Command,
+    FileFlows,
+    Autopulse,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Target {
     Plex(Plex),

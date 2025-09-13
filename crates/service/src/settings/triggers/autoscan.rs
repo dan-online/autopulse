@@ -1,14 +1,13 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Autoscan {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,
     /// Timer settings
-    #[serde(default)]
-    pub timer: Timer,
+    pub timer: Option<Timer>,
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
