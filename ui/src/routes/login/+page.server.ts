@@ -1,4 +1,5 @@
 import { type Actions, fail, redirect } from "@sveltejs/kit";
+import { base } from "$app/paths";
 import { env } from "$env/dynamic/private";
 import { sign } from "$lib/auth";
 import { isForced } from "$lib/forced";
@@ -20,7 +21,7 @@ const getURLOptions = (url: URL) => {
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
 	if (isForced) {
-		return redirect(302, "/");
+		return redirect(302, `${base}/`);
 	}
 
 	const [defaultURL, forceDefaultURL] = getURLOptions(url);

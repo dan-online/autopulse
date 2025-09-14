@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import { goto, invalidateAll } from "$app/navigation";
+import { resolve } from "$app/paths";
 import { page } from "$app/state";
 
 let searchLoading = $state(false);
@@ -49,9 +50,6 @@ const descMap: Record<StatNames, string> = {
 	total: "Total scan events",
 };
 
-// $: stats = page.data.stats;
-// $: events = page.data.events;
-// $: error = page.data.error;
 let stats = $derived(page.data.stats);
 let events = $derived(page.data.events);
 let error = $derived(page.data.error);
@@ -60,25 +58,16 @@ let statsSorted = $derived(
 	Object.entries(stats.stats).sort(correctSort) as [StatNames, string][],
 );
 
-// $: sortBy = page.url.searchParams.get("sort") || "created_at";
-// $: searchBy = page.url.searchParams.get("search") || "";
-// $: pageBy = page.url.searchParams.get("page")
-// 	? Number.parseInt(page.url.searchParams.get("page") as string)
-// 	: 1;
-// $: limitBy = page.url.searchParams.get("limit")
-// 	? Number.parseInt(page.url.searchParams.get("limit") as string)
-// 	: 10;
-// $: statusBy = page.url.searchParams.get("status") || "";
 let sortBy = $derived(page.url.searchParams.get("sort") || "created_at");
 let searchBy = $derived(page.url.searchParams.get("search") || "");
 let pageBy = $derived(
 	page.url.searchParams.get("page")
-		? Number.parseInt(page.url.searchParams.get("page") as string)
+		? Number.parseInt(page.url.searchParams.get("page") as string, 10)
 		: 1,
 );
 let limitBy = $derived(
 	page.url.searchParams.get("limit")
-		? Number.parseInt(page.url.searchParams.get("limit") as string)
+		? Number.parseInt(page.url.searchParams.get("limit") as string, 10)
 		: 10,
 );
 let statusBy = $derived(page.url.searchParams.get("status") || "");
@@ -153,7 +142,7 @@ const updateBasedOn = (
 
 	if (key === "page") {
 		if (e instanceof Event) {
-			pageIndex = Number.parseInt((e.target as HTMLInputElement).value);
+			pageIndex = Number.parseInt((e.target as HTMLInputElement).value, 10);
 		} else if (typeof e === "number") {
 			pageIndex = e;
 		} else {
@@ -168,7 +157,7 @@ const updateBasedOn = (
 	}
 
 	if (key === "limit" && e instanceof Event) {
-		limit = Number.parseInt((e.target as HTMLInputElement).value);
+		limit = Number.parseInt((e.target as HTMLInputElement).value, 10);
 		pageIndex = 1;
 	} else {
 		limit = limitBy;
@@ -261,8 +250,9 @@ const updateBasedOn = (
                         class="mt-4 lg:mt-0 inline-block h-8 w-8"
                     /> -->
                     <i
-                        class={iconMap[key] + " mt-4 lg:mt-0 inline-block h-8 w-8"}
-                        ></i>
+                        class={iconMap[key] +
+                            " mt-4 lg:mt-0 inline-block h-8 w-8"}
+                    ></i>
                 </div>
                 <div class="stat-title">
                     {key[0].toUpperCase() + key.slice(1)}
@@ -304,9 +294,14 @@ const updateBasedOn = (
                         >
                             {#if searchLoading}
                                 <!-- <SvgSpinners90RingWithBg class="w-4 h-4" /> -->
-                                 <i class="block i-svg-spinners-90-ring-with-bg w-4 h-4"></i>
+                                <i
+                                    class="block i-svg-spinners-90-ring-with-bg w-4 h-4"
+                                ></i>
                             {:else}
-                                <i class:text-primary={!limiter} class="block i-ph-magnifying-glass-bold w-4 h-4">
+                                <i
+                                    class:text-primary={!limiter}
+                                    class="block i-ph-magnifying-glass-bold w-4 h-4"
+                                >
                                 </i>
                             {/if}
                         </button>
@@ -346,7 +341,9 @@ const updateBasedOn = (
                                                     <!-- <LineMdChevronDown
                                                         class="ml-auto w-4 h-4"
                                                     /> -->
-                                                    <i class="i-line-md-chevron-down ml-auto w-4 h-4"></i>
+                                                    <i
+                                                        class="i-line-md-chevron-down ml-auto w-4 h-4"
+                                                    ></i>
                                                 {/if}
                                             </span>
                                         </button>
@@ -359,7 +356,8 @@ const updateBasedOn = (
                             {#each events as event}
                                 <tr
                                     class="cursor-pointer hover:bg-base-300 rounded-md"
-                                    onclick={() => goto(`/status/${event.id}`)}
+                                    onclick={() =>
+                                        goto(resolve(`/status/${event.id}`))}
                                 >
                                     {#each fields as field}
                                         {#if field.key === "created_at" || field.key === "updated_at"}
@@ -380,7 +378,9 @@ const updateBasedOn = (
                                     {/each}
                                     <td>
                                         <a
-                                            href={`/status/${event.id}`}
+                                            href={resolve(
+                                                `/status/${event.id}`,
+                                            )}
                                             class="btn btn-sm btn-primary"
                                         >
                                             View
@@ -406,7 +406,7 @@ const updateBasedOn = (
                     <div class="flex gap-2">
                         <button
                             class="btn btn-sm"
-                            disabled={pageBy <= 1  || searchLoading}
+                            disabled={pageBy <= 1 || searchLoading}
                             onclick={() => {
                                 updateBasedOn("page", Math.max(1, pageBy - 1));
                             }}
@@ -414,7 +414,7 @@ const updateBasedOn = (
                         >
                             <i class="i-line-md-chevron-left w-4 h-4"></i>
                         </button>
-                        <input 
+                        <input
                             value={pageBy}
                             class="input input-bordered input-sm w-12 text-center"
                             max={Math.ceil(events.length / limitBy)}

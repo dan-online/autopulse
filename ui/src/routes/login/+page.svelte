@@ -1,15 +1,15 @@
 <script lang="ts">
 import { applyAction, enhance } from "$app/forms";
 import { goto } from "$app/navigation";
-import { page } from "$app/stores";
-import type { ActionData } from "./$types";
+import { page } from "$app/state";
 
-export let form: ActionData;
-let loading = false;
+let { form } = $props();
 
-$: defaultURL = $page.data.defaultURL;
-$: forceDefaultURL = $page.data.forceDefaultURL;
-$: error = form?.error;
+let loading = $state(false);
+
+let defaultURL = $derived(page.data.defaultURL);
+let forceDefaultURL = $derived(page.data.forceDefaultURL);
+let error = $derived(form?.error);
 </script>
 
 <svelte:head>
@@ -102,7 +102,9 @@ $: error = form?.error;
                         <span>Sign in</span>
                     {:else}
                         <!-- <SvgSpinners90RingWithBg class="w-6 h-6" /> -->
-                         <i class="i-svg-spinners-90-ring-with-bg w-6 h-6 animate-spin"></i>
+                        <i
+                            class="i-svg-spinners-90-ring-with-bg w-6 h-6 animate-spin"
+                        ></i>
                     {/if}
                 </button>
             </div>

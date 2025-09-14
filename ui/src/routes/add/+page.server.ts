@@ -1,4 +1,5 @@
 import { type Actions, fail, redirect } from "@sveltejs/kit";
+import { base } from "$app/paths";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -50,7 +51,7 @@ export const actions: Actions = {
 			const json = await response.json();
 
 			if (goafter) {
-				return redirect(302, `/status/${json.id}`);
+				return redirect(302, `${base}/status/${json.id}`);
 			}
 
 			return {

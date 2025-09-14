@@ -1,4 +1,5 @@
-import type { Cookies, Handle } from "@sveltejs/kit";
+import { type Cookies, type Handle, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
 import { env } from "$env/dynamic/private";
 import { type Payload, verify } from "$lib/auth";
 import { isForced } from "$lib/forced";
@@ -25,12 +26,20 @@ const getAuthCookie = async (cookies: Cookies) => {
 	return authCookie ? await verify(authCookie).catch(() => null) : null;
 };
 
-export const handle: Handle = async ({ event, resolve }) => {
+export const handle: Handle = async ({ event, resolve: resolveEvent }) => {
 	event.locals.auth = await getAuthCookie(event.cookies);
+
+	if (
+		event.url.pathname !== resolve("/login") &&
+		!event.locals.auth &&
+		!isForced
+	) {
+		return redirect(302, resolve("/login"));
+	}
 
 	const start = performance.now();
 
-	const result = await resolve(event);
+	const result = await resolveEvent(event);
 
 	const end = performance.now();
 

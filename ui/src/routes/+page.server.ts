@@ -1,13 +1,10 @@
 import { redirect } from "@sveltejs/kit";
+import { base } from "$app/paths";
 import { isForced } from "$lib/forced";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
-	if (!event.locals.auth) {
-		return redirect(302, "/login");
-	}
-
-	const { serverUrl, username, password } = event.locals.auth;
+	const { serverUrl, username, password } = event.locals.auth!;
 
 	const statsUrl = new URL(serverUrl);
 	statsUrl.pathname = "/stats";
@@ -27,7 +24,7 @@ export const load: PageServerLoad = async (event) => {
 
 	if (!stats.ok) {
 		if (stats.status === 401 && !isForced) {
-			return redirect(302, "/login");
+			return redirect(302, `${base}/login`);
 		}
 
 		return {
