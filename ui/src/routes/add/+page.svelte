@@ -1,11 +1,13 @@
 <script lang="ts">
 import { enhance } from "$app/forms";
-import type { ActionData } from "./$types";
+import { resolve } from "$app/paths";
 
-export let form: ActionData;
+// export let form: ActionData;
+let { form } = $props();
+
 let loading = false;
 
-$: error = form?.error;
+let error = $derived(form?.error);
 </script>
 
 <svelte:head>
@@ -34,7 +36,7 @@ $: error = form?.error;
             <p>
                 Succesfully added <a
                     class="underline"
-                    href={`/status/${form.event.id}`}
+                    href={resolve(`/status/${form.event.id}`)}
                 >
                     {form.event.file_path}
                 </a>
