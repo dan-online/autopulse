@@ -1,6 +1,6 @@
-import { redirect } from "@sveltejs/kit";
-import { base } from "$app/paths";
+import { resolve } from "$app/paths";
 import { isForced } from "$lib/forced";
+import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async (event) => {
 
 	if (!stats.ok) {
 		if (stats.status === 401 && !isForced) {
-			return redirect(302, `${base}/login`);
+			return redirect(302, resolve("/login"));
 		}
 
 		return {
@@ -70,7 +70,7 @@ export const load: PageServerLoad = async (event) => {
 
 	if (!events.ok) {
 		if (events.status === 401 && !isForced) {
-			return redirect(302, "/login");
+			return redirect(302, resolve("/login"));
 		}
 
 		return {
