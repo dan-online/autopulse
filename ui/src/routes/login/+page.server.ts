@@ -1,8 +1,8 @@
-import { type Actions, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { env } from "$env/dynamic/private";
 import { sign } from "$lib/auth";
 import { isForced } from "$lib/forced";
+import { type Actions, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 const getURLOptions = () => {
@@ -81,5 +81,9 @@ export const actions: Actions = {
 
 			return redirect(302, resolve("/"));
 		}
+
+		return {
+			error: `${response.statusText}: ${await response.text()}`,
+		};
 	},
 };

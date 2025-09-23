@@ -6,9 +6,8 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 function fixBasePath(path) {
 	let newPath = path?.trim();
 
-	if (!newPath) return newPath;
-	if (newPath.length === 0) return path;
-	if (!newPath.startsWith("/")) newPath = `/${path}`;
+	if (!newPath || newPath.length === 0) return newPath;
+	if (!newPath.startsWith("/")) newPath = `/${newPath}`;
 	if (newPath.endsWith("/")) newPath = newPath.slice(0, -1);
 
 	return newPath;
