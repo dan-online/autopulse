@@ -22,7 +22,7 @@ const config = {
 		adapter: process.env.CF_PAGES ? cfAdapter() : nodeAdapter(),
 		paths: {
 			base: fixBasePath(process.env.BASE_PATH) || "",
-		}
+		},
 	},
 };
 

@@ -1,5 +1,5 @@
-import { resolve } from "$app/paths";
 import { type Actions, fail, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
