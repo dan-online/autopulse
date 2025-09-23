@@ -250,6 +250,8 @@ The autopulse ui is a simple web interface that allows you to view and add scan 
 | `FORCE_SERVER_URL` | Forces the server url | `true` |
 | `FORCE_USERNAME` | Forces the username | `true` |
 | `FORCE_PASSWORD` | Forces the password | `true` |
+| `ORIGIN` | Required when proxying requests | `https://mycool.domain` |
+| `PORT` | Change the port | `2885` |
 
 ###### Examples
 
@@ -268,6 +270,16 @@ FORCE_SERVER_URL=https://localhost:2875
 FORCE_USERNAME=admin
 FORCE_PASSWORD=password
 ```
+
+##### Reverse Proxy
+
+To serve the autopulse ui behind a reverse proxy **with** a base path, you must use the `ui-dynamic` tag instead. This builds the UI on startup and ensures paths are based on a given base path. Useful for nginx/etc
+
+###### Environment Variables
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `BASE_PATH` | Set the path for requests | `/autopulse` |
 
 ## To-do
 
