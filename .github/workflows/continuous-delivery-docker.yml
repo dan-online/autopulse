@@ -21,7 +21,7 @@ jobs:
   push_readme:
     name: Push README to Docker Hub
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - name: Push README to Docker Hub
