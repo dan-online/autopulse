@@ -82,6 +82,7 @@ jobs:
             echo "Release tag: ${{ github.event.release.tag_name }}"
             echo "tag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "tag_dynamic=ui-dynamic-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "tag_stable=stable" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=ui" >> "$GITHUB_OUTPUT"
@@ -212,6 +213,7 @@ jobs:
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Release tag: ${{ github.event.release.tag_name }}"
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "tag_stable=stable" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
@@ -260,6 +262,8 @@ jobs:
           tags: |
             ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
             danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
+            ${{ steps.tag.outputs.tag_stable && format('ghcr.io/dan-online/autopulse:{0}{1}', steps.tag.outputs.tag_stable, matrix.platform.tag) || '' }}
+            ${{ steps.tag.outputs.tag_stable && format('danonline/autopulse:{0}{1}', steps.tag.outputs.tag_stable, matrix.platform.tag) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
@@ -274,6 +278,8 @@ jobs:
           tags: |
             ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
             danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
+            ${{ steps.tag.outputs.tag_stable && format('ghcr.io/dan-online/autopulse:{0}-{1}{2}', steps.tag.outputs.tag_stable, matrix.feature, matrix.platform.tag) || '' }}
+            ${{ steps.tag.outputs.tag_stable && format('danonline/autopulse:{0}-{1}{2}', steps.tag.outputs.tag_stable, matrix.feature, matrix.platform.tag) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform.name }}
           build-args: ${{ matrix.platform.build_args }}
@@ -295,6 +301,7 @@ jobs:
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Release tag: ${{ github.event.release.tag_name }}"
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "tag_stable=stable" >> "$GITHUB_OUTPUT"
           else
             echo "Not a PR branch"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
@@ -323,6 +330,7 @@ jobs:
           GHCR_BASE="ghcr.io/dan-online/autopulse"
           DOCKERHUB_BASE="danonline/autopulse"
           TAG="${{ steps.tag.outputs.tag }}"
+          TAG_STABLE="${{ steps.tag.outputs.tag_stable }}"
           
           # First, create and push all manifests to GHCR
           # Get digests from GHCR only
@@ -368,6 +376,35 @@ jobs:
           docker buildx imagetools create \
             --tag danonline/autopulse:${TAG}-sqlite \
             ghcr.io/dan-online/autopulse:${TAG}-sqlite
+          
+          if [ -n "$TAG_STABLE" ]; then
+            echo "Creating stable manifests..."
+            docker manifest create ${GHCR_BASE}:${TAG_STABLE} \
+                --amend ${GHCR_BASE}@${AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${ARM64_DIGEST}
+            docker manifest create ${GHCR_BASE}:${TAG_STABLE}-postgres \
+                --amend ${GHCR_BASE}@${POSTGRES_AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${POSTGRES_ARM64_DIGEST}
+            docker manifest create ${GHCR_BASE}:${TAG_STABLE}-sqlite \
+                --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
+
+            docker manifest push ${GHCR_BASE}:${TAG_STABLE}-postgres
+            docker manifest push ${GHCR_BASE}:${TAG_STABLE}-sqlite
+            docker manifest push ${GHCR_BASE}:${TAG_STABLE}
+
+            docker buildx imagetools create \
+              --tag danonline/autopulse:${TAG_STABLE} \
+              ghcr.io/dan-online/autopulse:${TAG_STABLE}
+
+            docker buildx imagetools create \
+              --tag danonline/autopulse:${TAG_STABLE}-postgres \
+              ghcr.io/dan-online/autopulse:${TAG_STABLE}-postgres
+
+            docker buildx imagetools create \
+              --tag danonline/autopulse:${TAG_STABLE}-sqlite \
+              ghcr.io/dan-online/autopulse:${TAG_STABLE}-sqlite
+          fi
           
           echo "Copy images over to Docker Hub..."
           # docker pull ${GHCR_BASE}:${TAG} -q
