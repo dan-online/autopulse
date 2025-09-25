@@ -1,37 +1,32 @@
-import { type Actions, fail, redirect } from "@sveltejs/kit";
-import { base } from "$app/paths";
+import { type Actions, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
 import { env } from "$env/dynamic/private";
 import { sign } from "$lib/auth";
 import { isForced } from "$lib/forced";
 import type { PageServerLoad } from "./$types";
 
-const getURLOptions = (url: URL) => {
-	const currentDefaultURL = new URL(url);
-
-	currentDefaultURL.pathname = "";
-	currentDefaultURL.search = "";
-
+const getURLOptions = () => {
 	const defaultURL = env.DEFAULT_SERVER_URL
 		? new URL(env.DEFAULT_SERVER_URL)
-		: currentDefaultURL;
+		: null;
 	const forceDefaultURL = env.FORCE_DEFAULT_SERVER_URL === "true";
 
 	return [defaultURL, forceDefaultURL] as const;
 };
 
-export const load: PageServerLoad = async ({ url, cookies }) => {
+export const load: PageServerLoad = async ({ cookies }) => {
 	if (isForced) {
-		return redirect(302, `${base}/`);
+		return redirect(302, resolve("/"));
 	}
 
-	const [defaultURL, forceDefaultURL] = getURLOptions(url);
+	const [defaultURL, forceDefaultURL] = getURLOptions();
 
 	cookies.delete("auth", {
 		path: "/",
 	});
 
 	return {
-		defaultURL: defaultURL.href,
+		defaultURL: defaultURL?.href,
 		forceDefaultURL: forceDefaultURL,
 	};
 };
@@ -40,16 +35,19 @@ export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
 		const formData = await request.formData();
 
-		const [defaultURL, forceDefaultURL] = getURLOptions(url);
+		const [defaultURL, forceDefaultURL] = getURLOptions();
 
 		// Force default URL if the environment variable is set
-		const serverUrl = forceDefaultURL
-			? defaultURL
-			: (formData.get("server-url") as string);
+		const serverUrl =
+			forceDefaultURL && defaultURL
+				? defaultURL
+				: new URL(formData.get("server-url") as string);
+
 		const username = formData.get("username") as string;
 		const password = formData.get("password") as string;
 
-		const postUrl = new URL(serverUrl);
+		const postUrl = serverUrl;
+
 		postUrl.pathname = "/login";
 
 		const response = await fetch(postUrl.href, {
@@ -81,11 +79,11 @@ export const actions: Actions = {
 				},
 			);
 
-			return redirect(302, "/");
+			return redirect(302, resolve("/"));
 		}
 
-		return fail(response.status, {
+		return {
 			error: `${response.statusText}: ${await response.text()}`,
-		});
+		};
 	},
 };

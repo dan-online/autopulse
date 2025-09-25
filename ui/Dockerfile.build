@@ -1,0 +1,19 @@
+FROM public.ecr.aws/docker/library/node:23-alpine AS builder
+WORKDIR /app
+COPY package.json .
+COPY yarn.lock .
+
+RUN corepack enable
+RUN yarn config set nodeLinker node-modules
+RUN yarn install --immutable
+
+COPY . .
+
+ENV PORT=2880
+ENV BASE_PATH=
+
+EXPOSE 2880
+
+ENV NODE_ENV=production
+
+CMD [ "yarn", "buildrun" ]

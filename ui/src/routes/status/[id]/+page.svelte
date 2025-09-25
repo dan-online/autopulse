@@ -2,6 +2,7 @@
 import { onMount } from "svelte";
 import { enhance } from "$app/forms";
 import { invalidateAll } from "$app/navigation";
+import { resolve } from "$app/paths";
 import { page } from "$app/state";
 import TimeAgo from "$lib/components/core/TimeAgo.svelte";
 
@@ -133,7 +134,7 @@ onMount(() => {
                     </div>
                 </div>
                 <div class="card-actions justify-between mt-4">
-                    <form action="/add?/add" method="post" use:enhance>
+                    <form action={`${resolve('/add')}?/add`} method="post" use:enhance>
                         <input type="hidden" name="path" value={ev.file_path} />
                         <input type="hidden" name="hash" value={ev.file_hash} />
                         <input type="hidden" name="redirect" value="true" />
