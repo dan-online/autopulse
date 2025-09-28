@@ -661,12 +661,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/hugeicons@npm:^1.2.16":
-  version: 1.2.16
-  resolution: "@iconify-json/hugeicons@npm:1.2.16"
+"@iconify-json/hugeicons@npm:^1.2.17":
+  version: 1.2.17
+  resolution: "@iconify-json/hugeicons@npm:1.2.17"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/3197643592afd134e3e1913b8b9ad7f8ea0b0a76dd6e68508b14748bb231c178200bf34ec749ea4a695d5521ccf90dfe93648f489182dea59a4f3ae9ee0f8f38
+  checksum: 10c0/ee46e562498d3b8f89e864f46abb578fd057935b7dede11e916d8543e8ea9b52941d39e0af37b096d9f545fc839990fe68794037d34374d290600a4717901c7e
   languageName: node
   linkType: hard
 
@@ -4160,7 +4160,7 @@ __metadata:
   dependencies:
     "@biomejs/biome": "npm:^2.2.4"
     "@iconify-json/ci": "npm:^1.2.2"
-    "@iconify-json/hugeicons": "npm:^1.2.16"
+    "@iconify-json/hugeicons": "npm:^1.2.17"
     "@iconify-json/ic": "npm:^1.2.4"
     "@iconify-json/line-md": "npm:^1.2.11"
     "@iconify-json/material-symbols": "npm:^1.2.39"
