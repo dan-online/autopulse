@@ -7,7 +7,6 @@ use diesel::{Connection, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use serde::Deserialize;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -138,7 +137,10 @@ impl AnyConnection {
                 })?;
             }
 
+            #[cfg(unix)]
             if path.file_name().map(|x| x.to_str()) != Some(path.to_str()) {
+                use std::os::unix::fs::PermissionsExt;
+
                 std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777))
                     .with_context(|| {
                         format!(
