@@ -89,10 +89,10 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         {
             use tokio::signal::ctrl_c;
 
-            let mut ctrl_c = ctrl_c().await?;
+            let mut ctrl_c = ctrl_c();
 
             tokio::select! {
-                _ = ctrl_c.recv() => {
+                _ = ctrl_c => {
                     debug!("Received Ctrl+C");
                 }
             }
