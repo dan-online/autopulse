@@ -116,6 +116,13 @@ jobs:
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+          vcpkg install openssl:x64-windows-static-md
+
       - name: Install sqlite (Windows)
         if: runner.os == 'Windows'
         shell: cmd
