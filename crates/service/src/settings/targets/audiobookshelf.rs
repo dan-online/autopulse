@@ -146,7 +146,7 @@ impl TargetProcess for Audiobookshelf {
                     if let Err(e) = self.scan(token.clone(), ev, library_id).await {
                         error!("failed to scan audiobookshelf: {}", e);
                     } else {
-                        succeeded.push(ev.get_path(&self.rewrite));
+                        succeeded.push(ev.id.clone());
                     }
                 }
                 Ok(None) => {
