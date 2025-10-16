@@ -4,10 +4,10 @@ use crate::settings::{auth::Auth, targets::TargetProcess};
 use autopulse_database::models::ScanEvent;
 use autopulse_utils::get_url;
 use reqwest::header;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Audiobookshelf {
     /// URL to the audiobookshelf instance
     pub url: String,
