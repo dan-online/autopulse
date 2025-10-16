@@ -76,12 +76,12 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             let mut sigint = signal(SignalKind::interrupt())?;
 
             tokio::select! {
-            _ = sigterm.recv() => {
-                debug!("Received SIGTERM");
-            }
-            _ = sigint.recv() => {
-                debug!("Received SIGINT");
-            }
+                _ = sigterm.recv() => {
+                    debug!("Received SIGTERM");
+                }
+                _ = sigint.recv() => {
+                    debug!("Received SIGINT");
+                }
             }
         }
 
@@ -89,12 +89,12 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         {
             use tokio::signal::ctrl_c;
 
-            let mut ctrl_c = ctrl_c()?;
+            let mut ctrl_c = ctrl_c().await?;
 
             tokio::select! {
-            _ = ctrl_c.recv() => {
-                debug!("Received Ctrl+C");
-            }
+                _ = ctrl_c.recv() => {
+                    debug!("Received Ctrl+C");
+                }
             }
         }
 
