@@ -55,6 +55,7 @@ We use the following terminology:
   - Radarr
   - Tdarr
   - FileFlows
+  - Audiobookshelf
   - Another autopulse instance
 
 #### Example Flow
