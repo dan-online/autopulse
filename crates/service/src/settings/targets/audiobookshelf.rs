@@ -1,6 +1,6 @@
 use super::RequestBuilderPerform;
 use crate::settings::rewrite::Rewrite;
-use crate::settings::{auth::Auth, targets::TargetProcess};
+use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
 use autopulse_utils::get_url;
 use reqwest::header;
@@ -11,21 +11,12 @@ use tracing::{debug, error};
 pub struct Audiobookshelf {
     /// URL to the audiobookshelf instance
     pub url: String,
-    /// Authentication credentials
-    pub auth: Auth,
+    // /// Authentication credentials
+    // pub auth: Auth,
+    /// API token for Audiobookshelf Server (see https://www.audiobookshelf.org/guides/api-keys)
+    pub token: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
-}
-
-#[derive(Clone, Deserialize)]
-struct AudiobookshelfUser {
-    token: String,
-}
-
-#[doc(hidden)]
-#[derive(Deserialize)]
-struct AudiobookshelfLoginResponse {
-    user: AudiobookshelfUser,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,14 +38,15 @@ pub struct LibrariesResponse {
 }
 
 impl Audiobookshelf {
-    async fn get_client(&self, token: Option<String>) -> anyhow::Result<reqwest::Client> {
+    async fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        if self.auth.enabled {
-            if let Some(token) = token {
-                headers.insert("Authorization", format!("Bearer {token}").parse()?);
-            }
-        }
+        // if self.auth.enabled {
+        //     if let Some(token) = token {
+        //         headers.insert("Authorization", format!("Bearer {token}").parse()?);
+        //     }
+        // }
+        headers.insert("Authorization", format!("Bearer {}", self.token).parse()?);
 
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
@@ -63,24 +55,24 @@ impl Audiobookshelf {
             .map_err(Into::into)
     }
 
-    async fn login(&self) -> anyhow::Result<String> {
-        let client = self.get_client(None).await?;
-        let url = get_url(&self.url)?.join("login")?;
+    // async fn login(&self) -> anyhow::Result<String> {
+    //     let client = self.get_client(None).await?;
+    //     let url = get_url(&self.url)?.join("login")?;
 
-        let res = client
-            .post(url)
-            .header("Content-Type", "application/json")
-            .json(&self.auth)
-            .perform()
-            .await?;
+    //     let res = client
+    //         .post(url)
+    //         .header("Content-Type", "application/json")
+    //         .json(&self.auth)
+    //         .perform()
+    //         .await?;
 
-        let body: AudiobookshelfLoginResponse = res.json().await?;
+    //     let body: AudiobookshelfLoginResponse = res.json().await?;
 
-        Ok(body.user.token)
-    }
+    //     Ok(body.user.token)
+    // }
 
-    async fn scan(&self, token: String, ev: &ScanEvent, library_id: String) -> anyhow::Result<()> {
-        let client = self.get_client(Some(token)).await?;
+    async fn scan(&self, ev: &ScanEvent, library_id: String) -> anyhow::Result<()> {
+        let client = self.get_client().await?;
         let url = get_url(&self.url)?.join("api/watcher/update")?;
 
         client
@@ -98,8 +90,8 @@ impl Audiobookshelf {
             .map(|_| ())
     }
 
-    async fn get_libraries(&self, token: String) -> anyhow::Result<Vec<Library>> {
-        let client = self.get_client(Some(token)).await?;
+    async fn get_libraries(&self) -> anyhow::Result<Vec<Library>> {
+        let client = self.get_client().await?;
 
         let url = get_url(&self.url)?.join("api/libraries")?;
 
@@ -131,9 +123,8 @@ impl Audiobookshelf {
 impl TargetProcess for Audiobookshelf {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let mut succeeded = Vec::new();
-        let token = self.login().await?;
 
-        let libraries = self.get_libraries(token.clone()).await?;
+        let libraries = self.get_libraries().await?;
 
         if libraries.is_empty() {
             error!("no libraries found");
@@ -143,7 +134,7 @@ impl TargetProcess for Audiobookshelf {
         for ev in evs {
             match self.choose_library(ev, &libraries).await {
                 Ok(Some(library_id)) => {
-                    if let Err(e) = self.scan(token.clone(), ev, library_id).await {
+                    if let Err(e) = self.scan(ev, library_id).await {
                         error!("failed to scan audiobookshelf: {}", e);
                     } else {
                         succeeded.push(ev.id.clone());
