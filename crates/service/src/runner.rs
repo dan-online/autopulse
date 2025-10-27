@@ -8,7 +8,7 @@ use autopulse_database::{
     diesel::{self, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl},
     models::{FoundStatus, ProcessStatus, ScanEvent},
     schema::scan_events::{
-        can_process, dsl::scan_events, found_at, found_status, next_retry_at, process_status,
+        can_process, created_at, dsl::scan_events, found_status, next_retry_at, process_status,
     },
 };
 use autopulse_utils::sha256checksum;
@@ -274,7 +274,7 @@ impl PulseRunner {
         let delete_not_found = diesel::delete(
             scan_events
                 .filter(found_status.eq::<String>(FoundStatus::NotFound.into()))
-                .filter(found_at.lt(time_before_cleanup)),
+                .filter(created_at.lt(time_before_cleanup)),
         );
 
         if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)?) {
@@ -284,7 +284,7 @@ impl PulseRunner {
         let delete_failed = diesel::delete(
             scan_events
                 .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
-                .filter(found_at.lt(time_before_cleanup)),
+                .filter(created_at.lt(time_before_cleanup)),
         );
 
         if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)?) {
