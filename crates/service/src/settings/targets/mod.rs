@@ -9,9 +9,7 @@
 ///   audiobookshelf:
 ///     type: audiobookshelf
 ///     url: http://localhost:13378
-///     auth:
-///      username: "admin"  
-///      password: "password"
+///     token: "<API_KEY>"
 /// ```
 ///
 /// See [`Audiobookshelf`] for all options
