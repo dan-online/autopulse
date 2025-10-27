@@ -46,6 +46,9 @@ jobs:
             os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
+
+          - target: x86_64-pc-windows-msvc
+            os: windows-2025
           # - target: x86_64-apple-darwin
           #   os: macos-latest
           # - target: x86_64-pc-windows-msvc
@@ -113,6 +116,41 @@ jobs:
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+          vcpkg install openssl:x64-windows-static-md
+
+      - name: Install sqlite (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          choco install sqlite
+          cd /D C:\ProgramData\chocolatey\lib\SQLite\tools
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          lib /machine:x64 /def:sqlite3.def /out:sqlite3.lib
+
+      - name: Set variables for sqlite (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "C:\ProgramData\chocolatey\lib\SQLite\tools" >> $GITHUB_PATH
+          echo "SQLITE3_LIB_DIR=C:\ProgramData\chocolatey\lib\SQLite\tools" >> $GITHUB_ENV
+          echo "SQLITE_DATABASE_URL=C:\test.db" >> $GITHUB_ENV
+
+      - name: Install postgres (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          choco install postgresql14 --force --params '/Password:root'
+          echo "OPENSSL_RUST_USE_NASM=0" >> $GITHUB_ENV
+          echo OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl >> $GITHUB_ENV
+          echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\14\lib" >> $GITHUB_ENV
+          echo "PG_DATABASE_URL=postgres://postgres:root@localhost/" >> $GITHUB_ENV
+          echo "PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example" >> $GITHUB_ENV
+
       # - run : |
       #     brew update
       #     brew install postgresql@14
@@ -125,6 +163,6 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: ${{ contains(matrix.target, '-musl') && 'vendored' || '' }}
+          features: ${{ (contains(matrix.target, '-musl') || startsWith(matrix.os, 'windows')) && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name == 'pull_request' }}

@@ -20,7 +20,6 @@ use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
 use std::sync::Arc;
-use tokio::signal::unix::{signal, SignalKind};
 use tracing::{debug, error, info};
 
 /// Arguments for CLI
@@ -69,15 +68,33 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let server_task = tokio::spawn(server);
 
     let shutdown: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
-        let mut sigterm = signal(SignalKind::terminate())?;
-        let mut sigint = signal(SignalKind::interrupt())?;
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
 
-        tokio::select! {
-            _ = sigterm.recv() => {
-                debug!("Received SIGTERM");
+            let mut sigterm = signal(SignalKind::terminate())?;
+            let mut sigint = signal(SignalKind::interrupt())?;
+
+            tokio::select! {
+                _ = sigterm.recv() => {
+                    debug!("Received SIGTERM");
+                }
+                _ = sigint.recv() => {
+                    debug!("Received SIGINT");
+                }
             }
-            _ = sigint.recv() => {
-                debug!("Received SIGINT");
+        }
+
+        #[cfg(windows)]
+        {
+            use tokio::signal::ctrl_c;
+
+            let ctrl_c = ctrl_c();
+
+            tokio::select! {
+                _ = ctrl_c => {
+                    debug!("Received Ctrl+C");
+                }
             }
         }
 
