@@ -1,3 +1,19 @@
+/// Audiobookshelf - Audiobookshelf target
+///
+/// This target is used to send a file to the Audiobookshelf watcher
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   audiobookshelf:
+///     type: audiobookshelf
+///     url: http://localhost:13378
+///     token: "<API_KEY>"
+/// ```
+///
+/// See [`Audiobookshelf`] for all options
+pub mod audiobookshelf;
 /// Autopulse - Autopulse target
 ///
 /// This target is used to process a file in another instance of Autopulse
@@ -169,6 +185,7 @@ pub mod sonarr;
 /// See [`Tdarr`] for all options
 pub mod tdarr;
 
+use audiobookshelf::Audiobookshelf;
 use autopulse_database::models::ScanEvent;
 use reqwest::{RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
@@ -203,6 +220,7 @@ pub enum Target {
     Command(Command),
     FileFlows(FileFlows),
     Autopulse(Autopulse),
+    Audiobookshelf(Audiobookshelf),
 }
 
 pub trait TargetProcess {
@@ -223,6 +241,7 @@ impl TargetProcess for Target {
             Self::Radarr(t) => t.process(evs).await,
             Self::FileFlows(t) => t.process(evs).await,
             Self::Autopulse(t) => t.process(evs).await,
+            Self::Audiobookshelf(t) => t.process(evs).await,
         }
     }
 }
@@ -260,12 +279,25 @@ impl RequestBuilderPerform for RequestBuilder {
                 Ok(response)
             }
 
-            Err(e) => Err(anyhow::anyhow!(
-                "failed to {} {}: {}",
-                built.method(),
-                built.url(),
-                e,
-            )),
+            Err(e) => {
+                let status = e.status();
+                if let Some(status) = status {
+                    return Err(anyhow::anyhow!(
+                        "failed to {} {}: {} - {}",
+                        built.method(),
+                        built.url(),
+                        status,
+                        e
+                    ));
+                }
+
+                Err(anyhow::anyhow!(
+                    "failed to {} {}: {}",
+                    built.method(),
+                    built.url(),
+                    e,
+                ))
+            }
         }
     }
 }
