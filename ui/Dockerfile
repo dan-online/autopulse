@@ -1,6 +1,6 @@
 FROM nixos/nix
 
-RUN mkdir -p /etc/nix; echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+RUN mkdir -p /etc/nix; echo "experimental-features = nix-command flakes\nfilter-syscalls = false" >> /etc/nix/nix.conf
 
 WORKDIR /app
 
