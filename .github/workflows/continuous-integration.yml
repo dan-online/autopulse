@@ -20,7 +20,7 @@ jobs:
 
     - uses: rrbutani/use-nix-shell-action@v1
       with:
-        file: ui/shell.nix
+        devShell: ./ui#default
 
     - name: Install
       run: yarn install --immutable
