@@ -23,9 +23,10 @@ const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqli
 #[derive(Default)]
 pub enum DatabaseType {
     #[cfg(feature = "sqlite")]
-    #[default]
+    #[cfg_attr(feature = "sqlite", default)]
     Sqlite,
     #[cfg(feature = "postgres")]
+    #[cfg_attr(not(feature = "sqlite"), default)]
     Postgres,
 }
 
