@@ -20,24 +20,14 @@ const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqli
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum DatabaseType {
     #[cfg(feature = "sqlite")]
+    #[cfg_attr(feature = "sqlite", default)]
     Sqlite,
     #[cfg(feature = "postgres")]
+    #[cfg_attr(not(feature = "sqlite"), default)]
     Postgres,
-}
-
-impl Default for DatabaseType {
-    fn default() -> Self {
-        #[cfg(feature = "sqlite")]
-        {
-            Self::Sqlite
-        }
-        #[cfg(all(not(feature = "sqlite"), feature = "postgres"))]
-        {
-            Self::Postgres
-        }
-    }
 }
 
 impl DatabaseType {

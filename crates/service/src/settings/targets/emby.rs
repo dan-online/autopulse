@@ -38,6 +38,7 @@ pub struct Emby {
 /// Metadata refresh mode for Jellyfin/Emby
 #[derive(Serialize, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum EmbyMetadataRefreshMode {
     /// `none`
     None,
@@ -46,6 +47,7 @@ pub enum EmbyMetadataRefreshMode {
     /// `default`
     Default,
     /// `full_refresh`
+    #[default]
     FullRefresh,
 }
 
@@ -59,12 +61,6 @@ impl Display for EmbyMetadataRefreshMode {
         };
 
         write!(f, "{mode}")
-    }
-}
-
-impl Default for EmbyMetadataRefreshMode {
-    fn default() -> Self {
-        Self::FullRefresh
     }
 }
 
