@@ -6,6 +6,5 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     nodejs
     yarn-berry
-    biome
   ];
 }
