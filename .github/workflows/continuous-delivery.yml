@@ -57,7 +57,7 @@ jobs:
           #   os: ubuntu-22.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       # - name: Install dependencies on Linux
       #   if: contains(matrix.os, 'freebsd')
