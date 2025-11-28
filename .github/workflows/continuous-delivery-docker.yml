@@ -63,7 +63,7 @@ jobs:
 
       - name: Extract metadata (labels)
         id: meta
-        uses: docker/metadata-action@032a4b3bda1b716928481836ac5bfe36e1feaad6
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
           # flavor: |
@@ -173,7 +173,7 @@ jobs:
 
       - name: Extract metadata (labels)
         id: meta
-        uses: docker/metadata-action@032a4b3bda1b716928481836ac5bfe36e1feaad6
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
 
