@@ -50,7 +50,7 @@
             pkgs.llvmPackages.clang
             pkgs.llvmPackages.libclang
             pkgs.llvmPackages.libcxxClang
-            # pkgs.alsa-lib.dev
+
             pkgs.cargo-nextest
             rust
 
@@ -71,15 +71,17 @@
           ];
 
           shellHook = ''
-            export CARGO_TARGET_DIR="$HOME/.cargo/target";
-            export RUST_SRC_PATH="$(rustc --print sysroot)/lib/rustlib/src/rust/src";
-            export PATH="$PATH:$HOME/.cargo/bin"
+            if [ "$(whoami)" = "dan" ]; then
+              export CARGO_TARGET_DIR="$HOME/.cargo/target";
+              export RUST_SRC_PATH="$(rustc --print sysroot)/lib/rustlib/src/rust/src";
+              export PATH="$PATH:$HOME/.cargo/bin"
 
-            mkdir -p $HOME/.cargo/bin
+              mkdir -p $HOME/.cargo/bin
 
-            echo "cargo clippy --all --fix --allow-staged --no-deps -- -W clippy::all -W clippy::nursery -D warnings && cargo fmt" > $HOME/.cargo/bin/nursery
+              echo "cargo clippy --all --fix --allow-staged --no-deps -- -W clippy::all -W clippy::nursery -D warnings && cargo fmt" > $HOME/.cargo/bin/nursery
 
-            chmod +x $HOME/.cargo/bin/nursery
+              chmod +x $HOME/.cargo/bin/nursery
+            fi;
           '';
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
