@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:23-alpine AS builder
+FROM public.ecr.aws/docker/library/node:24-alpine AS builder
 WORKDIR /app
 COPY package.json .
 COPY yarn.lock .
@@ -13,7 +13,7 @@ RUN yarn build
 RUN rm -rf node_modules
 RUN yarn workspaces focus --production
 
-FROM public.ecr.aws/docker/library/node:23-alpine
+FROM public.ecr.aws/docker/library/node:24-alpine
 WORKDIR /app
 COPY --from=builder /app/build build/
 COPY --from=builder /app/node_modules node_modules/

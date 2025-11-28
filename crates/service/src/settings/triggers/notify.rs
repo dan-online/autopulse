@@ -10,10 +10,11 @@ use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::{error, trace};
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Default)]
 pub enum NotifyBackendType {
     #[serde(rename = "recommended")]
     /// Uses the recommended backend such as `inotify` on Linux, `FSEvents` on macOS, and `ReadDirectoryChangesW` on Windows
+    #[default]
     Recommended,
     #[serde(rename = "polling")]
     /// Uses a polling backend (useful for rclone/nfs/etc mounts), which will be extremely inefficient with a high number of files
@@ -32,12 +33,6 @@ impl NotifyBackend {
             Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
             Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
         }
-    }
-}
-
-impl Default for NotifyBackendType {
-    fn default() -> Self {
-        Self::Recommended
     }
 }
 

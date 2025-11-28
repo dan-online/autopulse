@@ -18,15 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-    - name: Enable Corepack
-      run: corepack enable
-
-    - name: Setup Node
-      uses: actions/setup-node@v6
+    - uses: rrbutani/use-nix-shell-action@v1
       with:
-        node-version: 'lts/*'
-        cache: 'yarn'
-        cache-dependency-path: 'ui'
+        file: shell.nix
 
     - name: Install
       run: yarn install --immutable
@@ -46,13 +40,9 @@ jobs:
     steps:
       - name: Checkout Project
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - uses: taiki-e/github-actions/install-rust@main
-        with:
-          toolchain: stable
-          component: rustfmt,clippy
-          target: x86_64-unknown-linux-musl
-      - name: Install libraries
-        run: sudo apt install -y libpq-dev libsqlite3-dev # libmysqlclient-dev
+
+      - uses: rrbutani/use-nix-shell-action@v1
+
       - name: Cargo Cache
         uses: actions/cache@v4
         with:
@@ -65,11 +55,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-release-x86_64-unknown-linux-musl-
           key: ${{ runner.os }}-cargo-release-x86_64-unknown-linux-musl-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Build
         run: cargo build --release
+
       - name: Format Check
         run: cargo fmt -- --check
+
       - name: Clippy Check
         run: cargo clippy --release --workspace -- -D warnings
+
       - name: Test
-        run: cargo test --release --workspace
+        run: cargo nextest --release --workspace
