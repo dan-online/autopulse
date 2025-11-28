@@ -1,27 +1,27 @@
-FROM nixos/nix
-
-RUN mkdir -p /etc/nix; echo -e "experimental-features = nix-command flakes\nfilter-syscalls = false" >> /etc/nix/nix.conf
-
+FROM public.ecr.aws/docker/library/node:24-alpine AS builder
 WORKDIR /app
+COPY package.json .
+COPY yarn.lock .
 
-# bring in exact environment definition
-COPY flake.nix flake.lock .
-
-# materialize environment so dependencies are cached
-RUN nix develop --command echo Loaded Nix Environment
-
-COPY package.json yarn.lock .
-
-RUN nix develop --command bash -c "yarn config set nodeLinker node-modules && yarn install --immutable"
+RUN corepack enable
+RUN yarn config set nodeLinker node-modules
+RUN yarn install --immutable
 
 COPY . .
 
-RUN nix develop --command yarn build
+RUN yarn build
 RUN rm -rf node_modules
-RUN nix develop --command yarn workspaces focus --production
+RUN yarn install --production --immutable
+
+FROM public.ecr.aws/docker/library/node:24-alpine
+WORKDIR /app
+COPY --from=builder /app/build build/
+COPY --from=builder /app/node_modules node_modules/
+COPY package.json .
 
 ENV PORT=2880
+
 EXPOSE 2880
 
 ENV NODE_ENV=production
-CMD [ "nix", "develop", "--command", "node", "build" ]
+CMD [ "node", "build" ]
