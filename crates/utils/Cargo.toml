@@ -1,7 +1,8 @@
 [package]
 name = "autopulse-utils"
-version = "1.4.0"
 edition = "2021"
+
+version.workspace = true
 
 [dev-dependencies]
 serde_json = { workspace = true }

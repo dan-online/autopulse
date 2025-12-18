@@ -1,8 +1,9 @@
 [package]
 name = "autopulse-database"
-version = "1.4.0"
 edition = "2021"
 build = "src/build.rs"
+
+version.workspace = true
 
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
