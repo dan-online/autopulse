@@ -18,7 +18,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::select;
 use tokio::task::JoinHandle;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 /// Represents the service statistics.
 #[derive(Clone, Serialize, QueryableByName)]
@@ -329,18 +329,19 @@ impl PulseManager {
                 if let Err(e) = manager.add_event(&new_scan_event) {
                     error!("failed to add notify event: {:?}", e);
                 } else {
-                    debug!(
-                        "added 1 file from {} trigger due to: {}",
-                        name,
+                    info!(
+                        "added 1 {} file from {} trigger",
                         match reason {
-                            notify::EventKind::Create(_) => "create",
-                            notify::EventKind::Modify(_) => "modify",
-                            notify::EventKind::Remove(_) => "remove",
-                            notify::EventKind::Access(_) => "access",
-                            notify::EventKind::Any => "any",
-                            notify::EventKind::Other => "other",
-                        }
+                            notify::EventKind::Create(_) => "created",
+                            notify::EventKind::Modify(_) => "modified",
+                            notify::EventKind::Remove(_) => "removed",
+                            notify::EventKind::Access(_) => "accessed",
+                            notify::EventKind::Any | notify::EventKind::Other => "changed",
+                        },
+                        name,
                     );
+
+                    debug!("file '{}' added from '{}' trigger", path, name);
                 }
 
                 manager
