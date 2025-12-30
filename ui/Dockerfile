@@ -11,7 +11,7 @@ COPY . .
 
 RUN yarn build
 RUN rm -rf node_modules
-RUN yarn install --production --immutable
+RUN yarn workspaces focus --all --production
 
 FROM public.ecr.aws/docker/library/node:24-alpine
 WORKDIR /app
