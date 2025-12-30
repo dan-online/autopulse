@@ -82,31 +82,24 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     AnyConnection::pre_init(&database_url)?;
 
     let pool = get_pool(&database_url)?;
-    let mut conn = get_conn(&pool)?;
 
-    conn.migrate()?;
-
-    // drop conn to prevent deadlocks
-    drop(conn);
+    get_conn(&pool)?
+        .migrate()
+        .context("failed to run migrations")?;
 
     let manager = PulseManager::new(settings, pool.clone());
-
-    // manager.start().await;
-    // manager.start_webhooks().await;
-    // manager.start_notify().await;
-    let tasks = manager.spawn();
+    let manager_task = manager.spawn();
 
     let server = get_server(hostname.clone(), port, manager.clone())?;
+    let server_task = tokio::spawn(server);
 
     info!("🚀 listening on {}:{}", hostname, port);
-
-    let server_task = tokio::spawn(server);
 
     tokio::select! {
         res = on_shutdown() => {
             res??;
         }
-        res = tasks => {
+        res = manager_task => {
             res?;
         }
         res = server_task => {
@@ -128,18 +121,17 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
             let guard = setup_logs(
                 &settings.app.log_level,
                 &settings.opts.log_file,
-                settings.opts.log_file_rollover.clone().into(),
+                &(&settings.opts.log_file_rollover).into(),
                 settings.app.api_logging,
             )?;
 
             Ok((settings, guard))
         }
         Err(e) => {
-            // still setup logs if settings failed to load
             setup_logs(
                 &autopulse_utils::LogLevel::Info,
                 &None,
-                Rotation::NEVER,
+                &Rotation::NEVER,
                 false,
             )?;
 

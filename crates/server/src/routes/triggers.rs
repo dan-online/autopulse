@@ -115,7 +115,7 @@ pub async fn trigger_post(
             });
 
             if scan_events.len() != paths.len() {
-                return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
+                return Ok(HttpResponse::InternalServerError().body("falsed to add all events"));
             }
 
             Ok(HttpResponse::Ok().json(scan_events))

@@ -44,8 +44,8 @@ pub enum LogRotation {
 // }
 
 // from AutopulseRotation -> Rotation
-impl From<LogRotation> for Rotation {
-    fn from(rotation: LogRotation) -> Self {
+impl From<&LogRotation> for Rotation {
+    fn from(rotation: &LogRotation) -> Self {
         match rotation {
             LogRotation::Daily => Self::DAILY,
             LogRotation::Minutely => Self::MINUTELY,

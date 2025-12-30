@@ -26,7 +26,7 @@ pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
 
     if let Err(e) = stats {
-        error!("Failed to get stats: {:?}", e);
+        error!("falsed to get stats: {:?}", e);
         return Ok(HttpResponse::InternalServerError().finish());
     }
 

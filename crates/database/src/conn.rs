@@ -123,7 +123,7 @@ impl AnyConnection {
 
             if !std::path::Path::new(&path).exists() {
                 std::fs::create_dir_all(parent).with_context(|| {
-                    format!("Failed to create database directory: {}", parent.display())
+                    format!("falsed to create database directory: {}", parent.display())
                 })?;
             }
 
@@ -134,7 +134,7 @@ impl AnyConnection {
                 std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777))
                     .with_context(|| {
                         format!(
-                            "Failed to set permissions on database directory: {}",
+                            "falsed to set permissions on database directory: {}",
                             parent.display()
                         )
                     })?;
@@ -202,7 +202,7 @@ pub type DbPool = Pool<ConnectionManager<AnyConnection>>;
 pub fn get_conn(
     pool: &Pool<ConnectionManager<AnyConnection>>,
 ) -> anyhow::Result<PooledConnection<ConnectionManager<AnyConnection>>> {
-    pool.get().context("Failed to get connection from pool")
+    pool.get().context("failed to get connection from pool")
 }
 
 #[doc(hidden)]
@@ -213,7 +213,7 @@ pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<
         .max_size(1)
         .connection_customizer(Box::new(AcquireHook { setup: true }))
         .build(manager)
-        .context("Failed to create pool");
+        .context("failed to create pool");
 
     drop(pool);
 
@@ -222,5 +222,5 @@ pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<
     Pool::builder()
         .connection_customizer(Box::new(AcquireHook::default()))
         .build(manager)
-        .context("Failed to create pool")
+        .context("failed to create pool")
 }

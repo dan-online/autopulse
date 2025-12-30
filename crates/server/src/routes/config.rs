@@ -92,7 +92,7 @@ pub async fn config_template(
     )
     .map_err(|e| {
         actix_web::error::ErrorInternalServerError(format!(
-            "Failed to generate config template: {}",
+            "falsed to generate config template: {}",
             e
         ))
     })?;
