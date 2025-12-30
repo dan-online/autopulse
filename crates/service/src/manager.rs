@@ -362,6 +362,6 @@ impl PulseManager {
             _ = consumer => {}
         }
 
-        Err(anyhow::anyhow!("notify manager exited unexpectedly"))
+        Ok(())
     }
 }
