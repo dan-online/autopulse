@@ -9,7 +9,6 @@ use autopulse_service::settings::triggers::{Trigger, TriggerType};
 use autopulse_service::settings::{default_triggers, Settings};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 fn default_database_type() -> DatabaseType {
     DatabaseType::default()
@@ -50,7 +49,7 @@ pub struct TemplateResponse {
 pub async fn config_template(
     query: web::Query<TemplateQuery>,
     auth: Option<BasicAuth>,
-    manager: web::Data<Arc<PulseManager>>,
+    manager: web::Data<PulseManager>,
 ) -> Result<HttpResponse> {
     if !check_auth(
         &auth,

@@ -19,7 +19,6 @@ use autopulse_service::settings::Settings;
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
-use std::sync::Arc;
 use tracing::{debug, error, info};
 
 /// Arguments for CLI
@@ -91,7 +90,6 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     drop(conn);
 
     let manager = PulseManager::new(settings, pool.clone());
-    let manager = Arc::new(manager);
 
     // manager.start().await;
     // manager.start_webhooks().await;

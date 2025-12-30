@@ -5,7 +5,6 @@ use actix_web::{Responder, Result};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_service::manager::PulseManager;
 use serde::Deserialize;
-use std::sync::Arc;
 
 #[derive(Deserialize)]
 #[serde(default)]
@@ -36,7 +35,7 @@ impl Default for ListQuery {
 
 #[get("/list")]
 pub async fn list(
-    manager: Data<Arc<PulseManager>>,
+    manager: Data<PulseManager>,
     auth: Option<BasicAuth>,
     query: web::Query<ListQuery>,
 ) -> Result<impl Responder> {
