@@ -157,7 +157,7 @@ impl Settings {
         let mut out = HashMap::new();
 
         for (key, value) in env::vars() {
-            if let Some(base) = key.strip_suffix("_FILE") {
+            if let Some(base) = key.strip_suffix("__FILE") {
                 if let Ok(file_value) = std::fs::read_to_string(&value) {
                     out.insert(base.to_string(), file_value.trim().to_string());
                     continue;
