@@ -271,24 +271,17 @@ impl PulseRunner {
         let time_before_cleanup = chrono::Utc::now().naive_utc()
             - chrono::Duration::days(self.settings.opts.cleanup_days as i64);
 
-        let delete_not_found = diesel::delete(
+        let delete_old_events = diesel::delete(
             scan_events
-                .filter(found_status.eq::<String>(FoundStatus::NotFound.into()))
+                .filter(
+                    (found_status.eq::<String>(FoundStatus::NotFound.into()))
+                        .or(process_status.eq::<String>(ProcessStatus::Failed.into())),
+                )
                 .filter(created_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_not_found.execute(&mut get_conn(&self.pool)?) {
-            error!("failed to delete not found events: {:?}", e);
-        }
-
-        let delete_failed = diesel::delete(
-            scan_events
-                .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
-                .filter(created_at.lt(time_before_cleanup)),
-        );
-
-        if let Err(e) = delete_failed.execute(&mut get_conn(&self.pool)?) {
-            error!("failed to delete failed events: {:?}", e);
+        if let Err(e) = delete_old_events.execute(&mut get_conn(&self.pool)?) {
+            error!("failed to delete old events: {:?}", e);
         }
 
         Ok(())

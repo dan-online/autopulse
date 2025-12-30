@@ -3,6 +3,8 @@ use crate::settings::triggers::Trigger;
 use crate::settings::webhooks::{EventType, WebhookManager};
 use crate::settings::Settings;
 use anyhow::Context;
+use autopulse_database::diesel::sql_types::BigInt;
+use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
     can_process, created_at, event_source, file_path, id, updated_at,
 };
@@ -19,17 +21,22 @@ use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
 /// Represents the service statistics.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, QueryableByName)]
 pub struct Stats {
     /// The total number of events.
+    #[diesel(sql_type = BigInt)]
     pub total: i64,
     /// The number of file events that have been processed.
+    #[diesel(sql_type = BigInt)]
     pub processed: i64,
     /// The number of file events that are being retried.
+    #[diesel(sql_type = BigInt)]
     pub retrying: i64,
     /// The number of file events that have failed.
+    #[diesel(sql_type = BigInt)]
     pub failed: i64,
     /// The number of file events that are pending.
+    #[diesel(sql_type = BigInt)]
     pub pending: i64,
 }
 
@@ -60,30 +67,45 @@ impl PulseManager {
         self.task_manager.shutdown().await
     }
 
+    //  pub fn get_stats(&self) -> anyhow::Result<Stats> {
+    //     let stats = sql_query(
+    //         "SELECT
+    //             COUNT(*) as total,
+    //             COALESCE(SUM(CASE WHEN process_status = 'complete' THEN 1 ELSE 0 END), 0) as processed,
+    //             COALESCE(SUM(CASE WHEN process_status = 'retry' THEN 1 ELSE 0 END), 0) as retrying,
+    //             COALESCE(SUM(CASE WHEN process_status = 'failed' THEN 1 ELSE 0 END), 0) as failed,
+    //             COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending
+    //         FROM scan_events",
+    //     )
+    //     .get_result::<Stats>(&mut get_conn(&self.pool)?)?;
+
+    //     Ok(stats)
+    // }
+
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
-        let total = scan_events
-            .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+        let conn = &mut get_conn(&self.pool)?;
+
+        let total = scan_events.count().get_result::<i64>(conn)?;
 
         let processed = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Complete.into()))
             .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+            .get_result::<i64>(conn)?;
 
         let retrying = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Retry.into()))
             .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+            .get_result::<i64>(conn)?;
 
         let failed = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
             .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+            .get_result::<i64>(conn)?;
 
         let pending = scan_events
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
             .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)?;
+            .get_result::<i64>(conn)?;
 
         Ok(Stats {
             total,
