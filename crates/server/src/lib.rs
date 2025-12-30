@@ -5,7 +5,6 @@ use routes::{
     config::config_template, index::hello, list::list, login::login, stats::stats, status::status,
     triggers::trigger_get, triggers::trigger_post,
 };
-use std::sync::Arc;
 
 pub mod routes;
 
@@ -16,7 +15,7 @@ mod middleware {
 pub fn get_server(
     hostname: String,
     port: u16,
-    manager_clone: Arc<PulseManager>,
+    manager_clone: PulseManager,
 ) -> anyhow::Result<Server> {
     Ok(HttpServer::new(move || {
         App::new()

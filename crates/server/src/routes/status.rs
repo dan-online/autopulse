@@ -6,13 +6,12 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_service::manager::PulseManager;
-use std::sync::Arc;
 
 #[doc(hidden)]
 #[get("/status/{id}")]
 pub async fn status(
     id: Path<String>,
-    manager: Data<Arc<PulseManager>>,
+    manager: Data<PulseManager>,
     auth: Option<BasicAuth>,
 ) -> Result<impl Responder> {
     if !check_auth(

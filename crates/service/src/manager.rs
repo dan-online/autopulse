@@ -14,9 +14,9 @@ use autopulse_database::{
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
-use autopulse_utils::TaskManager;
 use serde::Serialize;
 use std::sync::Arc;
+use tokio::select;
 use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
@@ -45,7 +45,6 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
-    pub task_manager: Arc<TaskManager>,
 }
 
 impl PulseManager {
@@ -53,18 +52,12 @@ impl PulseManager {
         let settings = Arc::new(settings);
         let pool = Arc::new(pool);
         let webhooks = Arc::new(WebhookManager::new(settings.clone()));
-        let task_manager = Arc::new(TaskManager::new());
 
         Self {
             settings,
             pool,
             webhooks,
-            task_manager,
         }
-    }
-
-    pub async fn shutdown(&self) -> anyhow::Result<()> {
-        self.task_manager.shutdown().await
     }
 
     //  pub fn get_stats(&self) -> anyhow::Result<Stats> {
@@ -214,125 +207,160 @@ impl PulseManager {
             .map_err(Into::into)
     }
 
-    pub async fn start(&self) -> Arc<JoinHandle<()>> {
-        let pool = self.pool.clone();
-        let webhooks = self.webhooks.clone();
-        let settings = self.settings.clone();
+    pub async fn spawn(&self) -> anyhow::Result<()> {
+        let handles = vec![
+            self.spawn_start(),
+            self.spawn_webhooks(),
+            self.spawn_notify(),
+        ];
 
-        self.task_manager
-            .spawn(async move {
-                let runner = PulseRunner::new(settings, pool, webhooks);
-                let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
-
-                loop {
-                    if let Err(e) = runner.run().await {
-                        error!("failed to run pulse: {:?}", e);
-                    }
-
-                    timer.tick().await;
-                }
-            })
-            .await
+        futures::future::select_all(handles).await.0?
     }
 
-    pub async fn start_webhooks(&self) -> Arc<JoinHandle<()>> {
-        let webhooks = self.webhooks.clone();
+    fn spawn_start(&self) -> JoinHandle<anyhow::Result<()>> {
+        let manager = Arc::new(self.clone());
+
+        tokio::spawn(async move {
+            manager
+                .start()
+                .await
+                .context("failed to handle scan events")
+        })
+    }
+
+    pub async fn start(&self) -> anyhow::Result<()> {
+        let runner = PulseRunner::new(
+            self.settings.clone(),
+            self.pool.clone(),
+            self.webhooks.clone(),
+        );
+        let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
+
+        loop {
+            runner.run().await?;
+
+            timer.tick().await;
+        }
+    }
+
+    fn spawn_webhooks(&self) -> JoinHandle<anyhow::Result<()>> {
+        let manager = Arc::new(self.clone());
+
+        tokio::spawn(async move {
+            manager
+                .start_webhooks()
+                .await
+                .context("failed to send webhooks")
+        })
+    }
+
+    pub async fn start_webhooks(&self) -> anyhow::Result<()> {
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
-        self.task_manager
-            .spawn(async move {
-                loop {
-                    if let Err(e) = webhooks.send().await {
-                        error!("failed to send webhooks: {:?}", e);
-                    }
+        loop {
+            self.webhooks.send().await?;
 
-                    timer.tick().await;
-                }
-            })
-            .await
+            timer.tick().await;
+        }
     }
 
-    pub async fn start_notify(&self) {
+    fn spawn_notify(&self) -> JoinHandle<anyhow::Result<()>> {
+        let manager = Arc::new(self.clone());
+
+        tokio::spawn(async move {
+            manager
+                .start_notify()
+                .await
+                .context("failed to handle notify triggers")
+        })
+    }
+
+    pub async fn start_notify(&self) -> anyhow::Result<()> {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
 
+        let mut producers = vec![];
         let settings = self.settings.clone();
 
         for (name, trigger) in settings.triggers.clone() {
             if let Trigger::Notify(service) = trigger {
-                let cloned_name = name.clone();
                 let timer = service
                     .timer
                     .clone()
                     .unwrap_or_default()
                     .wait
-                    .unwrap_or(settings.opts.default_timer_wait) as i64;
+                    .unwrap_or(self.settings.opts.default_timer_wait)
+                    as i64;
 
                 let global_tx = global_tx.clone();
 
                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
-                self.task_manager
-                    .spawn(async move {
-                        service
-                            .watcher(tx)
-                            .await
-                            .context(format!("failed to start notify service '{cloned_name}'"))
-                    })
-                    .await;
+                let service_clone = service.clone();
 
-                self.task_manager
-                    .spawn(async move {
-                        while let Some((path, reason)) = rx.recv().await {
-                            if let Err(e) = global_tx.send((
-                                name.clone(),
-                                path,
-                                reason,
-                                chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
-                            )) {
-                                error!("failed to send notify event: {:?}", e);
-                            }
+                producers.push(tokio::spawn(async move { service_clone.watcher(tx).await }));
+                producers.push(tokio::spawn(async move {
+                    while let Some((path, reason)) = rx.recv().await {
+                        if let Err(e) = global_tx.send((
+                            name.clone(),
+                            path,
+                            reason,
+                            chrono::Utc::now().naive_utc() + chrono::Duration::seconds(timer),
+                        )) {
+                            error!("failed to send notify event: {:?}", e);
                         }
-                    })
-                    .await;
+                    }
+
+                    Ok::<(), anyhow::Error>(())
+                }));
             }
         }
 
         let manager = Arc::new(self.clone());
 
-        self.task_manager
-            .spawn(async move {
-                while let Some((name, path, reason, when_process)) = global_rx.recv().await {
-                    let new_scan_event = NewScanEvent {
-                        event_source: name.clone(),
-                        file_path: path.clone(),
-                        can_process: when_process,
-                        ..Default::default()
-                    };
+        let consumer = async move {
+            while let Some((name, path, reason, when_process)) = global_rx.recv().await {
+                let new_scan_event = NewScanEvent {
+                    event_source: name.clone(),
+                    file_path: path.clone(),
+                    can_process: when_process,
+                    ..Default::default()
+                };
 
-                    if let Err(e) = manager.add_event(&new_scan_event) {
-                        error!("failed to add notify event: {:?}", e);
-                    } else {
-                        debug!(
-                            "added 1 file from {} trigger due to: {}",
-                            name,
-                            match reason {
-                                notify::EventKind::Create(_) => "create",
-                                notify::EventKind::Modify(_) => "modify",
-                                notify::EventKind::Remove(_) => "remove",
-                                notify::EventKind::Access(_) => "access",
-                                notify::EventKind::Any => "any",
-                                notify::EventKind::Other => "other",
-                            }
-                        );
-                    }
-
-                    manager
-                        .webhooks
-                        .add_event(EventType::New, Some(name.clone()), &[path])
-                        .await;
+                if let Err(e) = manager.add_event(&new_scan_event) {
+                    error!("failed to add notify event: {:?}", e);
+                } else {
+                    debug!(
+                        "added 1 file from {} trigger due to: {}",
+                        name,
+                        match reason {
+                            notify::EventKind::Create(_) => "create",
+                            notify::EventKind::Modify(_) => "modify",
+                            notify::EventKind::Remove(_) => "remove",
+                            notify::EventKind::Access(_) => "access",
+                            notify::EventKind::Any => "any",
+                            notify::EventKind::Other => "other",
+                        }
+                    );
                 }
-                // Ok(())
-            })
-            .await;
+
+                manager
+                    .webhooks
+                    .add_event(EventType::New, Some(name.clone()), &[path])
+                    .await;
+            }
+
+            Ok::<(), anyhow::Error>(())
+        };
+
+        select! {
+            res = futures::future::join_all(producers) => {
+                for r in res {
+                    r.map_err(|e| anyhow::anyhow!("notify producer task failed: {:?}", e))??;
+                }
+            },
+            _ = consumer => {}
+        }
+
+        Err(anyhow::anyhow!("notify manager exited unexpectedly"))
     }
 }

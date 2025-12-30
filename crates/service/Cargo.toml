@@ -19,6 +19,7 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true, features = ["macros", "process"] }
+futures = { workspace = true }
 
 # HTTP client
 reqwest = { version = "0.12.12", features = ["json", "stream"] }

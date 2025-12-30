@@ -13,7 +13,6 @@ use autopulse_service::{
 };
 use autopulse_utils::sify;
 use serde::Deserialize;
-use std::sync::Arc;
 use tracing::{debug_span, error, info};
 
 #[derive(Deserialize)]
@@ -26,7 +25,7 @@ enum TriggerQueryParams {
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
     trigger: Path<String>,
-    manager: Data<Arc<PulseManager>>,
+    manager: Data<PulseManager>,
     auth: Option<BasicAuth>,
     body: Json<serde_json::Value>,
 ) -> Result<HttpResponse> {
@@ -116,7 +115,7 @@ pub async fn trigger_post(
             });
 
             if scan_events.len() != paths.len() {
-                return Ok(HttpResponse::InternalServerError().body("Failed to add all events"));
+                return Ok(HttpResponse::InternalServerError().body("falsed to add all events"));
             }
 
             Ok(HttpResponse::Ok().json(scan_events))
@@ -128,7 +127,7 @@ pub async fn trigger_post(
 pub async fn trigger_get(
     query: Query<TriggerQueryParams>,
     trigger: Path<String>,
-    manager: Data<Arc<PulseManager>>,
+    manager: Data<PulseManager>,
     auth: Option<BasicAuth>,
 ) -> Result<HttpResponse> {
     if !check_auth(

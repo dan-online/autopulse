@@ -19,7 +19,6 @@ use autopulse_service::settings::Settings;
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
-use std::sync::Arc;
 use tracing::{debug, error, info};
 
 /// Arguments for CLI
@@ -35,39 +34,8 @@ pub struct Args {
     pub config: Option<String>,
 }
 
-#[doc(hidden)]
-#[tokio::main]
-async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<()> {
-    let hostname = settings.app.hostname.clone();
-    let port = settings.app.port;
-    let database_url = settings.app.database_url.clone();
-
-    AnyConnection::pre_init(&database_url)?;
-
-    let pool = get_pool(&database_url)?;
-    let mut conn = get_conn(&pool)?;
-
-    conn.migrate()?;
-
-    // drop conn to prevent deadlocks
-    drop(conn);
-
-    let manager = PulseManager::new(settings, pool.clone());
-    let manager = Arc::new(manager);
-
-    manager.start().await;
-    manager.start_webhooks().await;
-    manager.start_notify().await;
-
-    let manager_clone = manager.clone();
-
-    let server = get_server(hostname.clone(), port, manager_clone)?;
-
-    info!("🚀 listening on {}:{}", hostname, port);
-
-    let server_task = tokio::spawn(server);
-
-    let shutdown: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+fn on_shutdown() -> tokio::task::JoinHandle<anyhow::Result<()>> {
+    tokio::spawn(async move {
         #[cfg(unix)]
         {
             use tokio::signal::unix::{signal, SignalKind};
@@ -101,12 +69,43 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         info!("💤 shutting down...");
 
         Ok(())
-    });
+    })
+}
 
-    shutdown.await??;
+#[doc(hidden)]
+#[tokio::main]
+async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<()> {
+    let hostname = settings.app.hostname.clone();
+    let port = settings.app.port;
+    let database_url = settings.app.database_url.clone();
 
-    manager.shutdown().await?;
-    server_task.abort();
+    AnyConnection::pre_init(&database_url)?;
+
+    let pool = get_pool(&database_url)?;
+
+    get_conn(&pool)?
+        .migrate()
+        .context("failed to run migrations")?;
+
+    let manager = PulseManager::new(settings, pool.clone());
+    let manager_task = manager.spawn();
+
+    let server = get_server(hostname.clone(), port, manager.clone())?;
+    let server_task = tokio::spawn(server);
+
+    info!("🚀 listening on {}:{}", hostname, port);
+
+    tokio::select! {
+        res = on_shutdown() => {
+            res??;
+        }
+        res = manager_task => {
+            res?;
+        }
+        res = server_task => {
+            res??;
+        }
+    }
 
     Ok(())
 }
@@ -122,18 +121,17 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
             let guard = setup_logs(
                 &settings.app.log_level,
                 &settings.opts.log_file,
-                settings.opts.log_file_rollover.clone().into(),
+                &(&settings.opts.log_file_rollover).into(),
                 settings.app.api_logging,
             )?;
 
             Ok((settings, guard))
         }
         Err(e) => {
-            // still setup logs if settings failed to load
             setup_logs(
                 &autopulse_utils::LogLevel::Info,
                 &None,
-                Rotation::NEVER,
+                &Rotation::NEVER,
                 false,
             )?;
 
