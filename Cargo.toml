@@ -57,7 +57,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 
 # Asynchronous runtime
 tokio = { version = "1.43.0" }
-tokio-util = { version = "0.7.17" }
+# tokio-util = { version = "0.7.17" }
 futures = { version = "0.3.31" }
 
 # URL parsing
