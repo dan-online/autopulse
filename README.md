@@ -134,6 +134,9 @@ An example has been provided in the [example](https://github.com/dan-online/auto
 
 > Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
 
+> Note: You can also provide the path to a variable by appending _FILE
+> For example: AUTOPULSE__AUTH__PASSWORD_FILE=/run/secrets/autopulse_password
+
 ##### Authorization
 
 autopulse uses basic authorization for the API. You can set the username and password in the config file or by setting the `AUTOPULSE__AUTH__USERNAME` and `AUTOPULSE__AUTH__PASSWORD` environment variables.

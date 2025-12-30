@@ -3,6 +3,7 @@ use auth::Auth;
 use config::Config;
 use opts::Opts;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::{collections::HashMap, path::PathBuf};
 use targets::Target;
 use triggers::manual::Manual;
@@ -152,10 +153,31 @@ impl Default for Settings {
 }
 
 impl Settings {
+    fn resolve_env() -> HashMap<String, String> {
+        let mut out = HashMap::new();
+
+        for (key, value) in env::vars() {
+            if let Some(base) = key.strip_suffix("_FILE") {
+                if let Ok(file_value) = std::fs::read_to_string(&value) {
+                    out.insert(base.to_string(), file_value.trim().to_string());
+                    continue;
+                }
+            }
+
+            out.entry(key).or_insert(value);
+        }
+
+        out
+    }
+
     pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
         let mut settings = Config::builder()
             .add_source(config::File::with_name("config").required(false))
-            .add_source(config::Environment::with_prefix("AUTOPULSE").separator("__"));
+            .add_source(
+                config::Environment::with_prefix("AUTOPULSE")
+                    .separator("__")
+                    .source(Some(Self::resolve_env())),
+            );
 
         if let Some(file_loc) = optional_config_file {
             settings = settings.add_source(config::File::with_name(&file_loc));
