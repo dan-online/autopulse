@@ -99,8 +99,8 @@ jobs:
             danonline/autopulse:${{ steps.tag.outputs.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           context: ui/
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
       - name: Build and push (ui) (dynamic)
@@ -113,8 +113,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: ui/
           file: ui/Dockerfile.build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
       # - name: Login to Docker Hub
