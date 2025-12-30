@@ -58,6 +58,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
 
       # - name: Install dependencies on Linux
       #   if: contains(matrix.os, 'freebsd')
