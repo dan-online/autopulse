@@ -1,10 +1,8 @@
+use crate::manager::PulseManager;
+use crate::settings::targets::TargetProcess;
 use crate::settings::webhooks::EventType;
-use crate::{
-    settings::webhooks::WebhookManager,
-    settings::{targets::TargetProcess, Settings},
-};
 use autopulse_database::{
-    conn::{get_conn, DbPool},
+    conn::get_conn,
     diesel::{self, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl},
     models::{FoundStatus, ProcessStatus, ScanEvent},
     schema::scan_events::{
@@ -17,26 +15,25 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, info_span, warn, Instrument};
 
-pub(super) struct PulseRunner {
-    webhooks: Arc<WebhookManager>,
-    settings: Arc<Settings>,
-    pool: Arc<DbPool>,
+pub(super) struct PulseRunner<'a> {
+    // webhooks: Arc<WebhookManager>,
+    // settings: Arc<Settings>,
+    // pool: Arc<DbPool>,
+    manager: &'a PulseManager,
 
     anchors_available: Arc<Mutex<bool>>,
 }
 
-impl PulseRunner {
-    pub fn new(settings: Arc<Settings>, pool: Arc<DbPool>, webhooks: Arc<WebhookManager>) -> Self {
+impl<'a> PulseRunner<'a> {
+    pub fn new(manager: &'a PulseManager) -> Self {
         Self {
-            webhooks,
-            settings,
-            pool,
+            manager,
             anchors_available: Arc::new(Mutex::new(true)),
         }
     }
 
     async fn update_found_status(&self) -> anyhow::Result<()> {
-        if !self.settings.opts.check_path {
+        if !self.manager.settings.opts.check_path {
             return Ok(());
         }
 
@@ -46,7 +43,7 @@ impl PulseRunner {
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
             .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .load::<ScanEvent>(&mut get_conn(&self.pool)?)?;
+            .load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?;
 
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
@@ -76,7 +73,7 @@ impl PulseRunner {
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
-            get_conn(&self.pool)?.save_changes(ev)?;
+            get_conn(&self.manager.pool)?.save_changes(ev)?;
         }
 
         if !found_files.is_empty() {
@@ -85,7 +82,8 @@ impl PulseRunner {
             for (file, trigger) in found_files {
                 debug!("file '{file}' found from '{trigger}'");
 
-                self.webhooks
+                self.manager
+                    .webhooks
                     .add_event(EventType::Found, Some(trigger), &[file])
                     .await;
             }
@@ -101,7 +99,8 @@ impl PulseRunner {
             for (file, trigger) in &mismatched_files {
                 debug!("file '{file}' hash mismatch from '{trigger}'");
 
-                self.webhooks
+                self.manager
+                    .webhooks
                     .add_event(
                         EventType::HashMismatch,
                         Some(trigger.clone()),
@@ -127,12 +126,12 @@ impl PulseRunner {
             // filter by processable events
             .filter(can_process.lt(chrono::Utc::now().naive_utc()));
 
-        let mut evs = if self.settings.opts.check_path {
+        let mut evs = if self.manager.settings.opts.check_path {
             base_query
                 .filter(found_status.eq::<String>(FoundStatus::Found.into()))
-                .load::<ScanEvent>(&mut get_conn(&self.pool)?)?
+                .load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?
         } else {
-            base_query.load::<ScanEvent>(&mut get_conn(&self.pool)?)?
+            base_query.load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?
         };
 
         if evs.is_empty() {
@@ -154,7 +153,8 @@ impl PulseRunner {
                     ev.file_path, ev.event_source
                 );
 
-                self.webhooks
+                self.manager
+                    .webhooks
                     .add_event(
                         EventType::Processed,
                         Some(ev.event_source.clone()),
@@ -173,7 +173,8 @@ impl PulseRunner {
                     ev.file_path, ev.event_source
                 );
 
-                self.webhooks
+                self.manager
+                    .webhooks
                     .add_event(
                         EventType::Retrying,
                         Some(ev.event_source.clone()),
@@ -193,7 +194,8 @@ impl PulseRunner {
             for ev in &failed {
                 debug!("failed file '{}' from '{}'", ev.file_path, ev.event_source);
 
-                self.webhooks
+                self.manager
+                    .webhooks
                     .add_event(
                         EventType::Failed,
                         Some(ev.event_source.clone()),
@@ -212,9 +214,9 @@ impl PulseRunner {
     ) -> anyhow::Result<(Vec<ScanEvent>, Vec<ScanEvent>, Vec<ScanEvent>)> {
         let mut failed_ids = vec![];
 
-        let trigger_settings = &self.settings.triggers;
+        let trigger_settings = &self.manager.settings.triggers;
 
-        for (name, target) in &self.settings.targets {
+        for (name, target) in &self.manager.settings.targets {
             let evs = evs
                 .iter_mut()
                 .filter(|x| !x.get_targets_hit().contains(name))
@@ -261,12 +263,12 @@ impl PulseRunner {
         for ev in evs.iter_mut() {
             ev.updated_at = chrono::Utc::now().naive_utc();
 
-            let mut conn = get_conn(&self.pool)?;
+            let mut conn = get_conn(&self.manager.pool)?;
 
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
 
-                if ev.failed_times >= self.settings.opts.max_retries {
+                if ev.failed_times >= self.manager.settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
                     failed.push(conn.save_changes(ev)?);
@@ -291,7 +293,7 @@ impl PulseRunner {
 
     fn cleanup(&self) -> anyhow::Result<()> {
         let time_before_cleanup = chrono::Utc::now().naive_utc()
-            - chrono::Duration::days(self.settings.opts.cleanup_days as i64);
+            - chrono::Duration::days(self.manager.settings.opts.cleanup_days as i64);
 
         let delete_old_events = diesel::delete(
             scan_events
@@ -302,7 +304,7 @@ impl PulseRunner {
                 .filter(created_at.lt(time_before_cleanup)),
         );
 
-        if let Err(e) = delete_old_events.execute(&mut get_conn(&self.pool)?) {
+        if let Err(e) = delete_old_events.execute(&mut get_conn(&self.manager.pool)?) {
             error!("failed to delete old events: {:?}", e);
         }
 
@@ -310,7 +312,12 @@ impl PulseRunner {
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
-        let set_anchors_available = self.settings.anchors.iter().all(|anchor| anchor.exists());
+        let set_anchors_available = self
+            .manager
+            .settings
+            .anchors
+            .iter()
+            .all(|anchor| anchor.exists());
 
         let mut anchors_available = self.anchors_available.lock().await;
         if set_anchors_available != *anchors_available {

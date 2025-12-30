@@ -87,11 +87,13 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         .migrate()
         .context("failed to run migrations")?;
 
-    let manager = PulseManager::new(settings, pool.clone());
-    let manager_task = manager.spawn();
+    let manager = PulseManager::new(settings, pool);
 
-    let server = get_server(hostname.clone(), port, manager.clone())?;
-    let server_task = tokio::spawn(server);
+    let handle_events_task = manager.start();
+    let handle_webhooks_task = manager.start_webhooks();
+    let handle_notify_task = manager.start_notify();
+
+    let server = get_server(&hostname, &port, manager.clone())?;
 
     info!("🚀 listening on {}:{}", hostname, port);
 
@@ -99,11 +101,17 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         res = on_shutdown() => {
             res??;
         }
-        res = manager_task => {
+        res = handle_events_task => {
             res?;
         }
-        res = server_task => {
-            res??;
+        res = handle_webhooks_task => {
+            res?;
+        }
+        res = handle_notify_task => {
+            res?;
+        }
+        res = server => {
+            res?;
         }
     }
 

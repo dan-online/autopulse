@@ -1,8 +1,9 @@
 use super::runner::PulseRunner;
+
 use crate::settings::triggers::Trigger;
 use crate::settings::webhooks::{EventType, WebhookManager};
 use crate::settings::Settings;
-use anyhow::Context;
+
 use autopulse_database::diesel::sql_types::BigInt;
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
@@ -17,7 +18,6 @@ use autopulse_database::{
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::select;
-use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
 /// Represents the service statistics.
@@ -207,38 +207,8 @@ impl PulseManager {
             .map_err(Into::into)
     }
 
-    pub async fn spawn(&self) -> anyhow::Result<()> {
-        let mut handles = vec![self.spawn_start(), self.spawn_webhooks()];
-
-        if self
-            .settings
-            .triggers
-            .iter()
-            .any(|(_, t)| matches!(t, Trigger::Notify(_)))
-        {
-            handles.push(self.spawn_notify());
-        }
-
-        futures::future::select_all(handles).await.0?
-    }
-
-    fn spawn_start(&self) -> JoinHandle<anyhow::Result<()>> {
-        let manager = Arc::new(self.clone());
-
-        tokio::spawn(async move {
-            manager
-                .start()
-                .await
-                .context("failed to handle scan events")
-        })
-    }
-
     pub async fn start(&self) -> anyhow::Result<()> {
-        let runner = PulseRunner::new(
-            self.settings.clone(),
-            self.pool.clone(),
-            self.webhooks.clone(),
-        );
+        let runner = PulseRunner::new(self);
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
         loop {
@@ -246,17 +216,6 @@ impl PulseManager {
 
             timer.tick().await;
         }
-    }
-
-    fn spawn_webhooks(&self) -> JoinHandle<anyhow::Result<()>> {
-        let manager = Arc::new(self.clone());
-
-        tokio::spawn(async move {
-            manager
-                .start_webhooks()
-                .await
-                .context("failed to send webhooks")
-        })
     }
 
     pub async fn start_webhooks(&self) -> anyhow::Result<()> {
@@ -269,19 +228,17 @@ impl PulseManager {
         }
     }
 
-    fn spawn_notify(&self) -> JoinHandle<anyhow::Result<()>> {
-        let manager = Arc::new(self.clone());
-
-        tokio::spawn(async move {
-            manager
-                .start_notify()
-                .await
-                .context("failed to handle notify triggers")
-        })
-    }
-
     pub async fn start_notify(&self) -> anyhow::Result<()> {
         let (global_tx, mut global_rx) = tokio::sync::mpsc::unbounded_channel();
+
+        if !self
+            .settings
+            .triggers
+            .iter()
+            .any(|(_, t)| matches!(t, Trigger::Notify(_)))
+        {
+            return futures::future::pending().await;
+        }
 
         let mut producers = vec![];
         let settings = self.settings.clone();

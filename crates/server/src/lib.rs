@@ -12,11 +12,7 @@ mod middleware {
     pub mod auth;
 }
 
-pub fn get_server(
-    hostname: String,
-    port: u16,
-    manager_clone: PulseManager,
-) -> anyhow::Result<Server> {
+pub fn get_server(hostname: &str, port: &u16, manager: PulseManager) -> anyhow::Result<Server> {
     Ok(HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -29,10 +25,9 @@ pub fn get_server(
             .service(list)
             .service(config_template)
             .app_data(basic::Config::default().realm("Restricted area"))
-            .app_data(Data::new(manager_clone.clone()))
+            .app_data(Data::new(manager.clone()))
     })
-    .disable_signals()
-    .bind((hostname, port))?
+    .bind((hostname, *port))?
     .run())
 }
 
