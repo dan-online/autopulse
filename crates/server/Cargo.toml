@@ -1,6 +1,7 @@
 [package]
 name = "autopulse-server"
 edition = "2021"
+build = "src/build.rs"
 
 version.workspace = true
 
