@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: continuous-delivery-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
 env:
   CARGO_INCREMENTAL: 0
@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-tags: true
+          fetch-depth: 0
 
       # - name: Install dependencies on Linux
       #   if: contains(matrix.os, 'freebsd')
