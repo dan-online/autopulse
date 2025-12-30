@@ -18,7 +18,6 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::select;
 use tokio::task::JoinHandle;
-use tokio_util::sync::CancellationToken;
 use tracing::{debug, error};
 
 /// Represents the service statistics.
@@ -46,7 +45,6 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
-    pub shutdown_token: Arc<CancellationToken>,
 }
 
 impl PulseManager {
@@ -59,12 +57,7 @@ impl PulseManager {
             settings,
             pool,
             webhooks,
-            shutdown_token: Arc::new(CancellationToken::new()),
         }
-    }
-
-    pub async fn shutdown(&self) {
-        self.shutdown_token.cancel()
     }
 
     //  pub fn get_stats(&self) -> anyhow::Result<Stats> {
@@ -216,37 +209,23 @@ impl PulseManager {
 
     pub async fn spawn(&self) -> anyhow::Result<()> {
         let handles = vec![
-            ("events", self.spawn_start()),
-            ("webhooks", self.spawn_webhooks()),
-            ("notify", self.spawn_notify()),
+            self.spawn_start(),
+            self.spawn_webhooks(),
+            self.spawn_notify(),
         ];
 
-        let mut tasks = vec![];
-
-        for (name, handle) in handles {
-            let shutdown_token = self.shutdown_token.clone();
-
-            tasks.push(tokio::spawn(async move {
-                select! {
-                    res = handle => {
-                        res?.with_context(|| format!("{} task exited unexpectedly", name))?;
-
-                        Err(anyhow::anyhow!("{} task exited unexpectedly", name))
-                    },
-                    _ = shutdown_token.cancelled() => {
-                        Ok(())
-                    }
-                }
-            }));
-        }
-
-        futures::future::select_all(tasks).await.0?
+        futures::future::select_all(handles).await.0?
     }
 
     fn spawn_start(&self) -> JoinHandle<anyhow::Result<()>> {
         let manager = Arc::new(self.clone());
 
-        tokio::spawn(async move { manager.start().await })
+        tokio::spawn(async move {
+            manager
+                .start()
+                .await
+                .context("failed to handle scan events")
+        })
     }
 
     pub async fn start(&self) -> anyhow::Result<()> {
@@ -258,7 +237,7 @@ impl PulseManager {
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
 
         loop {
-            runner.run().await.context("failed to run pulse")?;
+            runner.run().await?;
 
             timer.tick().await;
         }
@@ -267,17 +246,19 @@ impl PulseManager {
     fn spawn_webhooks(&self) -> JoinHandle<anyhow::Result<()>> {
         let manager = Arc::new(self.clone());
 
-        tokio::spawn(async move { manager.start_webhooks().await })
+        tokio::spawn(async move {
+            manager
+                .start_webhooks()
+                .await
+                .context("failed to send webhooks")
+        })
     }
 
     pub async fn start_webhooks(&self) -> anyhow::Result<()> {
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
 
         loop {
-            self.webhooks
-                .send()
-                .await
-                .context("failed to send webhooks")?;
+            self.webhooks.send().await?;
 
             timer.tick().await;
         }
@@ -286,7 +267,12 @@ impl PulseManager {
     fn spawn_notify(&self) -> JoinHandle<anyhow::Result<()>> {
         let manager = Arc::new(self.clone());
 
-        tokio::spawn(async move { manager.start_notify().await })
+        tokio::spawn(async move {
+            manager
+                .start_notify()
+                .await
+                .context("failed to handle notify triggers")
+        })
     }
 
     pub async fn start_notify(&self) -> anyhow::Result<()> {

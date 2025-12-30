@@ -350,7 +350,6 @@ dependencies = [
  "serde_json",
  "struson",
  "tokio",
- "tokio-util",
  "tracing",
 ]
 

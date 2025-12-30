@@ -19,7 +19,6 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true, features = ["macros", "process"] }
-tokio-util = { workspace = true }
 futures = { workspace = true }
 
 # HTTP client

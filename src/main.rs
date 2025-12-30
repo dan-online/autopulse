@@ -35,40 +35,8 @@ pub struct Args {
     pub config: Option<String>,
 }
 
-#[doc(hidden)]
-#[tokio::main]
-async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<()> {
-    let hostname = settings.app.hostname.clone();
-    let port = settings.app.port;
-    let database_url = settings.app.database_url.clone();
-
-    AnyConnection::pre_init(&database_url)?;
-
-    let pool = get_pool(&database_url)?;
-    let mut conn = get_conn(&pool)?;
-
-    conn.migrate()?;
-
-    // drop conn to prevent deadlocks
-    drop(conn);
-
-    let manager = PulseManager::new(settings, pool.clone());
-    let manager = Arc::new(manager);
-
-    // manager.start().await;
-    // manager.start_webhooks().await;
-    // manager.start_notify().await;
-    let tasks = manager.spawn();
-
-    let manager_clone = manager.clone();
-
-    let server = get_server(hostname.clone(), port, manager_clone)?;
-
-    info!("🚀 listening on {}:{}", hostname, port);
-
-    let server_task = tokio::spawn(server);
-
-    let shutdown: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+fn on_shutdown() -> tokio::task::JoinHandle<anyhow::Result<()>> {
+    tokio::spawn(async move {
         #[cfg(unix)]
         {
             use tokio::signal::unix::{signal, SignalKind};
@@ -102,10 +70,42 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         info!("💤 shutting down...");
 
         Ok(())
-    });
+    })
+}
+
+#[doc(hidden)]
+#[tokio::main]
+async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<()> {
+    let hostname = settings.app.hostname.clone();
+    let port = settings.app.port;
+    let database_url = settings.app.database_url.clone();
+
+    AnyConnection::pre_init(&database_url)?;
+
+    let pool = get_pool(&database_url)?;
+    let mut conn = get_conn(&pool)?;
+
+    conn.migrate()?;
+
+    // drop conn to prevent deadlocks
+    drop(conn);
+
+    let manager = PulseManager::new(settings, pool.clone());
+    let manager = Arc::new(manager);
+
+    // manager.start().await;
+    // manager.start_webhooks().await;
+    // manager.start_notify().await;
+    let tasks = manager.spawn();
+
+    let server = get_server(hostname.clone(), port, manager.clone())?;
+
+    info!("🚀 listening on {}:{}", hostname, port);
+
+    let server_task = tokio::spawn(server);
 
     tokio::select! {
-        res = shutdown => {
+        res = on_shutdown() => {
             res??;
         }
         res = tasks => {
