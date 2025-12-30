@@ -15,7 +15,7 @@ use autopulse_utils::sha256checksum;
 use autopulse_utils::sify;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{error, info, info_span, warn, Instrument};
+use tracing::{debug, error, info, info_span, warn, Instrument};
 
 pub(super) struct PulseRunner {
     webhooks: Arc<WebhookManager>,
@@ -41,7 +41,7 @@ impl PulseRunner {
         }
 
         let mut found_files: Vec<(String, String)> = vec![];
-        let mut mismatched_files = vec![];
+        let mut mismatched_files: Vec<(String, String)> = vec![];
 
         let mut evs = scan_events
             .filter(found_status.ne::<String>(FoundStatus::Found.into()))
@@ -57,7 +57,7 @@ impl PulseRunner {
 
                     if hash != file_hash {
                         if ev.found_status != FoundStatus::HashMismatch.to_string() {
-                            mismatched_files.push(ev.file_path.clone());
+                            mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
                         }
 
                         ev.found_status = FoundStatus::HashMismatch.into();
@@ -82,9 +82,11 @@ impl PulseRunner {
         if !found_files.is_empty() {
             info!("found {} new file{}", found_files.len(), sify(&found_files));
 
-            for (file, target) in found_files {
+            for (file, trigger) in found_files {
+                debug!("file '{file}' found from '{trigger}'");
+
                 self.webhooks
-                    .add_event(EventType::Found, Some(target), &[file])
+                    .add_event(EventType::Found, Some(trigger), &[file])
                     .await;
             }
         }
@@ -96,9 +98,17 @@ impl PulseRunner {
                 sify(&mismatched_files)
             );
 
-            self.webhooks
-                .add_event(EventType::HashMismatch, None, &mismatched_files)
-                .await;
+            for (file, trigger) in &mismatched_files {
+                debug!("file '{file}' hash mismatch from '{trigger}'");
+
+                self.webhooks
+                    .add_event(
+                        EventType::HashMismatch,
+                        Some(trigger.clone()),
+                        std::slice::from_ref(file),
+                    )
+                    .await;
+            }
         }
 
         Ok(())
@@ -139,6 +149,11 @@ impl PulseRunner {
             );
 
             for ev in &processed {
+                debug!(
+                    "processed file '{}' from '{}'",
+                    ev.file_path, ev.event_source
+                );
+
                 self.webhooks
                     .add_event(
                         EventType::Processed,
@@ -153,6 +168,11 @@ impl PulseRunner {
             warn!("retrying {} file{}", retrying.len(), sify(&retrying));
 
             for ev in &retrying {
+                debug!(
+                    "retrying file '{}' from '{}'",
+                    ev.file_path, ev.event_source
+                );
+
                 self.webhooks
                     .add_event(
                         EventType::Retrying,
@@ -171,6 +191,8 @@ impl PulseRunner {
             );
 
             for ev in &failed {
+                debug!("failed file '{}' from '{}'", ev.file_path, ev.event_source);
+
                 self.webhooks
                     .add_event(
                         EventType::Failed,

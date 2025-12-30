@@ -13,7 +13,7 @@ use autopulse_service::{
 };
 use autopulse_utils::sify;
 use serde::Deserialize;
-use tracing::{debug_span, error, info};
+use tracing::{debug, debug_span, error, info};
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -191,6 +191,7 @@ pub async fn trigger_get(
 
                 debug_span!("", trigger = trigger.to_string()).in_scope(|| {
                     info!("added 1 file");
+                    debug!("added file '{}'", file_path);
                 });
 
                 let scan_event = scan_event.unwrap();
@@ -236,6 +237,7 @@ pub async fn trigger_get(
 
                 debug_span!("", trigger = trigger.to_string()).in_scope(|| {
                     info!("added 1 directory");
+                    debug!("added directory '{}'", dir_path);
                 });
 
                 let scan_event = scan_event.unwrap();
