@@ -55,9 +55,10 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let manager = PulseManager::new(settings, pool.clone());
     let manager = Arc::new(manager);
 
-    manager.start().await;
-    manager.start_webhooks().await;
-    manager.start_notify().await;
+    // manager.start().await;
+    // manager.start_webhooks().await;
+    // manager.start_notify().await;
+    let tasks = manager.spawn();
 
     let manager_clone = manager.clone();
 
@@ -103,10 +104,17 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         Ok(())
     });
 
-    shutdown.await??;
-
-    manager.shutdown().await?;
-    server_task.abort();
+    tokio::select! {
+        res = shutdown => {
+            res??;
+        }
+        res = tasks => {
+            res?;
+        }
+        res = server_task => {
+            res??;
+        }
+    }
 
     Ok(())
 }
