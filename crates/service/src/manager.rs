@@ -208,11 +208,16 @@ impl PulseManager {
     }
 
     pub async fn spawn(&self) -> anyhow::Result<()> {
-        let handles = vec![
-            self.spawn_start(),
-            self.spawn_webhooks(),
-            self.spawn_notify(),
-        ];
+        let mut handles = vec![self.spawn_start(), self.spawn_webhooks()];
+
+        if self
+            .settings
+            .triggers
+            .iter()
+            .any(|(_, t)| matches!(t, Trigger::Notify(_)))
+        {
+            handles.push(self.spawn_notify());
+        }
 
         futures::future::select_all(handles).await.0?
     }
