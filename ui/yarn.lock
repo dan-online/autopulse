@@ -111,18 +111,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:^2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/biome@npm:2.3.10"
+"@biomejs/biome@npm:^2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/biome@npm:2.3.11"
   dependencies:
-    "@biomejs/cli-darwin-arm64": "npm:2.3.10"
-    "@biomejs/cli-darwin-x64": "npm:2.3.10"
-    "@biomejs/cli-linux-arm64": "npm:2.3.10"
-    "@biomejs/cli-linux-arm64-musl": "npm:2.3.10"
-    "@biomejs/cli-linux-x64": "npm:2.3.10"
-    "@biomejs/cli-linux-x64-musl": "npm:2.3.10"
-    "@biomejs/cli-win32-arm64": "npm:2.3.10"
-    "@biomejs/cli-win32-x64": "npm:2.3.10"
+    "@biomejs/cli-darwin-arm64": "npm:2.3.11"
+    "@biomejs/cli-darwin-x64": "npm:2.3.11"
+    "@biomejs/cli-linux-arm64": "npm:2.3.11"
+    "@biomejs/cli-linux-arm64-musl": "npm:2.3.11"
+    "@biomejs/cli-linux-x64": "npm:2.3.11"
+    "@biomejs/cli-linux-x64-musl": "npm:2.3.11"
+    "@biomejs/cli-win32-arm64": "npm:2.3.11"
+    "@biomejs/cli-win32-x64": "npm:2.3.11"
   dependenciesMeta:
     "@biomejs/cli-darwin-arm64":
       optional: true
@@ -142,62 +142,62 @@ __metadata:
       optional: true
   bin:
     biome: bin/biome
-  checksum: 10c0/317bf8f8051f4030dc52855159bbd058db5cf2c9d5e7b212271f3d91842e0fc5bbc05495e47943676481325d4081cd41cf25dfa18a437d2b6e27f72dacfd41b4
+  checksum: 10c0/b9764070c3d1583466a8861d37dc480c18103f7bb52115db0f265a38e6343d69792c9beea094e0b3db0905cb365b9a82ad2a0f3f05b7f04873a8f9b444263140
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-arm64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-darwin-arm64@npm:2.3.10"
+"@biomejs/cli-darwin-arm64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-darwin-arm64@npm:2.3.11"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-x64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-darwin-x64@npm:2.3.10"
+"@biomejs/cli-darwin-x64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-darwin-x64@npm:2.3.11"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64-musl@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.3.10"
+"@biomejs/cli-linux-arm64-musl@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.3.11"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-linux-arm64@npm:2.3.10"
+"@biomejs/cli-linux-arm64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-linux-arm64@npm:2.3.11"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64-musl@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-linux-x64-musl@npm:2.3.10"
+"@biomejs/cli-linux-x64-musl@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-linux-x64-musl@npm:2.3.11"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-linux-x64@npm:2.3.10"
+"@biomejs/cli-linux-x64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-linux-x64@npm:2.3.11"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-arm64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-win32-arm64@npm:2.3.10"
+"@biomejs/cli-win32-arm64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-win32-arm64@npm:2.3.11"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-x64@npm:2.3.10":
-  version: 2.3.10
-  resolution: "@biomejs/cli-win32-x64@npm:2.3.10"
+"@biomejs/cli-win32-x64@npm:2.3.11":
+  version: 2.3.11
+  resolution: "@biomejs/cli-win32-x64@npm:2.3.11"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -657,12 +657,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/hugeicons@npm:^1.2.21":
-  version: 1.2.21
-  resolution: "@iconify-json/hugeicons@npm:1.2.21"
+"@iconify-json/hugeicons@npm:^1.2.22":
+  version: 1.2.22
+  resolution: "@iconify-json/hugeicons@npm:1.2.22"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/e7f5b4e5db4e25b910adea26358ae1d0125cbf1654d3883459e11bb9daba55c64736271ef4b84f844d2d9ff900ebbe2dfbc44ef8b253257c90bb867614c831e5
+  checksum: 10c0/403a5605a8746f5dec47fc011387ba6c11427724c9f8421f353de03d0dbc2791b2daa22965041711e9e0fa916cf28093b0e48367f003706274b04fbc3d33ba67
   languageName: node
   linkType: hard
 
@@ -675,12 +675,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/line-md@npm:^1.2.11":
-  version: 1.2.11
-  resolution: "@iconify-json/line-md@npm:1.2.11"
+"@iconify-json/line-md@npm:^1.2.13":
+  version: 1.2.13
+  resolution: "@iconify-json/line-md@npm:1.2.13"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/f0b7831eec7514f6fa88ef57b71a6c3702733520fb001d6e11625e484a301c5eb405250cd93d397fa5edc362d492c204d700f06503587037a0721a791681bb82
+  checksum: 10c0/a26bb54fa7407b565d079e485a769c541d284e93aae17352567fbc7bc22a674deae6c741fe4bc59427dd062060b5e7964ec55e5a5f9c971b9a1fce7f5c95a854
   languageName: node
   linkType: hard
 
@@ -3426,11 +3426,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ui@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:^2.3.10"
+    "@biomejs/biome": "npm:^2.3.11"
     "@iconify-json/ci": "npm:^1.2.2"
-    "@iconify-json/hugeicons": "npm:^1.2.21"
+    "@iconify-json/hugeicons": "npm:^1.2.22"
     "@iconify-json/ic": "npm:^1.2.4"
-    "@iconify-json/line-md": "npm:^1.2.11"
+    "@iconify-json/line-md": "npm:^1.2.13"
     "@iconify-json/material-symbols": "npm:^1.2.50"
     "@iconify-json/material-symbols-light": "npm:^1.2.50"
     "@iconify-json/pajamas": "npm:^1.2.15"
