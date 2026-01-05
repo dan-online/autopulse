@@ -148,7 +148,7 @@ pub async fn trigger_get(
     let trigger_settings = trigger_settings.unwrap();
 
     match &trigger_settings {
-        Trigger::Manual(trigger_settings) => match query.into_inner() {
+        Trigger::Manual(trigger_settings) | Trigger::Bazarr(trigger_settings) => match query.into_inner() {
             TriggerQueryParams::Manual(query) => {
                 let mut file_path = query.path.clone();
 
