@@ -1355,15 +1355,15 @@ __metadata:
   linkType: hard
 
 "@sveltejs/kit@npm:^2.49.2":
-  version: 2.49.2
-  resolution: "@sveltejs/kit@npm:2.49.2"
+  version: 2.50.0
+  resolution: "@sveltejs/kit@npm:2.50.0"
   dependencies:
     "@standard-schema/spec": "npm:^1.0.0"
     "@sveltejs/acorn-typescript": "npm:^1.0.5"
     "@types/cookie": "npm:^0.6.0"
     acorn: "npm:^8.14.1"
     cookie: "npm:^0.6.0"
-    devalue: "npm:^5.3.2"
+    devalue: "npm:^5.6.2"
     esm-env: "npm:^1.2.2"
     kleur: "npm:^4.1.5"
     magic-string: "npm:^0.30.5"
@@ -1375,13 +1375,16 @@ __metadata:
     "@opentelemetry/api": ^1.0.0
     "@sveltejs/vite-plugin-svelte": ^3.0.0 || ^4.0.0-next.1 || ^5.0.0 || ^6.0.0-next.0
     svelte: ^4.0.0 || ^5.0.0-next.0
+    typescript: ^5.3.3
     vite: ^5.0.3 || ^6.0.0 || ^7.0.0-beta.0
   peerDependenciesMeta:
     "@opentelemetry/api":
       optional: true
+    typescript:
+      optional: true
   bin:
     svelte-kit: svelte-kit.js
-  checksum: 10c0/05bf6d0d9fb87d894d1a5667f0473d8e83a4584f5c80850ed9eef1d1c8982236ea0d703bbd83befdff30c729d102fc67f2839014d900edb15f6b449ee059b9aa
+  checksum: 10c0/d06007fa019f01e97ab050fa2aaab55be374d3da74a461e1367ff716744746e400691320c312d4f8ae57e19dbfc523bb47add47115639dbc798610405d5a1215
   languageName: node
   linkType: hard
 
@@ -2068,10 +2071,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"devalue@npm:^5.3.2, devalue@npm:^5.5.0":
+"devalue@npm:^5.5.0":
   version: 5.6.1
   resolution: "devalue@npm:5.6.1"
   checksum: 10c0/4dca0e800336003fd1e268c142adfe78f3539cda7384b4f69762a93e0dfc33e223b580251da0a6da4be44962958fcba5eadf122f9720e09f437b28904af9c43e
+  languageName: node
+  linkType: hard
+
+"devalue@npm:^5.6.2":
+  version: 5.6.2
+  resolution: "devalue@npm:5.6.2"
+  checksum: 10c0/654f257ec525a2d3f35c941bfbb361148bc65ced060710969fbaa1c45abf1c9d7c4fcb77310bf8d2fb73c34cf60bad10710e7bf5b15643bbc082518ea04cb00b
   languageName: node
   linkType: hard
 
