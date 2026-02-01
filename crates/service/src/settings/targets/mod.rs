@@ -196,6 +196,21 @@ use {
 };
 
 /// HTTP request configuration options for targets
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   my_plex:
+///     type: plex
+///     url: https://192.168.1.100:32400
+///     token: "<PLEX_TOKEN>"
+///     request:
+///       insecure: true
+///       timeout: 30
+///       headers:
+///         X-Custom-Header: "value"
+/// ```
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Request {
     /// Allow insecure HTTPS connections (skip certificate verification) (default: false)
