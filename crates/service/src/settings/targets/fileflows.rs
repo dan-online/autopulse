@@ -1,4 +1,4 @@
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
@@ -16,6 +16,9 @@ pub struct FileFlows {
     pub url: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash, Debug)]
@@ -91,11 +94,8 @@ struct FileFlowsLibraryFile {
 
 impl FileFlows {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
-        let headers = header::HeaderMap::new();
-
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .default_headers(headers)
+        self.request
+            .client_builder(header::HeaderMap::new())
             .build()
             .map_err(Into::into)
     }
