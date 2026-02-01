@@ -30,11 +30,8 @@ impl Autopulse {
             headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
         }
 
-        self.request.apply_headers(&mut headers);
-
         self.request
-            .client_builder()
-            .default_headers(headers)
+            .client_builder(headers)
             .build()
             .map_err(Into::into)
     }

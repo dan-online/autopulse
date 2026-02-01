@@ -46,11 +46,8 @@ impl Audiobookshelf {
 
         headers.insert("Authorization", format!("Bearer {}", self.token).parse()?);
 
-        self.request.apply_headers(&mut headers);
-
         self.request
-            .client_builder()
-            .default_headers(headers)
+            .client_builder(headers)
             .build()
             .map_err(Into::into)
     }

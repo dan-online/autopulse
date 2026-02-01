@@ -229,25 +229,34 @@ impl Request {
     /// Default timeout in seconds
     pub const DEFAULT_TIMEOUT: u64 = 10;
 
-    /// Returns a pre-configured reqwest ClientBuilder with insecure and timeout settings
-    pub fn client_builder(&self) -> reqwest::ClientBuilder {
+    /// Returns a pre-configured reqwest ClientBuilder with insecure, timeout, and header settings.
+    ///
+    /// Custom headers from the request config are merged into the provided headers.
+    /// Existing headers (e.g., auth tokens) are not overwritten by custom headers.
+    pub fn client_builder(&self, mut headers: header::HeaderMap) -> reqwest::ClientBuilder {
+        for (key, value) in &self.headers {
+            match (
+                header::HeaderName::from_bytes(key.as_bytes()),
+                header::HeaderValue::from_str(value),
+            ) {
+                (Ok(name), Ok(val)) => {
+                    if headers.contains_key(&name) {
+                        tracing::warn!("header '{}' already exists, ignoring custom value", key);
+                    } else {
+                        headers.insert(name, val);
+                    }
+                }
+                (Err(e), _) => tracing::warn!("invalid header name '{}': {}", key, e),
+                (_, Err(e)) => tracing::warn!("invalid header value for '{}': {}", key, e),
+            }
+        }
+
         reqwest::Client::builder()
             .tls_danger_accept_invalid_certs(self.insecure)
             .timeout(std::time::Duration::from_secs(
                 self.timeout.unwrap_or(Self::DEFAULT_TIMEOUT),
             ))
-    }
-
-    /// Applies custom headers to a HeaderMap
-    pub fn apply_headers(&self, headers: &mut header::HeaderMap) {
-        for (key, value) in &self.headers {
-            if let (Ok(name), Ok(val)) = (
-                header::HeaderName::from_bytes(key.as_bytes()),
-                header::HeaderValue::from_str(value),
-            ) {
-                headers.insert(name, val);
-            }
-        }
+            .default_headers(headers)
     }
 }
 

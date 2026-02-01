@@ -94,13 +94,8 @@ struct FileFlowsLibraryFile {
 
 impl FileFlows {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
-        let mut headers = header::HeaderMap::new();
-
-        self.request.apply_headers(&mut headers);
-
         self.request
-            .client_builder()
-            .default_headers(headers)
+            .client_builder(header::HeaderMap::new())
             .build()
             .map_err(Into::into)
     }

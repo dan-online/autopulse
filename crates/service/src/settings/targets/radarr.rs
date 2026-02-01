@@ -48,11 +48,8 @@ impl Radarr {
         headers.insert("X-Api-Key", self.token.parse().unwrap());
         headers.insert("Accept", "application/json".parse().unwrap());
 
-        self.request.apply_headers(&mut headers);
-
         self.request
-            .client_builder()
-            .default_headers(headers)
+            .client_builder(headers)
             .build()
             .map_err(Into::into)
     }

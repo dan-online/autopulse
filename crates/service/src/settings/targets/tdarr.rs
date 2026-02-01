@@ -45,7 +45,10 @@ struct Payload {
 
 impl Tdarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
-        self.request.client_builder().build().map_err(Into::into)
+        self.request
+            .client_builder(reqwest::header::HeaderMap::new())
+            .build()
+            .map_err(Into::into)
     }
 
     async fn scan(&self, evs: &[&ScanEvent]) -> anyhow::Result<()> {
