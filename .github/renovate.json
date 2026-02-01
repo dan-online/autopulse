@@ -2,5 +2,32 @@
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
         "github>dan-online/.github:renovate-config"
+    ],
+    "packageRules": [
+        {
+            "matchManagers": ["cargo"],
+            "matchFileNames": ["crates/server/**"],
+            "groupName": "autopulse-server dependencies"
+        },
+        {
+            "matchManagers": ["cargo"],
+            "matchFileNames": ["crates/service/**"],
+            "groupName": "autopulse-service dependencies"
+        },
+        {
+            "matchManagers": ["cargo"],
+            "matchFileNames": ["crates/database/**"],
+            "groupName": "autopulse-database dependencies"
+        },
+        {
+            "matchManagers": ["cargo"],
+            "matchFileNames": ["crates/utils/**"],
+            "groupName": "autopulse-utils dependencies"
+        },
+        {
+            "matchManagers": ["cargo"],
+            "matchFileNames": ["Cargo.toml"],
+            "groupName": "workspace dependencies"
+        }
     ]
 }
