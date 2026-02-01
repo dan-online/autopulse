@@ -1,4 +1,4 @@
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 use crate::settings::rewrite::Rewrite;
 use crate::settings::{auth::Auth, targets::TargetProcess};
 use autopulse_database::models::ScanEvent;
@@ -17,6 +17,9 @@ pub struct Autopulse {
     pub trigger: Option<String>,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 impl Autopulse {
@@ -27,8 +30,10 @@ impl Autopulse {
             headers.insert("Authorization", self.auth.to_auth_encoded().parse()?);
         }
 
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+        self.request.apply_headers(&mut headers);
+
+        self.request
+            .client_builder()
             .default_headers(headers)
             .build()
             .map_err(Into::into)

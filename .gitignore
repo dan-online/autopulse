@@ -16,3 +16,7 @@ data
 
 # Nix
 result
+
+# md files
+*.md
+!README.md

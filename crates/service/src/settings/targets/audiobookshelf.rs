@@ -1,4 +1,4 @@
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
@@ -17,6 +17,9 @@ pub struct Audiobookshelf {
     pub token: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,15 +44,12 @@ impl Audiobookshelf {
     async fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        // if self.auth.enabled {
-        //     if let Some(token) = token {
-        //         headers.insert("Authorization", format!("Bearer {token}").parse()?);
-        //     }
-        // }
         headers.insert("Authorization", format!("Bearer {}", self.token).parse()?);
 
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+        self.request.apply_headers(&mut headers);
+
+        self.request
+            .client_builder()
             .default_headers(headers)
             .build()
             .map_err(Into::into)

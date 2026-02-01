@@ -187,12 +187,54 @@ pub mod tdarr;
 
 use audiobookshelf::Audiobookshelf;
 use autopulse_database::models::ScanEvent;
-use reqwest::{RequestBuilder, Response};
+use reqwest::{header, RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use {
     autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
     radarr::Radarr, sonarr::Sonarr, tdarr::Tdarr,
 };
+
+/// HTTP request configuration options for targets
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct Request {
+    /// Allow insecure HTTPS connections (skip certificate verification) (default: false)
+    #[serde(default)]
+    pub insecure: bool,
+
+    /// Request timeout in seconds (default: 10)
+    pub timeout: Option<u64>,
+
+    /// Custom headers to include in requests
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+}
+
+impl Request {
+    /// Default timeout in seconds
+    pub const DEFAULT_TIMEOUT: u64 = 10;
+
+    /// Returns a pre-configured reqwest ClientBuilder with insecure and timeout settings
+    pub fn client_builder(&self) -> reqwest::ClientBuilder {
+        reqwest::Client::builder()
+            .tls_danger_accept_invalid_certs(self.insecure)
+            .timeout(std::time::Duration::from_secs(
+                self.timeout.unwrap_or(Self::DEFAULT_TIMEOUT),
+            ))
+    }
+
+    /// Applies custom headers to a HeaderMap
+    pub fn apply_headers(&self, headers: &mut header::HeaderMap) {
+        for (key, value) in &self.headers {
+            if let (Ok(name), Ok(val)) = (
+                header::HeaderName::from_bytes(key.as_bytes()),
+                header::HeaderValue::from_str(value),
+            ) {
+                headers.insert(name, val);
+            }
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

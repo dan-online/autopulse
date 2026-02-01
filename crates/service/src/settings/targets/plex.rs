@@ -1,4 +1,4 @@
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
@@ -26,6 +26,9 @@ pub struct Plex {
     pub analyze: bool,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -137,8 +140,10 @@ impl Plex {
         headers.insert("X-Plex-Token", self.token.parse().unwrap());
         headers.insert("Accept", "application/json".parse().unwrap());
 
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+        self.request.apply_headers(&mut headers);
+
+        self.request
+            .client_builder()
             .default_headers(headers)
             .build()
             .map_err(Into::into)
@@ -528,6 +533,7 @@ mod tests {
             refresh: false,
             analyze: false,
             rewrite: None,
+            request: Request::default(),
         };
 
         // Test with a path that has a file name and season directory
@@ -563,6 +569,7 @@ mod tests {
             refresh: false,
             analyze: false,
             rewrite: None,
+            request: Request::default(),
         };
 
         let libraries = [Library {

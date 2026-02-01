@@ -2,10 +2,9 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
 use autopulse_utils::get_url;
-use reqwest::header;
 use serde::{Deserialize, Serialize};
 
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Tdarr {
@@ -15,6 +14,9 @@ pub struct Tdarr {
     pub db_id: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 #[derive(Serialize)]
@@ -43,13 +45,7 @@ struct Payload {
 
 impl Tdarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
-        let headers = header::HeaderMap::new();
-
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .default_headers(headers)
-            .build()
-            .map_err(Into::into)
+        self.request.client_builder().build().map_err(Into::into)
     }
 
     async fn scan(&self, evs: &[&ScanEvent]) -> anyhow::Result<()> {

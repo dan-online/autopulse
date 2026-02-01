@@ -7,16 +7,19 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tracing::error;
 
-use super::RequestBuilderPerform;
+use super::{Request, RequestBuilderPerform};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Sonarr {
-    /// URL to the Plex server
+    /// URL to the Sonarr server
     pub url: String,
-    /// API token for the Plex server
+    /// API token for the Sonarr server
     pub token: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// HTTP request options
+    #[serde(default)]
+    pub request: Request,
 }
 
 #[derive(Deserialize, Debug)]
@@ -45,8 +48,10 @@ impl Sonarr {
         headers.insert("X-Api-Key", self.token.parse().unwrap());
         headers.insert("Accept", "application/json".parse().unwrap());
 
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+        self.request.apply_headers(&mut headers);
+
+        self.request
+            .client_builder()
             .default_headers(headers)
             .build()
             .map_err(Into::into)
