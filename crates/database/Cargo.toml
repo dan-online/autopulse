@@ -32,3 +32,6 @@ diesel_migrations = { version = "2.2.0", default-features = false }
 pq-sys = { version = "0.7.0", optional = true }
 libsqlite3-sys = { version = "0.35.0", optional = true }
 # mysqlclient-sys = "x.x.x"
+
+[dev-dependencies]
+tempfile = "3.24.0"
