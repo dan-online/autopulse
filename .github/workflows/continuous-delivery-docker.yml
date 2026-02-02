@@ -148,8 +148,6 @@ jobs:
             runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
             tag: -arm64
-            build_args: |
-              IMAGE_TAG=arm64v8-3.20
     runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v6
