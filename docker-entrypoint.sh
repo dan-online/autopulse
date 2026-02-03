@@ -27,10 +27,8 @@ if [ "$(id -u)" = "0" ]; then
         chown -R autopulse:autopulse /config 2>/dev/null || true
 
         # Set user environment variables that su-exec doesn't provide
-        export HOME=/config
-        export USER=autopulse
-
-        exec su-exec autopulse "$@"
+        # Use env to ensure these are passed through exec
+        exec env HOME=/config USER=autopulse su-exec autopulse "$@"
     fi
 fi
 
