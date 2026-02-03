@@ -6,7 +6,8 @@ RUN apk add --no-cache \
     tini \
     tzdata \
     shadow \
-    wget
+    wget \
+    curl
 
 RUN addgroup -g 1000 autopulse && \
     adduser -D -u 1000 -G autopulse -h /config autopulse && \
