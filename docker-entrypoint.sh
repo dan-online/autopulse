@@ -26,6 +26,10 @@ if [ "$(id -u)" = "0" ]; then
         # Fix ownership of config directory
         chown -R autopulse:autopulse /config 2>/dev/null || true
 
+        # Set user environment variables that su-exec doesn't provide
+        export HOME=/config
+        export USER=autopulse
+
         exec su-exec autopulse "$@"
     fi
 fi
