@@ -12,7 +12,7 @@
 #![doc = include_str!("../README.md")]
 
 use anyhow::Context;
-use autopulse_database::conn::{get_conn, get_pool, AnyConnection};
+use autopulse_database::conn::{close_pool, get_conn, get_pool, AnyConnection};
 use autopulse_server::get_server;
 use autopulse_service::manager::PulseManager;
 use autopulse_service::settings::Settings;
@@ -114,6 +114,8 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
             res?;
         }
     }
+
+    close_pool(&manager.pool);
 
     Ok(())
 }

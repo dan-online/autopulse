@@ -116,8 +116,10 @@ impl<'a> PulseRunner<'a> {
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
         let base_query = scan_events
             .limit(100)
-            .filter(process_status.ne::<String>(ProcessStatus::Complete.into()))
-            .filter(process_status.ne::<String>(ProcessStatus::Failed.into()))
+            .filter(process_status.eq_any([
+                String::from(ProcessStatus::Pending),
+                String::from(ProcessStatus::Retry),
+            ]))
             .filter(
                 next_retry_at
                     .is_null()

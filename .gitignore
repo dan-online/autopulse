@@ -13,6 +13,7 @@ data
 
 # Random testing scripts
 *.sh
+!docker-entrypoint.sh
 
 # Nix
 result
