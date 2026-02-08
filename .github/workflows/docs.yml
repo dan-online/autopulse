@@ -18,7 +18,7 @@ jobs:
       deployments: write
     steps:
       - name: Checkout Project
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Stable Rust
         uses: actions-rs/toolchain@v1
