@@ -52,6 +52,7 @@
             pkgs.llvmPackages.libcxxClang
 
             pkgs.cargo-nextest
+            pkgs.sccache
             rust
 
             pkgs.nixfmt
@@ -72,7 +73,6 @@
 
           shellHook = ''
             if [ "$(whoami)" = "dan" ]; then
-              export CARGO_TARGET_DIR="$HOME/.cargo/target";
               export RUST_SRC_PATH="$(rustc --print sysroot)/lib/rustlib/src/rust/src";
               export PATH="$PATH:$HOME/.cargo/bin"
 
@@ -83,6 +83,8 @@
               chmod +x $HOME/.cargo/bin/nursery
             fi;
           '';
+
+          RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
           BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${pkgs.llvmPackages.libclang.lib}/lib/clang/${pkgs.lib.getVersion pkgs.clang}/include";
