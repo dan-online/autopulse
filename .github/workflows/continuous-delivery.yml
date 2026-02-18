@@ -21,6 +21,8 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: -D warnings
   RUSTUP_MAX_RETRIES: 10
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
 
 defaults:
   run:
@@ -78,6 +80,9 @@ jobs:
       #   run: |
       #     choco install postgresql libsqlite3
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Cargo Cache
         uses: actions/cache@v5
         with:
@@ -86,7 +91,6 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
           key: ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-
