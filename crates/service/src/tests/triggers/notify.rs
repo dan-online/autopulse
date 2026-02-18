@@ -86,7 +86,10 @@ mod tests {
         .await?;
 
         // Should have at least one event (Create or CloseWrite)
-        assert!(!result.is_empty(), "expected at least one event from watcher");
+        assert!(
+            !result.is_empty(),
+            "expected at least one event from watcher"
+        );
 
         // Verify that we got either a Create or a CloseWrite event
         let has_expected_event = result.iter().any(|(_, kind)| {
