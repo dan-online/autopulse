@@ -130,6 +130,9 @@ jobs:
 
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
     strategy:
       matrix:
         feature:
