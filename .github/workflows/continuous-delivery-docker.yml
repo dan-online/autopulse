@@ -179,8 +179,10 @@ jobs:
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
 
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Cargo Cache
-        if: matrix.feature == 'full'
         uses: actions/cache@v5
         with:
           path: |
@@ -188,24 +190,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-full-
-
-      - name: Cargo Cache
-        if: matrix.feature != 'full'
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-full-
+            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-
 
       - name: Pull Request suffix
         run: |
