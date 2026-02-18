@@ -43,9 +43,8 @@ impl Autopulse {
         url.query_pairs_mut()
             .append_pair("path", &ev.get_path(&self.rewrite));
 
-        if ev.file_hash.is_some() {
-            url.query_pairs_mut()
-                .append_pair("hash", ev.file_hash.as_ref().unwrap());
+        if let Some(hash) = &ev.file_hash {
+            url.query_pairs_mut().append_pair("hash", hash);
         }
 
         client.get(url).perform().await.map(|_| ())

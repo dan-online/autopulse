@@ -117,7 +117,7 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
 impl AnyConnection {
     pub fn pre_init(database_url: &str) -> anyhow::Result<()> {
         if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
-            let path = database_url.split("sqlite://").collect::<Vec<&str>>()[1];
+            let path = database_url.split("sqlite://").nth(1).unwrap();
             let path = PathBuf::from(path);
             let parent = path.parent().unwrap();
 
