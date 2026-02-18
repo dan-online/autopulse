@@ -16,6 +16,7 @@ use autopulse_database::{
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
 use serde::Serialize;
+use notify_debouncer_full::notify;
 use std::sync::Arc;
 use tokio::select;
 use tracing::{debug, error, info};
