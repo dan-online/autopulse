@@ -286,6 +286,11 @@ impl PulseManager {
                     event_source: name.clone(),
                     file_path: path.clone(),
                     can_process: when_process,
+                    found_status: if matches!(reason, notify::EventKind::Remove(_)) {
+                        FoundStatus::Found.into()
+                    } else {
+                        FoundStatus::NotFound.into()
+                    },
                     ..Default::default()
                 };
 

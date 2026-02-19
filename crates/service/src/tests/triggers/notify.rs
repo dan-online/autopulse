@@ -210,4 +210,48 @@ mod tests {
         watcher_task.abort();
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_watcher_emits_remove_event() -> anyhow::Result<()> {
+        let path = env::temp_dir().join(generate_uuid());
+        create_dir(&path)?;
+
+        let notifier = test_notifier(&path, 1);
+        let (tx, mut rx) = mpsc::unbounded_channel();
+
+        let notifier_clone = notifier.clone();
+        let watcher_task = tokio::spawn(async move { notifier_clone.watcher(tx).await });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Create a file, wait for debounce window to pass, then delete it
+        let file_path = path.join("delete_test.txt");
+        std::fs::File::create(&file_path)?;
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        std::fs::remove_file(&file_path)?;
+
+        let result = timeout(Duration::from_secs(5), async {
+            let mut events = vec![];
+            loop {
+                match tokio::time::timeout(Duration::from_secs(3), rx.recv()).await {
+                    Ok(Some(event)) => events.push(event),
+                    _ => break,
+                }
+            }
+            events
+        })
+        .await?;
+
+        // Should have a Remove event for the deleted file
+        let has_remove = result
+            .iter()
+            .any(|(_, kind)| matches!(kind, EventKind::Remove(_)));
+        assert!(
+            has_remove,
+            "expected a Remove event after file deletion, got: {result:?}"
+        );
+
+        watcher_task.abort();
+        Ok(())
+    }
 }
