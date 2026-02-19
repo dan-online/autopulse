@@ -2,9 +2,12 @@
 set -e
 
 # Timezone handling
+# The TZ env var is the primary mechanism (chrono reads it directly).
+# The /etc/localtime symlink is a fallback for tools like `date`.
+# Use || true so non-root containers (--user flag) don't crash.
 if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
-    ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
-    echo "$TZ" > /etc/timezone
+    { ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime; } 2>/dev/null || true
+    { echo "$TZ" > /etc/timezone; } 2>/dev/null || true
 fi
 
 # PUID/PGID remapping - only when running as root
