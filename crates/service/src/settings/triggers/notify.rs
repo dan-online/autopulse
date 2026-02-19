@@ -7,7 +7,7 @@ use notify_debouncer_full::{
         event::{AccessKind, AccessMode, ModifyKind, RenameMode},
         Config, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode,
     },
-    DebounceEventResult, Debouncer, NoCache,
+    DebounceEventResult, Debouncer, NoCache, RecommendedCache,
 };
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
@@ -27,7 +27,7 @@ pub enum NotifyBackendType {
 
 #[doc(hidden)]
 pub enum NotifyBackend {
-    Recommended(Debouncer<RecommendedWatcher, NoCache>),
+    Recommended(Debouncer<RecommendedWatcher, RecommendedCache>),
     Polling(Debouncer<PollWatcher, NoCache>),
 }
 
