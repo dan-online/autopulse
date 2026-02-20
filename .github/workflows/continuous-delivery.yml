@@ -122,9 +122,9 @@ jobs:
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
-      - name: Setup Strawberry Perl (Windows)
+      - name: Use Strawberry Perl for OpenSSL build (Windows)
         if: runner.os == 'Windows'
-        run: echo "C:\Strawberry\perl\bin" >> $GITHUB_PATH
+        run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl" >> $GITHUB_ENV
 
       # SQLite and PostgreSQL installations removed - vendored feature uses
       # pq-sys/bundled and libsqlite3-sys/bundled which compile from source
