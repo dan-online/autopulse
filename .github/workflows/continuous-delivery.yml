@@ -122,19 +122,9 @@ jobs:
           sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
-      - name: Cache vcpkg (Windows)
+      - name: Setup Strawberry Perl (Windows)
         if: runner.os == 'Windows'
-        uses: actions/cache@v5
-        with:
-          path: C:\vcpkg\installed
-          key: ${{ runner.os }}-vcpkg-openssl-x64-windows-static-md-v1
-
-      - name: Install OpenSSL (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-          vcpkg install openssl:x64-windows-static-md
+        run: echo "C:\Strawberry\perl\bin" >> $GITHUB_PATH
 
       # SQLite and PostgreSQL installations removed - vendored feature uses
       # pq-sys/bundled and libsqlite3-sys/bundled which compile from source
