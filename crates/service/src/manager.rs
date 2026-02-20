@@ -15,6 +15,7 @@ use autopulse_database::{
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
+use notify_debouncer_full::notify;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::select;
@@ -285,6 +286,7 @@ impl PulseManager {
                     event_source: name.clone(),
                     file_path: path.clone(),
                     can_process: when_process,
+                    found_status: FoundStatus::Found.into(),
                     ..Default::default()
                 };
 

@@ -1,9 +1,13 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
 use autopulse_utils::regex::Regex;
-use notify::{
-    event::{ModifyKind, RenameMode},
-    Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+use notify_debouncer_full::{
+    new_debouncer, new_debouncer_opt,
+    notify::{
+        event::{AccessKind, AccessMode, ModifyKind, RenameMode},
+        Config, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode,
+    },
+    DebounceEventResult, Debouncer, NoCache, RecommendedCache,
 };
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
@@ -23,15 +27,17 @@ pub enum NotifyBackendType {
 
 #[doc(hidden)]
 pub enum NotifyBackend {
-    Recommended(RecommendedWatcher),
-    Polling(PollWatcher),
+    Recommended(Debouncer<RecommendedWatcher, RecommendedCache>),
+    Polling(Debouncer<PollWatcher, NoCache>),
 }
 
 impl NotifyBackend {
     pub fn watch(&mut self, path: String, mode: RecursiveMode) -> anyhow::Result<()> {
+        let path = std::path::Path::new(&path);
+
         match self {
-            Self::Recommended(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
-            Self::Polling(watcher) => watcher.watch(path.as_ref(), mode).map_err(Into::into),
+            Self::Recommended(debouncer) => debouncer.watch(path, mode).map_err(Into::into),
+            Self::Polling(debouncer) => debouncer.watch(path, mode).map_err(Into::into),
         }
     }
 }
@@ -57,6 +63,8 @@ pub struct Notify {
     pub excludes: Vec<String>,
     /// Timer
     pub timer: Option<Timer>,
+    /// Debounce timeout in seconds (default: 2)
+    pub debounce: Option<u64>,
 }
 
 impl Notify {
@@ -96,28 +104,31 @@ impl Notify {
 
     pub fn async_watcher(
         &self,
-    ) -> anyhow::Result<(NotifyBackend, UnboundedReceiver<notify::Result<Event>>)> {
+    ) -> anyhow::Result<(NotifyBackend, UnboundedReceiver<DebounceEventResult>)> {
         let (tx, rx) = unbounded_channel();
 
-        let event_handler = move |res| {
-            if let Err(e) = tx.send(res) {
+        let event_handler = move |result: DebounceEventResult| {
+            if let Err(e) = tx.send(result) {
                 error!("failed to process notify event: {e}");
             }
         };
 
-        if self.backend == NotifyBackendType::Recommended {
-            let watcher = RecommendedWatcher::new(event_handler, Config::default())?;
+        let timeout = Duration::from_secs(self.debounce.unwrap_or(2));
 
-            Ok((NotifyBackend::Recommended(watcher), rx))
+        if self.backend == NotifyBackendType::Recommended {
+            let debouncer = new_debouncer(timeout, None, event_handler)?;
+
+            Ok((NotifyBackend::Recommended(debouncer), rx))
         } else {
-            let watcher = PollWatcher::new(
+            let debouncer = new_debouncer_opt::<_, PollWatcher, NoCache>(
+                timeout,
+                None,
                 event_handler,
+                NoCache,
                 Config::default().with_poll_interval(Duration::from_secs(10)),
             )?;
 
-            // watcher.poll()?;
-
-            Ok((NotifyBackend::Polling(watcher), rx))
+            Ok((NotifyBackend::Polling(debouncer), rx))
         }
     }
 
@@ -143,23 +154,32 @@ impl Notify {
             }
         }
 
-        while let Some(res) = rx.recv().await {
-            match res {
-                Ok(event) => match event.kind {
-                    EventKind::Modify(
-                        ModifyKind::Data(_)
-                        | ModifyKind::Metadata(_)
-                        | ModifyKind::Name(RenameMode::Both),
-                    )
-                    | EventKind::Create(_)
-                    | EventKind::Remove(_) => {
-                        for path in event.paths {
-                            self.send_event(tx.clone(), Some(&path), event.kind)?;
+        while let Some(result) = rx.recv().await {
+            match result {
+                Ok(events) => {
+                    for debounced_event in events {
+                        let kind = debounced_event.event.kind;
+
+                        match kind {
+                            EventKind::Access(AccessKind::Close(AccessMode::Write))
+                            | EventKind::Modify(
+                                ModifyKind::Metadata(_) | ModifyKind::Name(RenameMode::Both),
+                            )
+                            | EventKind::Create(_)
+                            | EventKind::Remove(_) => {
+                                for path in debounced_event.event.paths {
+                                    self.send_event(tx.clone(), Some(&path), kind)?;
+                                }
+                            }
+                            _ => {}
                         }
                     }
-                    _ => {}
-                },
-                Err(e) => error!("failed to process notify event: {e}"),
+                }
+                Err(errors) => {
+                    for error in errors {
+                        error!("failed to process notify event: {error}");
+                    }
+                }
             }
         }
 
