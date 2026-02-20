@@ -23,7 +23,7 @@ jobs:
         devShell: ./ui#default
 
     - name: Install
-      run: yarn install --immutable
+      run: yarn install --immutable --check-cache
 
     - name: Biome Check
       run: yarn biome ci
