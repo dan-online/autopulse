@@ -117,27 +117,21 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
 impl AnyConnection {
     pub fn pre_init(database_url: &str) -> anyhow::Result<()> {
         if database_url.starts_with("sqlite://") && !database_url.contains(":memory:") {
-            let path = database_url.split("sqlite://").nth(1).unwrap();
+            let path = database_url
+                .strip_prefix("sqlite://")
+                .expect("already checked prefix");
+
             let path = PathBuf::from(path);
-            let parent = path.parent().unwrap();
 
-            if !std::path::Path::new(&path).exists() {
+            let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) else {
+                return Ok(());
+            };
+
+            // Create directory if it doesn't exist
+            if !parent.exists() {
                 std::fs::create_dir_all(parent).with_context(|| {
-                    format!("falsed to create database directory: {}", parent.display())
+                    format!("failed to create database directory: {}", parent.display())
                 })?;
-            }
-
-            #[cfg(unix)]
-            if path.file_name().map(|x| x.to_str()) != Some(path.to_str()) {
-                use std::os::unix::fs::PermissionsExt;
-
-                std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o777))
-                    .with_context(|| {
-                        format!(
-                            "falsed to set permissions on database directory: {}",
-                            parent.display()
-                        )
-                    })?;
             }
         }
 
@@ -159,6 +153,21 @@ impl AnyConnection {
                 migrations_applied.len(),
                 sify(&migrations_applied)
             );
+        }
+
+        Ok(())
+    }
+
+    pub fn close(&mut self) -> anyhow::Result<()> {
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgresql(_) => {}
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite(conn) => {
+                // Should cleanup spare wal/shm files
+                conn.batch_execute("PRAGMA wal_checkpoint(TRUNCATE);")
+                    .context("failed to checkpoint WAL")?;
+            }
         }
 
         Ok(())
@@ -205,6 +214,12 @@ pub fn get_conn(
     pool.get().context("failed to get connection from pool")
 }
 
+pub fn close_pool(pool: &Pool<ConnectionManager<AnyConnection>>) {
+    if let Ok(mut conn) = pool.get() {
+        let _ = conn.close();
+    }
+}
+
 #[doc(hidden)]
 pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
@@ -223,4 +238,80 @@ pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<
         .connection_customizer(Box::new(AcquireHook::default()))
         .build(manager)
         .context("failed to create pool")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_pre_init_memory_db_skipped() {
+        let result = AnyConnection::pre_init("sqlite://:memory:");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_pre_init_creates_directory() {
+        let tmp = tempdir().unwrap();
+        let db_path = tmp.path().join("subdir").join("test.db");
+        let url = format!("sqlite://{}", db_path.display());
+
+        let result = AnyConnection::pre_init(&url);
+        assert!(result.is_ok());
+        assert!(db_path.parent().unwrap().exists());
+    }
+
+    #[test]
+    fn test_pre_init_no_parent_directory() {
+        let result = AnyConnection::pre_init("sqlite://test.db");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_pre_init_writable_directory_succeeds() {
+        let tmp = tempdir().unwrap();
+        let subdir = tmp.path().join("writable");
+        fs::create_dir(&subdir).unwrap();
+
+        let db_path = subdir.join("test.db");
+        let url = format!("sqlite://{}", db_path.display());
+
+        let result = AnyConnection::pre_init(&url);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_pre_init_postgres_skipped() {
+        let result = AnyConnection::pre_init("postgres://localhost/test");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "sqlite")]
+    fn test_close_pool_cleans_up_wal_files() {
+        let tmp = tempdir().unwrap();
+        let db_path = tmp.path().join("test.db");
+        let url = format!("sqlite://{}", db_path.display());
+
+        AnyConnection::pre_init(&url).unwrap();
+        let pool = get_pool(&url).unwrap();
+
+        // Get a connection to trigger WAL mode and create the db
+        {
+            let mut conn = get_conn(&pool).unwrap();
+            conn.migrate().unwrap();
+        }
+
+        // WAL files may exist at this point
+        close_pool(&pool);
+        drop(pool);
+
+        // Verify no WAL files remain
+        let wal_path = tmp.path().join("test.db-wal");
+        let shm_path = tmp.path().join("test.db-shm");
+        assert!(!wal_path.exists(), "WAL file should be cleaned up");
+        assert!(!shm_path.exists(), "SHM file should be cleaned up");
+    }
 }

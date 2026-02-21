@@ -44,14 +44,14 @@ impl Command {
                 .await
                 .map_err(|_| anyhow::anyhow!("command timed out"))??;
 
+            debug!("command output: {:?}", output);
+
             if !output.status.success() {
                 return Err(anyhow::anyhow!(
                     "command failed with status: {}",
                     output.status
                 ));
             }
-
-            debug!("command output: {:?}", output);
         }
 
         if let Some(raw) = self.raw.clone() {
