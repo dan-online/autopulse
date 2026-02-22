@@ -3,6 +3,7 @@
     "extends": [
         "github>dan-online/.github:renovate-config"
     ],
+    "ignoreDeps": ["libsqlite3-sys", "pq-sys"],
     "packageRules": [
         {
             "matchManagers": ["cargo"],
