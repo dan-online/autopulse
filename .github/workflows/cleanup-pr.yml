@@ -33,7 +33,7 @@ jobs:
             pr_number="${{ github.event.number }}"
           fi
 
-          features=(postgres sqlite)
+          features=(postgres sqlite mysql)
           tags=(none amd64 arm64)
 
           # pr-${pr_number}/pr-${pr_number}-arm64/pr-${pr_number}-amd64/ui-pr-${pr_number}

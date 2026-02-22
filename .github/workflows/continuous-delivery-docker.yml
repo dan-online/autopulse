@@ -134,11 +134,13 @@ jobs:
       SCCACHE_GHA_ENABLED: "true"
       RUSTC_WRAPPER: sccache
     strategy:
+      fail-fast: false
       matrix:
         feature:
           - full
           - postgres
           - sqlite
+          - mysql
         platform:
           - name: linux/amd64
             runner: ubuntu-22.04
@@ -191,9 +193,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-
+            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ matrix.feature }}-
 
       - name: Pull Request suffix
         run: |
@@ -220,6 +222,38 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
 
+      # taiki-e musl toolchain ships GCC 9; mysqlclient-src (MySQL 9.5) checks for GCC 11+
+      # Bypass the cmake version check and ensure cmake uses the musl cross-compiler
+      # (CMAKE_TOOLCHAIN_FILE causes the cmake crate to skip its CC/CXX detection)
+      - name: Bypass MySQL GCC version check
+        if: matrix.feature == 'mysql' || matrix.feature == 'full'
+        run: |
+          TARGET_US=$(echo "${{ matrix.platform.target }}" | tr '-' '_')
+          MUSL_CC=$(eval echo "\${CC_${TARGET_US}:-\${CC:-cc}}")
+          MUSL_CXX=$(eval echo "\${CXX_${TARGET_US}:-\${CXX:-c++}}")
+          sudo apt-get install -y libncurses-dev >/dev/null 2>&1
+          NCURSES_LIB=$(find /usr/lib* /lib* -name 'libncurses.a' -o -name 'libncurses.so' 2>/dev/null | head -1)
+          NCURSES_INC=$(dirname "$(find /usr/include -name 'curses.h' 2>/dev/null | head -1)")
+          # musl has resolver functions in libc; create stub so cmake finds "libresolv"
+          mkdir -p /tmp/musl-stubs
+          "${MUSL_CC}" -x c -c -o /tmp/musl-stubs/empty.o /dev/null
+          ar rcs /tmp/musl-stubs/libresolv.a /tmp/musl-stubs/empty.o
+          printf 'set(FORCE_UNSUPPORTED_COMPILER ON CACHE BOOL "" FORCE)\n' > /tmp/force-gcc.cmake
+          printf 'set(CMAKE_C_COMPILER "%s" CACHE FILEPATH "" FORCE)\n' "${MUSL_CC}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_LIBRARY "%s" CACHE FILEPATH "" FORCE)\n' "${NCURSES_LIB}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_INCLUDE_PATH "%s" CACHE PATH "" FORCE)\n' "${NCURSES_INC}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_NEED_NCURSES TRUE CACHE BOOL "" FORCE)\n' >> /tmp/force-gcc.cmake
+          printf 'set(RESOLV_LIBRARY "/tmp/musl-stubs/libresolv.a" CACHE FILEPATH "" FORCE)\n' >> /tmp/force-gcc.cmake
+          # GCC 9 doesn't recognize -std=c++20 (only -std=c++2a); wrapper translates the flag
+          printf '#!/bin/bash\nargs=()\nfor arg in "$@"; do args+=("${arg//-std=c++20/-std=c++2a}"); done\nexec "%s" "${args[@]}"\n' "${MUSL_CXX}" > /tmp/musl-cxx-wrap
+          chmod +x /tmp/musl-cxx-wrap
+          printf 'set(CMAKE_CXX_COMPILER "/tmp/musl-cxx-wrap" CACHE FILEPATH "" FORCE)\n' >> /tmp/force-gcc.cmake
+          # Build tools (uca9dump, comp_err) must be static to run on glibc host
+          printf 'set(CMAKE_EXE_LINKER_FLAGS "-static" CACHE STRING "" FORCE)\n' >> /tmp/force-gcc.cmake
+          echo "CMAKE_TOOLCHAIN_FILE=/tmp/force-gcc.cmake" >> "$GITHUB_ENV"
+          echo "Generated /tmp/force-gcc.cmake:"
+          cat /tmp/force-gcc.cmake
+
       - name: Test binary
         if: matrix.feature == 'full'
         run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }} --workspace
@@ -227,10 +261,6 @@ jobs:
       - name: Build binary
         if: matrix.feature == 'full'
         run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
-
-      # - name: Test binary
-      #   if: matrix.feature != 'full'
-      #   run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
 
       - name: Build binary
         if: matrix.feature != 'full'
@@ -333,6 +363,9 @@ jobs:
           SQLITE_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-sqlite-amd64 | jq -r '.manifests[0].digest')
           SQLITE_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-sqlite-arm64 | jq -r '.manifests[0].digest')
 
+          MYSQL_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-mysql-amd64 | jq -r '.manifests[0].digest')
+          MYSQL_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-mysql-arm64 | jq -r '.manifests[0].digest')
+
           # Build manifests on GHCR
           echo "Creating manifests on GHCR..."
           
@@ -350,9 +383,15 @@ jobs:
           docker manifest create ${GHCR_BASE}:${TAG}-sqlite \
               --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
               --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
+          
+          # MySQL manifest
+          docker manifest create ${GHCR_BASE}:${TAG}-mysql \
+              --amend ${GHCR_BASE}@${MYSQL_AMD64_DIGEST} \
+              --amend ${GHCR_BASE}@${MYSQL_ARM64_DIGEST}
 
           docker manifest push ${GHCR_BASE}:${TAG}-postgres
           docker manifest push ${GHCR_BASE}:${TAG}-sqlite
+          docker manifest push ${GHCR_BASE}:${TAG}-mysql
           docker manifest push ${GHCR_BASE}:${TAG}
 
           docker buildx imagetools create \
@@ -366,6 +405,10 @@ jobs:
           docker buildx imagetools create \
             --tag danonline/autopulse:${TAG}-sqlite \
             ghcr.io/dan-online/autopulse:${TAG}-sqlite
+
+          docker buildx imagetools create \
+            --tag danonline/autopulse:${TAG}-mysql \
+            ghcr.io/dan-online/autopulse:${TAG}-mysql
           
           if [ -n "$TAG_STABLE" ]; then
             echo "Creating stable manifests..."
@@ -378,9 +421,13 @@ jobs:
             docker manifest create ${GHCR_BASE}:${TAG_STABLE}-sqlite \
                 --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
                 --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
+            docker manifest create ${GHCR_BASE}:${TAG_STABLE}-mysql \
+                --amend ${GHCR_BASE}@${MYSQL_AMD64_DIGEST} \
+                --amend ${GHCR_BASE}@${MYSQL_ARM64_DIGEST}
 
             docker manifest push ${GHCR_BASE}:${TAG_STABLE}-postgres
             docker manifest push ${GHCR_BASE}:${TAG_STABLE}-sqlite
+            docker manifest push ${GHCR_BASE}:${TAG_STABLE}-mysql
             docker manifest push ${GHCR_BASE}:${TAG_STABLE}
 
             docker buildx imagetools create \
@@ -394,6 +441,10 @@ jobs:
             docker buildx imagetools create \
               --tag danonline/autopulse:${TAG_STABLE}-sqlite \
               ghcr.io/dan-online/autopulse:${TAG_STABLE}-sqlite
+
+            docker buildx imagetools create \
+              --tag danonline/autopulse:${TAG_STABLE}-mysql \
+              ghcr.io/dan-online/autopulse:${TAG_STABLE}-mysql
           fi
           
           echo "Copy images over to Docker Hub..."

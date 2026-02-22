@@ -4,6 +4,7 @@
   # hostname: 0.0.0.0
   # port: 2875
   # database_url: postgres://autopulse:autopulse@localhost:5432/autopulse
+  # database_url: mysql://autopulse:autopulse@127.0.0.1:3306/autopulse # NOTE: use 127.0.0.1, not localhost (mysqlclient uses unix socket for localhost)
 
 # auth:
   # username: admin

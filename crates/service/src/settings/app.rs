@@ -1,3 +1,4 @@
+use autopulse_database::conn::DatabaseType;
 use autopulse_utils::LogLevel;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,7 @@ const fn default_port() -> u16 {
 
 #[doc(hidden)]
 fn default_database_url() -> String {
-    "postgres://autopulse:autopulse@localhost:5432/autopulse".to_string()
+    DatabaseType::default().default_url()
 }
 
 #[doc(hidden)]

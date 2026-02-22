@@ -7,8 +7,9 @@ version.workspace = true
 
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
-sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys"]
-vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled", "openssl-sys/vendored"]
+sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "diesel/returning_clauses_for_sqlite_3_35", "dep:libsqlite3-sys"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql", "dep:mysqlclient-sys"]
+vendored = ["pq-sys?/bundled", "libsqlite3-sys?/bundled", "mysqlclient-sys?/bundled", "openssl-sys/vendored"]
 
 [dependencies]
 # Crates
@@ -22,7 +23,6 @@ chrono = { workspace = true }
 
 # Database
 diesel = { version = "2.3.6", default-features = false, features = [
-    "returning_clauses_for_sqlite_3_35",
     "r2d2",
     "chrono",
 ] }
@@ -31,8 +31,8 @@ diesel_migrations = { version = "2.3.0", default-features = false }
 # Connectors
 pq-sys = { version = ">=0.6.0", optional = true } # version pinned by diesel
 libsqlite3-sys = { version = ">=0.17.2", optional = true } # version pinned by diesel
+mysqlclient-sys = { version = ">=0.4.0", optional = true } # version pinned by diesel
 openssl-sys = { version = "0.9", optional = true }
-# mysqlclient-sys = "x.x.x"
 
 [dev-dependencies]
 tempfile = "3.24.0"

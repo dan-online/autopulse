@@ -82,9 +82,10 @@ The easiest way to get started with autopulse is to use the provided docker imag
 
 #### Tags
 
-- `latest` - full image with support for postgres/sqlite
+- `latest` - full image with support for postgres/sqlite/mysql
 - `latest-postgres` - smaller image that only supports Postgres
 - `latest-sqlite` - smaller image that only supports SQLite
+- `latest-mysql` - smaller image that only supports MySQL/MariaDB
 - `stable` - latest versioned release
 
 - `ui` - self-hostable UI for autopulse
@@ -109,7 +110,13 @@ $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=postgres://postg
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://database.db --name autopulse ghcr.io/dan-online/autopulse
 # or in-memory
 $ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=sqlite://:memory: --name autopulse ghcr.io/dan-online/autopulse
+
+# mysql/mariadb database
+$ docker run -d --net autopulse --name mysql -e MYSQL_ROOT_PASSWORD=autopulse -e MYSQL_DATABASE=autopulse -e MYSQL_USER=autopulse -e MYSQL_PASSWORD=autopulse mysql
+$ docker run -d --net autopulse -e AUTOPULSE__APP__DATABASE_URL=mysql://autopulse:autopulse@mysql/autopulse --name autopulse ghcr.io/dan-online/autopulse
 ```
+
+> **Note**: When connecting to MySQL/MariaDB outside of Docker networking, use `127.0.0.1` instead of `localhost` in the connection URL. The `mysqlclient` library treats `localhost` as a Unix socket connection, which will fail if the server is not on the same host.
 
 ### Documentation
 
@@ -237,7 +244,7 @@ $ curl -u "admin:password" "http://localhost:2875/api/config-template?database=p
 ```
 
 **Query Parameters:**
-- `database`: Database type (`sqlite`, `postgres`)
+- `database`: Database type (`sqlite`, `postgres`, `mysql`)
 - `triggers`: Comma-separated trigger types (`manual`, `sonarr`, `radarr`, etc)
 - `targets`: Comma-separated target types (`plex`, `jellyfin`, `emby`, etc)
 - `output`: Output format (`json`, `toml`)
@@ -308,7 +315,7 @@ To serve the autopulse ui behind a reverse proxy **with** a base path, you must 
   - [x] Plex refresh
 - [x] Databases
   - [x] SQLite
-  - [-] MySQL - linking mysql for alpine docker image is quite complex, so for now not supported unless someone can figure it out
+  - [x] MySQL/MariaDB
 - [x] UI
   - [x] Add/View scan requests
   - [ ] Add/View triggers
@@ -357,6 +364,7 @@ $ cargo run
 # or if you only have one of the dependencies installed
 $ cargo run --no-default-features --features sqlite   # for sqlite
 $ cargo run --no-default-features --features postgres # for postgres
+$ cargo run --no-default-features --features mysql    # for mysql/mariadb (requires libmysqlclient-dev)
 ```
 
 ## License
