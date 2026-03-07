@@ -5,6 +5,10 @@ build = "src/build.rs"
 
 version.workspace = true
 
+[features]
+sqlite = []
+postgres = []
+
 [dependencies]
 # Crates
 autopulse-service = { workspace = true }

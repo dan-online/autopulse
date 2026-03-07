@@ -9,8 +9,8 @@ version = "1.5.0"
 
 [features]
 vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
-sqlite = ["autopulse-database/sqlite"]
-postgres = ["autopulse-database/postgres"]
+sqlite = ["autopulse-database/sqlite", "autopulse-server/sqlite"]
+postgres = ["autopulse-database/postgres", "autopulse-server/postgres"]
 default = ["sqlite", "postgres"]
 
 [dependencies]

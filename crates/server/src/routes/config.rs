@@ -271,6 +271,8 @@ mod tests {
         assert!(config_str.contains("sonarr"));
         assert!(config_str.contains("jellyfin"));
         assert!(config_str.contains("tdarr"));
+
+        #[cfg(feature = "postgres")]
         assert!(config_str.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
     }
 
