@@ -220,10 +220,13 @@ impl PulseManager {
     }
 
     pub async fn start_webhooks(&self) -> anyhow::Result<()> {
-        let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
+        let interval = std::time::Duration::from_secs(self.settings.opts.webhook_interval);
+        let mut timer = tokio::time::interval(interval);
 
         loop {
-            self.webhooks.send().await?;
+            if let Err(e) = self.webhooks.send().await {
+                error!("webhook batch send failed: {e}");
+            }
 
             timer.tick().await;
         }

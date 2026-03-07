@@ -1,4 +1,5 @@
 use crate::settings::Settings;
+use futures::future::join_all;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 use tokio::sync::RwLock;
 use tracing::error;
@@ -39,7 +40,18 @@ impl Display for EventType {
 }
 
 impl EventType {
-    pub fn action(&self) -> String {
+    pub fn key(&self) -> &'static str {
+        match self {
+            Self::New => "new",
+            Self::Found => "found",
+            Self::Retrying => "retrying",
+            Self::Failed => "failed",
+            Self::Processed => "processed",
+            Self::HashMismatch => "hash_mismatch",
+        }
+    }
+
+    pub fn action(&self) -> &'static str {
         match self {
             Self::New => "added",
             Self::Found => "found",
@@ -48,7 +60,6 @@ impl EventType {
             Self::Processed => "processed",
             Self::HashMismatch => "mismatched",
         }
-        .to_string()
     }
 }
 
@@ -76,6 +87,8 @@ impl WebhookManager {
     pub async fn send(&self) -> anyhow::Result<()> {
         let mut queue = self.queue.write().await;
         let webhooks = &self.settings.webhooks;
+        let retries = self.settings.opts.webhook_retries;
+        let timeout_secs = self.settings.opts.webhook_timeout;
 
         let mut batch = queue
             .drain()
@@ -86,13 +99,19 @@ impl WebhookManager {
 
         batch.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
 
-        for (name, webhook) in webhooks {
-            let webhook = webhook.clone();
+        let futures: Vec<_> = webhooks
+            .iter()
+            .map(|(name, webhook)| {
+                let batch = &batch;
+                async move {
+                    if let Err(e) = webhook.send(batch, retries, timeout_secs).await {
+                        error!("failed to send webhook '{}': {}", name, e);
+                    }
+                }
+            })
+            .collect();
 
-            if let Err(e) = webhook.send(&batch).await {
-                error!("failed to send webhook '{}': {}", name, e);
-            }
-        }
+        join_all(futures).await;
 
         Ok(())
     }

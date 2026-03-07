@@ -21,9 +21,15 @@
   #     to: /new/tv
   
 # webhooks:
-  # discord:
-  #   type: "discord"
-  #   url: "https://discord.com/api/webhooks/1234567890/aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+#   discord:
+#     type: "discord"
+#     url: "https://discord.com/api/webhooks/1234567890/aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+#   hookshot:
+#     type: "hookshot"
+#     url: "https://matrix.example.com/_matrix/hookshot/webhook/aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+#   json:
+#     type: "json"
+#     url: "https://example.com/webhooks/autopulse"
 
 # targets:
   # plex:

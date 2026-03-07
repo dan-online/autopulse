@@ -71,7 +71,7 @@ We use the following terminology:
 - **Integration**: integrates with Sonarr, Radarr, Plex, Jellyfin, and more in the future
 - **Checks**: checks the file exists before updating the target and optionally waits for the file to match a provided hash
 - **Reliability**: uses a database to store the state of the scan requests
-- **Webhooks**: allow for notifications to be sent when a file is ready to be processed with webhooks such as Discord
+- **Webhooks**: allow for notifications to be sent when a file is ready to be processed with Discord, Matrix Hookshot, or generic JSON webhooks
 - **User-Interface**: provides a simple web interface to view/add scan requests
 
 ## Getting Started
@@ -183,6 +183,14 @@ webhooks:
   my_discord:
     type: "discord"
     url: "https://discord.com/api/webhooks/1234567890/abcdefg"
+
+  my_hookshot:
+    type: "hookshot"
+    url: "https://matrix.example.com/_matrix/hookshot/webhook/abcdefg"
+
+  my_json:
+    type: "json"
+    url: "https://example.com/webhooks/autopulse"
 
 targets:
   my_plex:
