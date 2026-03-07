@@ -33,9 +33,11 @@ config = "0.15.6"
 # File system notifications
 notify-debouncer-full = "0.7.0"
 
+# HTML encoding
+html-escape = "0.2"
+
 # Other
 struson = { version = "0.7.0", features = [
     "simple-api",
     "serde",
 ] } # Parse Jellyfin response as a stream
-async-recursion = "1.1.1" # Retry requests for webhooks

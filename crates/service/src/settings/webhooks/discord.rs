@@ -1,7 +1,6 @@
-use super::{EventType, WebhookBatch};
-use autopulse_utils::{get_timestamp, sify};
+use super::{transport, EventType, WebhookBatch};
+use autopulse_utils::sify;
 use serde::{Deserialize, Serialize};
-use tracing::trace;
 
 #[derive(Serialize, Clone)]
 #[doc(hidden)]
@@ -38,22 +37,19 @@ pub struct DiscordWebhook {
 }
 
 impl DiscordWebhook {
-    fn get_client(&self) -> reqwest::Client {
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .build()
-            .expect("failed to build reqwest client")
-    }
-
     fn truncate_message(message: String, length: usize) -> String {
-        if message.len() > length {
-            format!("{}...", &message[..(length - 3)])
-        } else {
-            message
+        if length < 3 || message.len() <= length {
+            return message;
         }
+
+        let cut = message.floor_char_boundary(length - 3);
+        format!("{}...", &message[..cut])
     }
 
-    fn generate_json(&self, batch: &WebhookBatch) -> DiscordEmbedContent {
+    fn generate_json(
+        &self,
+        batch: &[(EventType, Option<String>, Vec<String>)],
+    ) -> DiscordEmbedContent {
         let mut content = DiscordEmbedContent {
             username: self
                 .username
@@ -67,6 +63,8 @@ impl DiscordWebhook {
         };
 
         for (event, trigger, files) in batch {
+            let timestamp = chrono::Utc::now().to_rfc3339();
+
             let color = match event {
                 EventType::New => 6_061_450,     // grey
                 EventType::Found => 52084,       // green
@@ -100,7 +98,7 @@ impl DiscordWebhook {
             let fields = vec![
                 DiscordEmbedField {
                     name: "Timestamp".to_string(),
-                    value: get_timestamp(),
+                    value: timestamp.clone(),
                 },
                 DiscordEmbedField {
                     name: "Files".to_string(),
@@ -111,7 +109,7 @@ impl DiscordWebhook {
 
             let embed = DiscordEmbed {
                 color,
-                timestamp: chrono::Utc::now().to_rfc3339(),
+                timestamp,
                 fields,
                 title,
             };
@@ -122,58 +120,64 @@ impl DiscordWebhook {
         content
     }
 
-    #[async_recursion::async_recursion]
-    pub async fn send(&self, batch: &WebhookBatch, retries: u8) -> anyhow::Result<()> {
+    pub async fn send(
+        &self,
+        batch: &WebhookBatch,
+        retries: u8,
+        timeout_secs: u64,
+    ) -> anyhow::Result<()> {
         let mut message_queue = vec![];
 
         for chunk in batch.chunks(10) {
-            let content = self.generate_json(&chunk.to_vec());
+            let content = self.generate_json(chunk);
             message_queue.push(content);
         }
 
-        for message in message_queue {
-            let res = self
-                .get_client()
-                .post(&self.url)
-                .json(&message)
-                .send()
-                .await
-                .map_err(|e| anyhow::anyhow!(e))?;
+        transport::shared_sender(std::time::Duration::from_secs(timeout_secs))?
+            .send_json(&self.url, &message_queue, retries)
+            .await
+    }
+}
 
-            if !res.status().is_success() {
-                let reset = res.headers().get("X-RateLimit-Reset");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-                if let Some(reset) = reset {
-                    if retries == 0 {
-                        let body = res.text().await?;
+    #[test]
+    fn truncate_ascii_under_limit() {
+        let input = "short".to_string();
+        assert_eq!(DiscordWebhook::truncate_message(input, 10), "short");
+    }
 
-                        return Err(anyhow::anyhow!(
-                            "failed to send webhook, retries exhausted: {body}"
-                        ));
-                    }
+    #[test]
+    fn truncate_ascii_over_limit() {
+        let input = "this is a long message".to_string();
+        let result = DiscordWebhook::truncate_message(input, 10);
+        assert_eq!(result, "this is...");
+        assert_eq!(result.len(), 10);
+    }
 
-                    let reset = reset.to_str().unwrap_or_default();
-                    let reset = reset.parse::<u64>().unwrap_or_default();
-                    let now = chrono::Utc::now().timestamp() as u64;
+    #[test]
+    fn truncate_multibyte_at_boundary() {
+        // '😀' is 4 bytes; cutting mid-emoji must not panic
+        let input = "abcde😀fgh".to_string();
+        // length=8 → cut at 5, but byte 5 is inside the 4-byte emoji (bytes 5..9)
+        // floor_char_boundary(5) should back up to byte 5 which is the start of 😀
+        let result = DiscordWebhook::truncate_message(input, 8);
+        assert!(result.ends_with("..."));
+        assert!(result.is_char_boundary(result.len()));
+    }
 
-                    if reset > now {
-                        let wait = reset.saturating_sub(now);
+    #[test]
+    fn truncate_empty_string() {
+        let result = DiscordWebhook::truncate_message(String::new(), 10);
+        assert_eq!(result, "");
+    }
 
-                        trace!("rate limited, waiting for {} seconds", wait);
-
-                        tokio::time::sleep(tokio::time::Duration::from_secs(wait)).await;
-
-                        self.send(batch, retries - 1).await?;
-                        continue;
-                    }
-                }
-
-                let body = res.text().await.unwrap_or_else(|_| "no body".to_string());
-
-                return Err(anyhow::anyhow!("failed to send webhook: {}", body));
-            }
-        }
-
-        Ok(())
+    #[test]
+    fn truncate_exactly_at_limit() {
+        let input = "exactly 10".to_string();
+        assert_eq!(input.len(), 10);
+        assert_eq!(DiscordWebhook::truncate_message(input, 10), "exactly 10");
     }
 }

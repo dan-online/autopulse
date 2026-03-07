@@ -22,6 +22,21 @@ const fn default_cleanup_days() -> u64 {
     10
 }
 
+#[doc(hidden)]
+const fn default_webhook_retries() -> u8 {
+    3
+}
+
+#[doc(hidden)]
+const fn default_webhook_timeout() -> u64 {
+    10
+}
+
+#[doc(hidden)]
+const fn default_webhook_interval() -> u64 {
+    10
+}
+
 #[derive(Serialize, Clone, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LogRotation {
@@ -79,6 +94,18 @@ pub struct Opts {
     /// Whether to rollover the log file (default: never)
     #[serde(default)]
     pub log_file_rollover: LogRotation,
+
+    /// Number of retries for webhook HTTP requests (default: 3)
+    #[serde(default = "default_webhook_retries")]
+    pub webhook_retries: u8,
+
+    /// HTTP timeout in seconds for webhook requests (default: 10)
+    #[serde(default = "default_webhook_timeout")]
+    pub webhook_timeout: u64,
+
+    /// Interval in seconds between webhook batch sends (default: 10)
+    #[serde(default = "default_webhook_interval")]
+    pub webhook_interval: u64,
 }
 
 impl Default for Opts {
@@ -90,6 +117,9 @@ impl Default for Opts {
             cleanup_days: default_cleanup_days(),
             log_file: None,
             log_file_rollover: LogRotation::default(),
+            webhook_retries: default_webhook_retries(),
+            webhook_timeout: default_webhook_timeout(),
+            webhook_interval: default_webhook_interval(),
         }
     }
 }
