@@ -310,6 +310,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "libsqlite3-sys",
+ "mysqlclient-sys",
  "openssl-sys",
  "pq-sys",
  "serde",
@@ -797,10 +798,13 @@ dependencies = [
  "downcast-rs",
  "itoa",
  "libsqlite3-sys",
+ "mysqlclient-sys",
+ "percent-encoding",
  "pq-sys",
  "r2d2",
  "sqlite-wasm-rs",
  "time",
+ "url",
 ]
 
 [[package]]
@@ -1690,6 +1694,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "link-cplusplus"
+version = "1.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f78c730aaa7d0b9336a299029ea49f9ee53b0ed06e9202e8cb7db9bae7b8c82"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1790,6 +1803,30 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "mysqlclient-src"
+version = "0.2.0+9.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb15319d926496e1fa5ad3e80896d6d38210d3de486e5ffd58c854835237db93"
+dependencies = [
+ "cmake",
+ "link-cplusplus",
+ "openssl-sys",
+]
+
+[[package]]
+name = "mysqlclient-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92ed7312f0cfc4032aea6f8ea2abb4d288e4413e33bf0c80ad30eef8aa8fb9d8"
+dependencies = [
+ "mysqlclient-src",
+ "openssl-sys",
+ "pkg-config",
+ "semver",
+ "vcpkg",
 ]
 
 [[package]]

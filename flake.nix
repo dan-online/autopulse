@@ -35,7 +35,7 @@
         features = [
           "postgres"
           "sqlite"
-          # "mysql"
+          "mysql"
         ];
       in
       {

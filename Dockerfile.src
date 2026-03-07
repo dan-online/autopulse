@@ -11,11 +11,10 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-
 COPY --from=planner /app/recipe.json recipe.json
 
-# Database support: postgres, sqlite
-ARG ENABLED_FEATURES="postgres,sqlite"
+# vendored bundles all native deps (pq-sys, libsqlite3-sys, mysqlclient-sys, openssl)
+ARG ENABLED_FEATURES="vendored"
 ARG TARGET="x86_64-unknown-linux-musl"
 
 RUN cargo chef cook --release --target ${TARGET} --recipe-path recipe.json --features ${ENABLED_FEATURES}
@@ -28,7 +27,7 @@ COPY src src
 COPY migrations migrations
 COPY README.md README.md
 
-RUN cargo build --release --target ${TARGET} --no-default-features --features ${ENABLED_FEATURES}
+RUN cargo build --release --target ${TARGET} --features ${ENABLED_FEATURES}
 
 RUN cp target/${TARGET}/release/autopulse /tmp/autopulse
 

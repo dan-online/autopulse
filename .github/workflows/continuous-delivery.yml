@@ -36,16 +36,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04-arm
           - target: aarch64-unknown-linux-musl
             os: ubuntu-22.04-arm
           # - target: aarch64-apple-darwin
           #   os: macos-12
           # - target: aarch64-pc-windows-msvc
           #   os: windows-2022
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
 
@@ -106,34 +102,41 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
-      # - uses: taiki-e/install-action@cross
-      #   if: contains(matrix.target, '-musl')
-
-      # - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-      #   if: endsWith(matrix.target, 'windows-msvc')
-
-      # - run: |
-      #     echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-      #     vcpkg install openssl:x64-windows-static-md
-      #   if: startsWith(matrix.os, 'windows')
-
-      - run : |
-          sudo apt update -y && \
-          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
-        if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
+      # taiki-e musl toolchain ships GCC 9; mysqlclient-src (MySQL 9.5) checks for GCC 11+
+      # Bypass the cmake version check and ensure cmake uses the musl cross-compiler
+      # (CMAKE_TOOLCHAIN_FILE causes the cmake crate to skip its CC/CXX detection)
+      - name: Bypass MySQL GCC version check
+        if: contains(matrix.target, '-musl')
+        run: |
+          TARGET_US=$(echo "${{ matrix.target }}" | tr '-' '_')
+          MUSL_CC=$(eval echo "\${CC_${TARGET_US}:-\${CC:-cc}}")
+          MUSL_CXX=$(eval echo "\${CXX_${TARGET_US}:-\${CXX:-c++}}")
+          sudo apt-get install -y libncurses-dev >/dev/null 2>&1
+          NCURSES_LIB=$(find /usr/lib* /lib* -name 'libncurses.a' -o -name 'libncurses.so' 2>/dev/null | head -1)
+          NCURSES_INC=$(dirname "$(find /usr/include -name 'curses.h' 2>/dev/null | head -1)")
+          # musl has resolver functions in libc; create stub so cmake finds "libresolv"
+          mkdir -p /tmp/musl-stubs
+          "${MUSL_CC}" -x c -c -o /tmp/musl-stubs/empty.o /dev/null
+          ar rcs /tmp/musl-stubs/libresolv.a /tmp/musl-stubs/empty.o
+          printf 'set(FORCE_UNSUPPORTED_COMPILER ON CACHE BOOL "" FORCE)\n' > /tmp/force-gcc.cmake
+          printf 'set(CMAKE_C_COMPILER "%s" CACHE FILEPATH "" FORCE)\n' "${MUSL_CC}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_LIBRARY "%s" CACHE FILEPATH "" FORCE)\n' "${NCURSES_LIB}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_INCLUDE_PATH "%s" CACHE PATH "" FORCE)\n' "${NCURSES_INC}" >> /tmp/force-gcc.cmake
+          printf 'set(CURSES_NEED_NCURSES TRUE CACHE BOOL "" FORCE)\n' >> /tmp/force-gcc.cmake
+          printf 'set(RESOLV_LIBRARY "/tmp/musl-stubs/libresolv.a" CACHE FILEPATH "" FORCE)\n' >> /tmp/force-gcc.cmake
+          # GCC 9 doesn't recognize -std=c++20 (only -std=c++2a); wrapper translates the flag
+          printf '#!/bin/bash\nargs=()\nfor arg in "$@"; do args+=("${arg//-std=c++20/-std=c++2a}"); done\nexec "%s" "${args[@]}"\n' "${MUSL_CXX}" > /tmp/musl-cxx-wrap
+          chmod +x /tmp/musl-cxx-wrap
+          printf 'set(CMAKE_CXX_COMPILER "/tmp/musl-cxx-wrap" CACHE FILEPATH "" FORCE)\n' >> /tmp/force-gcc.cmake
+          # Build tools (uca9dump, comp_err) must be static to run on glibc host
+          printf 'set(CMAKE_EXE_LINKER_FLAGS "-static" CACHE STRING "" FORCE)\n' >> /tmp/force-gcc.cmake
+          echo "CMAKE_TOOLCHAIN_FILE=/tmp/force-gcc.cmake" >> "$GITHUB_ENV"
+          echo "Generated /tmp/force-gcc.cmake:"
+          cat /tmp/force-gcc.cmake
 
       - name: Use Strawberry Perl for OpenSSL build (Windows)
         if: runner.os == 'Windows'
         run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl" >> $GITHUB_ENV
-
-      # SQLite and PostgreSQL installations removed - vendored feature uses
-      # pq-sys/bundled and libsqlite3-sys/bundled which compile from source
-
-      # - run : |
-      #     brew update
-      #     brew install postgresql@14
-      #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
-      #   if: startsWith(matrix.os, 'macos')
 
       - uses: taiki-e/upload-rust-binary-action@main
         with:
@@ -141,6 +144,6 @@ jobs:
           target: ${{ matrix.target }}
           tar: all
           zip: windows
-          features: ${{ (contains(matrix.target, '-musl') || startsWith(matrix.os, 'windows')) && 'vendored' || '' }}
+          features: vendored
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name == 'pull_request' }}
