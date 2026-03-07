@@ -58,7 +58,7 @@
             pkgs.nixfmt
           ]
           ++ pkgs.lib.optionals (pkgs.lib.elem "postgres" features) [
-            pkgs.postgresql
+            pkgs.postgresql.lib
           ]
           ++ pkgs.lib.optionals (pkgs.lib.elem "sqlite" features) [
             pkgs.sqlite
