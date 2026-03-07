@@ -1,5 +1,7 @@
 {
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -19,75 +21,60 @@
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs { inherit system overlays; };
-        rust = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [
-            "rust-src"
-            "rust-analyzer"
-          ];
-          targets = [
-            "x86_64-unknown-linux-gnu"
-            # "x86_64-unknown-linux-musl"
-            # "aarch64-unknown-linux-gnu"
-            # "aarch64-unknown-linux-musl"
-          ];
-        };
+
+        lib = pkgs.lib;
+
+        llvmPackages = pkgs.llvmPackages;
+
+        rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+        formatterPackage = pkgs.nixfmt-tree;
 
         features = [
           "postgres"
           "sqlite"
           # "mysql"
         ];
-      in
-      {
-        formatter = pkgs.nixfmt-tree;
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            pkgs.openssl
-            pkgs.pkg-config
-            pkgs.clang
-            pkgs.cmake
-            pkgs.llvmPackages.clang
-            pkgs.llvmPackages.libclang
-            pkgs.llvmPackages.libcxxClang
-
-            pkgs.cargo-nextest
-            pkgs.sccache
-            rust
-
-            pkgs.nixfmt
-          ]
-          ++ pkgs.lib.optionals (pkgs.lib.elem "postgres" features) [
-            pkgs.postgresql
-          ]
-          ++ pkgs.lib.optionals (pkgs.lib.elem "sqlite" features) [
+        databasePackages =
+          lib.optionals (lib.elem "postgres" features) [ pkgs.libpq ]
+          ++ lib.optionals (lib.elem "sqlite" features) [
             pkgs.sqlite
           ]
-          ++ pkgs.lib.optionals (pkgs.lib.elem "mysql" features) [
+          ++ lib.optionals (lib.elem "mysql" features) [
             pkgs.libmysqlclient
             pkgs.ncurses
+          ];
+
+      in
+      {
+        formatter = formatterPackage;
+
+        devShells.default = pkgs.mkShell {
+          packages = [
+            rust
+            pkgs.cargo-nextest
+            pkgs.sccache
+            formatterPackage
+          ];
+
+          nativeBuildInputs = [
+            pkgs.pkg-config
+            pkgs.cmake
+            llvmPackages.clang
+            llvmPackages.libclang
+          ];
+
+          buildInputs = [
+            pkgs.openssl
           ]
-          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+          ++ databasePackages
+          ++ lib.optionals pkgs.stdenv.isDarwin [
             pkgs.libiconv
           ];
 
-          shellHook = ''
-            if [ "$(whoami)" = "dan" ]; then
-              export RUST_SRC_PATH="$(rustc --print sysroot)/lib/rustlib/src/rust/src";
-              export PATH="$PATH:$HOME/.cargo/bin"
-
-              mkdir -p $HOME/.cargo/bin
-
-              echo "cargo clippy --all --fix --allow-staged --no-deps -- -W clippy::all -W clippy::nursery -D warnings && cargo fmt" > $HOME/.cargo/bin/nursery
-
-              chmod +x $HOME/.cargo/bin/nursery
-            fi;
-          '';
-
           RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
-
-          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-          BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${pkgs.llvmPackages.libclang.lib}/lib/clang/${pkgs.lib.getVersion pkgs.clang}/include";
+          RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust/library";
         };
       }
     );

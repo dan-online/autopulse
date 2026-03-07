@@ -20,12 +20,10 @@
         formatter = pkgs.nixfmt-tree;
 
         devShells.default = pkgs.mkShell {
-          buildInputs =
-            with pkgs;
-            [
-              nodejs
-              yarn-berry
-            ];
+          buildInputs = with pkgs; [
+            nodejs
+            yarn-berry
+          ];
         };
       }
     );

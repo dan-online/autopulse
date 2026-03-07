@@ -60,7 +60,18 @@ where
     S: WebhookSleeper,
     N: WebhookClock,
 {
-    pub fn new(client: C, sleeper: S, clock: N) -> Self {
+    fn serialize_messages<T>(messages: &[T]) -> anyhow::Result<Vec<serde_json::Value>>
+    where
+        T: Serialize,
+    {
+        messages
+            .iter()
+            .map(serde_json::to_value)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(Into::into)
+    }
+
+    pub const fn new(client: C, sleeper: S, clock: N) -> Self {
         Self {
             client,
             sleeper,
@@ -68,81 +79,87 @@ where
         }
     }
 
-    pub async fn send_json<T>(&self, url: &str, messages: &[T], retries: u8) -> anyhow::Result<()>
+    pub fn send_json<'a, T>(
+        &'a self,
+        url: &'a str,
+        messages: &'a [T],
+        retries: u8,
+    ) -> BoxFuture<'a, anyhow::Result<()>>
     where
         T: Serialize,
     {
-        let messages = messages
-            .iter()
-            .map(serde_json::to_value)
-            .collect::<Result<Vec<_>, _>>()?;
+        let messages = Self::serialize_messages(messages);
 
-        let max_retries = retries;
-        let mut retries = retries;
-        let mut index = 0;
+        async move {
+            let messages = messages?;
+            let max_retries = retries;
+            let mut retries = retries;
+            let mut index = 0;
 
-        while index < messages.len() {
-            let message = &messages[index];
+            while index < messages.len() {
+                let message = &messages[index];
 
-            let response = match self.client.post_json(url, message).await {
-                Ok(resp) => resp,
-                Err(err) => {
+                let response = match self.client.post_json(url, message).await {
+                    Ok(resp) => resp,
+                    Err(err) => {
+                        if retries == 0 {
+                            return Err(err);
+                        }
+
+                        let backoff = Duration::from_secs(2u64.pow((max_retries - retries) as u32));
+                        trace!(
+                            "network error, retrying in {} seconds: {err}",
+                            backoff.as_secs()
+                        );
+                        self.sleeper.sleep(backoff).await;
+                        retries -= 1;
+                        continue;
+                    }
+                };
+
+                if response.success {
+                    index += 1;
+                    retries = max_retries;
+                    continue;
+                }
+
+                if let Some(wait) = self.retry_delay(&response.headers) {
                     if retries == 0 {
-                        return Err(err);
+                        return Err(anyhow::anyhow!(
+                            "failed to send webhook, retries exhausted: {}",
+                            response.body
+                        ));
                     }
 
+                    trace!("rate limited, waiting for {} seconds", wait.as_secs());
+
+                    self.sleeper.sleep(wait).await;
+                    retries -= 1;
+                    continue;
+                }
+
+                let is_server_error = response
+                    .status_code
+                    .is_some_and(|code| (500..600).contains(&code));
+
+                if is_server_error && retries > 0 {
                     let backoff = Duration::from_secs(2u64.pow((max_retries - retries) as u32));
                     trace!(
-                        "network error, retrying in {} seconds: {err}",
+                        "server error {}, retrying in {} seconds",
+                        response.status_code.unwrap_or(0),
                         backoff.as_secs()
                     );
                     self.sleeper.sleep(backoff).await;
                     retries -= 1;
                     continue;
                 }
-            };
 
-            if response.success {
-                index += 1;
-                retries = max_retries;
-                continue;
+                return Err(anyhow::anyhow!("failed to send webhook: {}", response.body));
             }
 
-            if let Some(wait) = self.retry_delay(&response.headers) {
-                if retries == 0 {
-                    return Err(anyhow::anyhow!(
-                        "failed to send webhook, retries exhausted: {}",
-                        response.body
-                    ));
-                }
-
-                trace!("rate limited, waiting for {} seconds", wait.as_secs());
-
-                self.sleeper.sleep(wait).await;
-                retries -= 1;
-                continue;
-            }
-
-            let is_server_error = response
-                .status_code
-                .is_some_and(|code| (500..600).contains(&code));
-
-            if is_server_error && retries > 0 {
-                let backoff = Duration::from_secs(2u64.pow((max_retries - retries) as u32));
-                trace!(
-                    "server error {}, retrying in {} seconds",
-                    response.status_code.unwrap_or(0),
-                    backoff.as_secs()
-                );
-                self.sleeper.sleep(backoff).await;
-                retries -= 1;
-                continue;
-            }
-
-            return Err(anyhow::anyhow!("failed to send webhook: {}", response.body));
+            Ok(())
         }
-
-        Ok(())
+        .boxed()
     }
 
     fn retry_delay(&self, headers: &HeaderMap) -> Option<Duration> {

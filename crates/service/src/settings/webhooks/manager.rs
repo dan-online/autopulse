@@ -40,7 +40,7 @@ impl Display for EventType {
 }
 
 impl EventType {
-    pub fn key(&self) -> &'static str {
+    pub const fn key(&self) -> &'static str {
         match self {
             Self::New => "new",
             Self::Found => "found",
@@ -51,7 +51,7 @@ impl EventType {
         }
     }
 
-    pub fn action(&self) -> &'static str {
+    pub const fn action(&self) -> &'static str {
         match self {
             Self::New => "added",
             Self::Found => "found",
