@@ -45,7 +45,7 @@ jobs:
       #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
         uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
@@ -91,7 +91,7 @@ jobs:
         id: tag
 
       - name: Build and push (ui)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: |
@@ -104,7 +104,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Build and push (ui) (dynamic)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: |
@@ -158,7 +158,7 @@ jobs:
       #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
         uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
@@ -244,7 +244,7 @@ jobs:
 
       # "latest-platform?" tag, full feature-set
       - name: Create Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         if: matrix.feature == 'full'
         with:
           push: true
@@ -260,7 +260,7 @@ jobs:
 
       # "feature-platform?" tag, selected feature-set
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         if: matrix.feature != 'full'
         with:
           push: true
@@ -299,7 +299,7 @@ jobs:
         id: tag
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
         uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
