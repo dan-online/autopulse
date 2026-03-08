@@ -76,7 +76,7 @@ jobs:
       - name: Update workspace version
         env:
           VERSION: ${{ inputs.version }}
-        run: cargo set-version --workspace "$VERSION"
+        run: cargo set-version "$VERSION" --workspace
 
       - name: Update lockfile
         run: cargo update --workspace
