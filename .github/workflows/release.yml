@@ -62,24 +62,23 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cargo-set-version
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-set-version
-
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "autopulse") | .version')
+          CURRENT=$(sed -n '/^\[workspace\.package\]/,/^\[/{ s/^version = "\(.*\)"/\1/p }' Cargo.toml)
           echo "version=${CURRENT}" >> "$GITHUB_OUTPUT"
 
       - name: Update workspace version
         env:
           VERSION: ${{ inputs.version }}
-        run: cargo set-version "$VERSION" --workspace
+        run: |
+          sed -i '/^\[workspace\.package\]/,/^\[/ s/^version = ".*"/version = "'"$VERSION"'"/' Cargo.toml
 
       - name: Update lockfile
         run: cargo update --workspace
+
+      - name: Format
+        run: cargo fmt
 
       - name: Ensure release label exists
         env:
@@ -99,7 +98,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git checkout -b "$BRANCH"
-          git add Cargo.toml Cargo.lock crates/*/Cargo.toml
+          git add Cargo.toml Cargo.lock
           git commit -m "chore(release): v${VERSION}"
           git push origin "$BRANCH"
 
