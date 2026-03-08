@@ -63,7 +63,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-set-version
-        uses: taiki-e/install-action@cargo-edit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-set-version
 
       - name: Get current version
         id: current
