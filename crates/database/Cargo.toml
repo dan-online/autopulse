@@ -2,8 +2,7 @@
 name = "autopulse-database"
 edition = "2021"
 build = "src/build.rs"
-
-version.workspace = true
+version = "1.6.0"
 
 [features]
 postgres = ["diesel/postgres", "diesel_migrations/postgres", "dep:pq-sys"]
@@ -12,7 +11,7 @@ vendored = ["pq-sys/bundled", "libsqlite3-sys/bundled", "openssl-sys/vendored"]
 
 [dependencies]
 # Crates
-autopulse-utils = { workspace = true }
+autopulse-utils = { workspace = true , version = "1.6.0" }
 
 # Core
 anyhow = { workspace = true }

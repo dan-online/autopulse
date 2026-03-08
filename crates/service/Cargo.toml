@@ -1,16 +1,15 @@
 [package]
 name = "autopulse-service"
 edition = "2021"
-
-version.workspace = true
+version = "1.6.0"
 
 [features]
 vendored = ["reqwest/native-tls-vendored"]
 
 [dependencies]
 # Crates
-autopulse-database = { workspace = true }
-autopulse-utils = { workspace = true }
+autopulse-database = { workspace = true , version = "1.6.0" }
+autopulse-utils = { workspace = true , version = "1.6.0" }
 
 # Core
 anyhow = { workspace = true }

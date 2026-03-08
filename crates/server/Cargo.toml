@@ -2,8 +2,7 @@
 name = "autopulse-server"
 edition = "2021"
 build = "src/build.rs"
-
-version.workspace = true
+version = "1.6.0"
 
 [features]
 sqlite = []
@@ -11,9 +10,9 @@ postgres = []
 
 [dependencies]
 # Crates
-autopulse-service = { workspace = true }
-autopulse-utils = { workspace = true }
-autopulse-database = { workspace = true }
+autopulse-service = { workspace = true , version = "1.6.0" }
+autopulse-utils = { workspace = true , version = "1.6.0" }
+autopulse-database = { workspace = true , version = "1.6.0" }
 
 # Core
 anyhow = { workspace = true }

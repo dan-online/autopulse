@@ -1,8 +1,7 @@
 [package]
 name = "autopulse"
 edition = "2021"
-
-version.workspace = true
+version = "1.6.0"
 
 [workspace.package]
 version = "1.5.0"
@@ -15,10 +14,10 @@ default = ["sqlite", "postgres"]
 
 [dependencies]
 # Crates
-autopulse-server = { workspace = true }
-autopulse-database = { workspace = true }
-autopulse-service = { workspace = true }
-autopulse-utils = { workspace = true }
+autopulse-server = { workspace = true , version = "1.6.0" }
+autopulse-database = { workspace = true , version = "1.6.0" }
+autopulse-service = { workspace = true , version = "1.6.0" }
+autopulse-utils = { workspace = true , version = "1.6.0" }
 
 # Core
 anyhow = { workspace = true }
