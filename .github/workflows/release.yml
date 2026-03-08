@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.6.0)"
+        required: true
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.toml
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    name: Create Release PR
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate semver
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid semver version: $VERSION"
+            exit 1
+          fi
+
+      - name: Check tag doesn't already exist
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: Check for existing release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh pr list --state open --label release --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::error::A release PR is already open. Close or merge it first."
+            exit 1
+          fi
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-set-version
+        uses: taiki-e/install-action@cargo-edit
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "autopulse") | .version')
+          echo "version=${CURRENT}" >> "$GITHUB_OUTPUT"
+
+      - name: Update workspace version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: cargo set-version --workspace "$VERSION"
+
+      - name: Update lockfile
+        run: cargo update --workspace
+
+      - name: Ensure release label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create release --color 0E8A16 --description "Release PR" --force
+
+      - name: Create release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          BRANCH="release/v${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add Cargo.toml Cargo.lock crates/*/Cargo.toml
+          git commit -m "chore(release): v${VERSION}"
+          git push origin "$BRANCH"
+
+          BODY="## Release v${VERSION}
+
+          Merging this PR will automatically create GitHub release \`v${VERSION}\`.
+
+          **Full Changelog**: https://github.com/${REPO}/compare/v${CURRENT_VERSION}...v${VERSION}"
+
+          gh pr create \
+            --title "chore(release): v${VERSION}" \
+            --body "$BODY" \
+            --label release \
+            --base main \
+            --head "$BRANCH"
+
+  release:
+    name: Publish Release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for unreleased version
+        id: check
+        run: |
+          VERSION=$(sed -n '/^\[workspace\.package\]/,/^\[/{ s/^version = "\(.*\)"/\1/p }' Cargo.toml)
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read version from Cargo.toml"
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Version ${VERSION} already tagged, skipping release"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unreleased version ${VERSION} detected"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --title "autopulse $TAG" \
+            --generate-notes \
+            --latest
