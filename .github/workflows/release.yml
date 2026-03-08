@@ -51,7 +51,7 @@ jobs:
 
       - name: Check for existing release PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           EXISTING=$(gh pr list --state open --label release --json number --jq 'length')
           if [ "$EXISTING" -gt 0 ]; then
@@ -82,12 +82,12 @@ jobs:
 
       - name: Ensure release label exists
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: gh label create release --color 0E8A16 --description "Release PR" --force
 
       - name: Create release PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           VERSION: ${{ inputs.version }}
           CURRENT_VERSION: ${{ steps.current.outputs.version }}
           REPO: ${{ github.repository }}
@@ -100,7 +100,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add Cargo.toml Cargo.lock
           git commit -m "chore(release): v${VERSION}"
-          git push origin "$BRANCH"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$BRANCH"
 
           BODY="## Release v${VERSION}
 
