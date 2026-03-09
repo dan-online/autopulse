@@ -144,6 +144,19 @@ jobs:
             echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install git-cliff
+        if: steps.check.outputs.should_release == 'true'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release notes
+        if: steps.check.outputs.should_release == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: git-cliff --config cliff.toml --latest --github-token "$GITHUB_TOKEN" -o /tmp/release-notes.md
+
       - name: Create GitHub Release
         if: steps.check.outputs.should_release == 'true'
         env:
@@ -152,5 +165,5 @@ jobs:
         run: |
           gh release create "$TAG" \
             --title "autopulse $TAG" \
-            --generate-notes \
+            --notes-file /tmp/release-notes.md \
             --latest

@@ -1,0 +1,50 @@
+[remote.github]
+owner = "dan-online"
+repo = "autopulse"
+
+[changelog]
+body = """
+### **What's Changed**
+{% for group, commits in commits | group_by(attribute="group") %}
+
+#### **{{ group }}**
+{% for commit in commits -%}
+* {{ commit.message | split(pat="\n") | first | trim }}\
+  {% if commit.remote.username %} by @{{ commit.remote.username }}{% endif %}\
+  {% if commit.remote.pr_number %} in https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/pull/{{ commit.remote.pr_number }}{% endif %}
+{% endfor -%}
+{% endfor %}
+{%- if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
+
+---
+
+### **New Contributors**
+{% for contributor in github.contributors | filter(attribute="is_first_time", value=true) -%}
+* @{{ contributor.username }} made their first contribution\
+  {% if contributor.pr_number %} in https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/pull/{{ contributor.pr_number }}{% endif %}
+{% endfor %}
+{%- endif %}
+
+---
+
+### **Full Changelog**
+
+[Compare {{ previous.version }}...{{ version }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/compare/{{ previous.version }}...{{ version }})
+"""
+trim = true
+
+[git]
+# Keep conventional_commits off so commit.message preserves the full prefix
+conventional_commits = false
+filter_unconventional = false
+commit_parsers = [
+    { message = "^chore\\(release\\)", skip = true },
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Fixes" },
+    { message = "^refactor", group = "Refactors" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^chore", group = "Chores" },
+    { message = "^ci", group = "Chores" },
+    { message = "^build", group = "Chores" },
+    { message = "^Merge", skip = true },
+]
