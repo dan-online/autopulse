@@ -147,7 +147,7 @@ jobs:
       - name: Create GitHub Release
         if: steps.check.outputs.should_release == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           TAG: ${{ steps.check.outputs.tag }}
         run: |
           gh release create "$TAG" \
