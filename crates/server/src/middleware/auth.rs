@@ -1,5 +1,5 @@
 use actix_web::{
-    dev::Payload, error::ErrorUnauthorized, web::Data, Error, FromRequest, HttpRequest,
+    dev::Payload, error::InternalError, web::Data, Error, FromRequest, HttpRequest, HttpResponse,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_service::manager::PulseManager;
@@ -12,16 +12,27 @@ impl FromRequest for AuthenticatedUser {
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        let manager = req.app_data::<Data<PulseManager>>().cloned();
+        let manager = match req.app_data::<Data<PulseManager>>().cloned() {
+            Some(m) => m,
+            // Fail closed: missing PulseManager is a server misconfiguration, not a bypass
+            None => {
+                return Box::pin(async {
+                    Err(InternalError::from_response(
+                        "Server misconfigured",
+                        HttpResponse::InternalServerError()
+                            .json("Server misconfigured: missing application data"),
+                    )
+                    .into())
+                });
+            }
+        };
 
-        if !manager.as_ref().is_some_and(|m| m.settings.auth.enabled) {
+        if !manager.settings.auth.enabled {
             return Box::pin(async { Ok(Self) });
         }
 
-        // We know manager is Some because the guard above passed
-        let auth_cfg = &manager.as_ref().unwrap().settings.auth;
-        let username = auth_cfg.username.clone();
-        let password = auth_cfg.password.clone();
+        let username = manager.settings.auth.username.clone();
+        let password = manager.settings.auth.password.clone();
 
         let fut = BasicAuth::from_request(req, payload);
 
@@ -34,7 +45,13 @@ impl FromRequest for AuthenticatedUser {
                 }
             }
 
-            Err(ErrorUnauthorized("Unauthorized"))
+            Err(
+                InternalError::from_response(
+                    "Authentication required",
+                    HttpResponse::Unauthorized().json("Authentication required"),
+                )
+                .into(),
+            )
         })
     }
 }
