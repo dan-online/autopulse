@@ -45,13 +45,11 @@ impl FromRequest for AuthenticatedUser {
                 }
             }
 
-            Err(
-                InternalError::from_response(
-                    "Authentication required",
-                    HttpResponse::Unauthorized().json("Authentication required"),
-                )
-                .into(),
+            Err(InternalError::from_response(
+                "Authentication required",
+                HttpResponse::Unauthorized().json("Authentication required"),
             )
+            .into())
         })
     }
 }
