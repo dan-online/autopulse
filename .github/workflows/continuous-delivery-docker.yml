@@ -48,14 +48,14 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Extract metadata (labels)
         id: meta
-        uses: docker/metadata-action@85e876bd3a78bcc6b9925c818c482e365cf13b71
+        uses: docker/metadata-action@b13d25e5fcf2e04305d8aedc9a6c28ebe258e934
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
           # flavor: |
@@ -161,14 +161,14 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -176,7 +176,7 @@ jobs:
 
       - name: Extract metadata (labels)
         id: meta
-        uses: docker/metadata-action@85e876bd3a78bcc6b9925c818c482e365cf13b71
+        uses: docker/metadata-action@b13d25e5fcf2e04305d8aedc9a6c28ebe258e934
         with:
           images: ghcr.io/dan-online/autopulse,danonline/autopulse
 
@@ -302,14 +302,14 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Login to the GHCR
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@db14339dbc0a1f0b184157be94b23a2138122354
+        uses: docker/login-action@9fe7774c8f8ebfade96f0a62aa10f3882309d517
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
