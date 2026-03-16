@@ -45,8 +45,8 @@ impl Sonarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        headers.insert("X-Api-Key", self.token.parse().unwrap());
-        headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("X-Api-Key", self.token.parse()?);
+        headers.insert("Accept", "application/json".parse()?);
 
         self.request
             .client_builder(headers)
@@ -55,7 +55,7 @@ impl Sonarr {
     }
 
     async fn get_series(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<(i64, Vec<String>)>> {
-        let client = self.get_client().unwrap();
+        let client = self.get_client()?;
         let url = get_url(&self.url)?.join("api/v3/series")?;
         let mut to_be_refreshed: HashMap<i64, Vec<String>> = HashMap::new();
 
@@ -80,7 +80,7 @@ impl Sonarr {
     }
 
     async fn refresh_series(&self, series_id: i64) -> anyhow::Result<()> {
-        let client = self.get_client().unwrap();
+        let client = self.get_client()?;
         let url = get_url(&self.url)?.join("api/v3/command")?;
         let payload = Command::RefreshSeries(RefreshSeries { series_id });
 

@@ -1,10 +1,9 @@
-use crate::middleware::auth::check_auth;
+use crate::middleware::auth::AuthenticatedUser;
 use actix_web::{
     get,
     web::{Data, Path},
     HttpResponse, Responder, Result,
 };
-use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_service::manager::PulseManager;
 
 #[doc(hidden)]
@@ -12,17 +11,8 @@ use autopulse_service::manager::PulseManager;
 pub async fn status(
     id: Path<String>,
     manager: Data<PulseManager>,
-    auth: Option<BasicAuth>,
+    _auth: AuthenticatedUser,
 ) -> Result<impl Responder> {
-    if !check_auth(
-        &auth,
-        &manager.settings.auth.enabled,
-        &manager.settings.auth.username,
-        &manager.settings.auth.password,
-    ) {
-        return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-    }
-
     let scan_ev = manager.get_event(&id);
 
     if let Err(e) = scan_ev {

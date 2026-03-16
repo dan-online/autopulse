@@ -1,5 +1,6 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
+use crate::settings::triggers::TriggerConfig;
 use autopulse_utils::regex::Regex;
 use notify_debouncer_full::{
     new_debouncer, new_debouncer_opt,
@@ -65,6 +66,20 @@ pub struct Notify {
     pub timer: Option<Timer>,
     /// Debounce timeout in seconds (default: 2)
     pub debounce: Option<u64>,
+}
+
+impl TriggerConfig for Notify {
+    fn rewrite(&self) -> Option<&Rewrite> {
+        self.rewrite.as_ref()
+    }
+
+    fn timer(&self) -> Option<&Timer> {
+        self.timer.as_ref()
+    }
+
+    fn excludes(&self) -> &Vec<String> {
+        &self.excludes
+    }
 }
 
 impl Notify {
