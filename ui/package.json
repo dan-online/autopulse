@@ -12,13 +12,13 @@
 		"check:watch": "yarn prepare && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.8",
+		"@biomejs/biome": "^2.4.9",
 		"@iconify-json/ci": "^1.2.2",
 		"@iconify-json/hugeicons": "^1.2.24",
 		"@iconify-json/ic": "^1.2.4",
 		"@iconify-json/line-md": "^1.2.16",
-		"@iconify-json/material-symbols": "^1.2.63",
-		"@iconify-json/material-symbols-light": "^1.2.63",
+		"@iconify-json/material-symbols": "^1.2.64",
+		"@iconify-json/material-symbols-light": "^1.2.64",
 		"@iconify-json/pajamas": "^1.2.15",
 		"@iconify-json/ph": "^1.2.2",
 		"@iconify-json/svg-spinners": "^1.2.4",
@@ -31,13 +31,13 @@
 		"@unocss/extractor-svelte": "66.6.7",
 		"@unocss/reset": "66.6.7",
 		"daisyui": "^5.5.19",
-		"svelte": "^5.54.1",
+		"svelte": "^5.55.0",
 		"svelte-check": "^4.4.5",
 		"typescript": "^5.9.3",
 		"unocss": "66.6.7",
 		"unocss-preset-daisyui-next": "^0.1.2",
 		"vite": "^7.3.1",
-		"wrangler": "^4.76.0"
+		"wrangler": "^4.78.0"
 	},
 	"type": "module",
 	"packageManager": "yarn@4.12.0"

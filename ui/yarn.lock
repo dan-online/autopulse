@@ -15,18 +15,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:^2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/biome@npm:2.4.8"
+"@biomejs/biome@npm:^2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/biome@npm:2.4.9"
   dependencies:
-    "@biomejs/cli-darwin-arm64": "npm:2.4.8"
-    "@biomejs/cli-darwin-x64": "npm:2.4.8"
-    "@biomejs/cli-linux-arm64": "npm:2.4.8"
-    "@biomejs/cli-linux-arm64-musl": "npm:2.4.8"
-    "@biomejs/cli-linux-x64": "npm:2.4.8"
-    "@biomejs/cli-linux-x64-musl": "npm:2.4.8"
-    "@biomejs/cli-win32-arm64": "npm:2.4.8"
-    "@biomejs/cli-win32-x64": "npm:2.4.8"
+    "@biomejs/cli-darwin-arm64": "npm:2.4.9"
+    "@biomejs/cli-darwin-x64": "npm:2.4.9"
+    "@biomejs/cli-linux-arm64": "npm:2.4.9"
+    "@biomejs/cli-linux-arm64-musl": "npm:2.4.9"
+    "@biomejs/cli-linux-x64": "npm:2.4.9"
+    "@biomejs/cli-linux-x64-musl": "npm:2.4.9"
+    "@biomejs/cli-win32-arm64": "npm:2.4.9"
+    "@biomejs/cli-win32-x64": "npm:2.4.9"
   dependenciesMeta:
     "@biomejs/cli-darwin-arm64":
       optional: true
@@ -46,62 +46,62 @@ __metadata:
       optional: true
   bin:
     biome: bin/biome
-  checksum: 10c0/aa77037ee9e49d3ee8d3efcbe11750a84a3536f9ef05457c77ce34dfb5f06da23630cd701ef98b06abf7c691b64ebebcde9fbfb32abadf6b55bdc825ee600662
+  checksum: 10c0/10d5e64d844d055bf395391b06194d791a0ed0f6279fa7eb9d1ab1a83ba9be29a8b64465474f314e31e6446da2dd2b51695a266fe201a02f2be16178602323ff
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-arm64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-darwin-arm64@npm:2.4.8"
+"@biomejs/cli-darwin-arm64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-darwin-arm64@npm:2.4.9"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-x64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-darwin-x64@npm:2.4.8"
+"@biomejs/cli-darwin-x64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-darwin-x64@npm:2.4.9"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64-musl@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.4.8"
+"@biomejs/cli-linux-arm64-musl@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.4.9"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-linux-arm64@npm:2.4.8"
+"@biomejs/cli-linux-arm64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-linux-arm64@npm:2.4.9"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64-musl@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-linux-x64-musl@npm:2.4.8"
+"@biomejs/cli-linux-x64-musl@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-linux-x64-musl@npm:2.4.9"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-linux-x64@npm:2.4.8"
+"@biomejs/cli-linux-x64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-linux-x64@npm:2.4.9"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-arm64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-win32-arm64@npm:2.4.8"
+"@biomejs/cli-win32-arm64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-win32-arm64@npm:2.4.9"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-x64@npm:2.4.8":
-  version: 2.4.8
-  resolution: "@biomejs/cli-win32-x64@npm:2.4.8"
+"@biomejs/cli-win32-x64@npm:2.4.9":
+  version: 2.4.9
+  resolution: "@biomejs/cli-win32-x64@npm:2.4.9"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -605,21 +605,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/material-symbols-light@npm:^1.2.63":
-  version: 1.2.63
-  resolution: "@iconify-json/material-symbols-light@npm:1.2.63"
+"@iconify-json/material-symbols-light@npm:^1.2.64":
+  version: 1.2.64
+  resolution: "@iconify-json/material-symbols-light@npm:1.2.64"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/80109ab49749d0df5380a5b3b16d1bc075ae856153e13668caab35b32abb6b41484ab9848f7c94245bc1fbb20e66a16211fd520e37fdf9a4e25ec18978ce60c9
+  checksum: 10c0/7e789a1fd95de2a2556177966122bc8c2c830402003531d2f175ed5122e5d5b777af99f7d20b6fbcdac0ef018eafab6ec2bb4faa2de3139c51d670498bfdd799
   languageName: node
   linkType: hard
 
-"@iconify-json/material-symbols@npm:^1.2.63":
-  version: 1.2.63
-  resolution: "@iconify-json/material-symbols@npm:1.2.63"
+"@iconify-json/material-symbols@npm:^1.2.64":
+  version: 1.2.64
+  resolution: "@iconify-json/material-symbols@npm:1.2.64"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/af563f74eaf644baae9576277066108f0c1731b24065794c2ae630dae8c5af517e7a55386360228cd400d1961052e3493e1f82271592cd341300bbc327fe0c63
+  checksum: 10c0/905c579b47dee4b8a6baf6689aad7ae4d544bed6ec7c7c093b26c60d40d1dc467d795cb93f90d8105805fdc6d04f3d1753a1728cbb3c334ff6f78e4df09c36af
   languageName: node
   linkType: hard
 
@@ -2865,9 +2865,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"miniflare@npm:4.20260317.1":
-  version: 4.20260317.1
-  resolution: "miniflare@npm:4.20260317.1"
+"miniflare@npm:4.20260317.3":
+  version: 4.20260317.3
+  resolution: "miniflare@npm:4.20260317.3"
   dependencies:
     "@cspotcode/source-map-support": "npm:0.8.1"
     sharp: "npm:^0.34.5"
@@ -2877,7 +2877,7 @@ __metadata:
     youch: "npm:4.1.0-beta.10"
   bin:
     miniflare: bootstrap.js
-  checksum: 10c0/de7e5ef4c5a1ce7efaf70c8618737921f0e3c0391f6a9ad4d2c243f27d2452c43d47c5070cd0456c3225e124e3c48ebd866251ae32d2909b000236a3a4f59a1e
+  checksum: 10c0/0de91aefe66562dd8a5480b15a43837a6008b0c8229f57fe68b454d496699522785ba14aa4fed13303e8655d267266b0c7ae950b66203b3928f76699e3f5d368
   languageName: node
   linkType: hard
 
@@ -3745,9 +3745,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte@npm:^5.54.1":
-  version: 5.54.1
-  resolution: "svelte@npm:5.54.1"
+"svelte@npm:^5.55.0":
+  version: 5.55.0
+  resolution: "svelte@npm:5.55.0"
   dependencies:
     "@jridgewell/remapping": "npm:^2.3.4"
     "@jridgewell/sourcemap-codec": "npm:^1.5.0"
@@ -3765,7 +3765,7 @@ __metadata:
     locate-character: "npm:^3.0.0"
     magic-string: "npm:^0.30.11"
     zimmerframe: "npm:^1.1.2"
-  checksum: 10c0/d1ee60de085c0c0d2c848942068722e2c5fb4701f9f0a1938ffffc456794cec06fb6d0922f238e18d6bc6fd5ddabe6f3387222e0aba4650fec7a6070576c4a19
+  checksum: 10c0/2a23abec064ba6f6196764b752e60af80628fb8b85d135ab43009efb01b08696fc194cb31fe4c1d7ad06f75d714cffc6c13c159a612b9c3eac6715616a131abe
   languageName: node
   linkType: hard
 
@@ -3858,13 +3858,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ui@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:^2.4.8"
+    "@biomejs/biome": "npm:^2.4.9"
     "@iconify-json/ci": "npm:^1.2.2"
     "@iconify-json/hugeicons": "npm:^1.2.24"
     "@iconify-json/ic": "npm:^1.2.4"
     "@iconify-json/line-md": "npm:^1.2.16"
-    "@iconify-json/material-symbols": "npm:^1.2.63"
-    "@iconify-json/material-symbols-light": "npm:^1.2.63"
+    "@iconify-json/material-symbols": "npm:^1.2.64"
+    "@iconify-json/material-symbols-light": "npm:^1.2.64"
     "@iconify-json/pajamas": "npm:^1.2.15"
     "@iconify-json/ph": "npm:^1.2.2"
     "@iconify-json/svg-spinners": "npm:^1.2.4"
@@ -3877,13 +3877,13 @@ __metadata:
     "@unocss/extractor-svelte": "npm:66.6.7"
     "@unocss/reset": "npm:66.6.7"
     daisyui: "npm:^5.5.19"
-    svelte: "npm:^5.54.1"
+    svelte: "npm:^5.55.0"
     svelte-check: "npm:^4.4.5"
     typescript: "npm:^5.9.3"
     unocss: "npm:66.6.7"
     unocss-preset-daisyui-next: "npm:^0.1.2"
     vite: "npm:^7.3.1"
-    wrangler: "npm:^4.76.0"
+    wrangler: "npm:^4.78.0"
   languageName: unknown
   linkType: soft
 
@@ -4153,16 +4153,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrangler@npm:^4.76.0":
-  version: 4.76.0
-  resolution: "wrangler@npm:4.76.0"
+"wrangler@npm:^4.78.0":
+  version: 4.78.0
+  resolution: "wrangler@npm:4.78.0"
   dependencies:
     "@cloudflare/kv-asset-handler": "npm:0.4.2"
     "@cloudflare/unenv-preset": "npm:2.16.0"
     blake3-wasm: "npm:2.1.5"
     esbuild: "npm:0.27.3"
     fsevents: "npm:~2.3.2"
-    miniflare: "npm:4.20260317.1"
+    miniflare: "npm:4.20260317.3"
     path-to-regexp: "npm:6.3.0"
     unenv: "npm:2.0.0-rc.24"
     workerd: "npm:1.20260317.1"
@@ -4177,7 +4177,7 @@ __metadata:
   bin:
     wrangler: bin/wrangler.js
     wrangler2: bin/wrangler.js
-  checksum: 10c0/40061288c9d70f30e044fedd62ea10161582bbd39aaa6ca9c21916ae0daac7a321a7c93638385cedac847a08fce96724cd6c39b2c327b0ab881931bf314ae3c8
+  checksum: 10c0/125454cc27e64a488aa5a3b7e146536522bc942db695ec7bf16d8c560e5b3c6a6095bc06ea58c1a47840a8edec733200ed4ac3d37205d6fd0a01cdc236170bef
   languageName: node
   linkType: hard
 
