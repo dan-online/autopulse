@@ -1,5 +1,6 @@
 use sha2::{Digest, Sha256};
 use std::{
+    fmt::Write,
     fs::File,
     io::{BufReader, Read},
     path::PathBuf,
@@ -19,5 +20,10 @@ pub fn sha256checksum(file_path: &PathBuf) -> anyhow::Result<String> {
         hasher.update(&buffer[..bytes_read]);
     }
 
-    Ok(format!("{:x}", hasher.finalize()))
+    let digest = hasher.finalize();
+    let mut hash = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        write!(&mut hash, "{byte:02x}").unwrap();
+    }
+    Ok(hash)
 }
