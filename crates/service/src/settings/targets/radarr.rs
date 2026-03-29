@@ -45,8 +45,8 @@ impl Radarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        headers.insert("X-Api-Key", self.token.parse().unwrap());
-        headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("X-Api-Key", self.token.parse()?);
+        headers.insert("Accept", "application/json".parse()?);
 
         self.request
             .client_builder(headers)
@@ -55,7 +55,7 @@ impl Radarr {
     }
 
     async fn get_movies(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<i64>> {
-        let client = self.get_client().unwrap();
+        let client = self.get_client()?;
 
         let url = get_url(&self.url)?.join("api/v3/movie")?;
         let mut to_be_refreshed: HashMap<i64, Vec<String>> = HashMap::new();
@@ -86,7 +86,7 @@ impl Radarr {
     }
 
     async fn refresh_movies(&self, movie_ids: Vec<i64>) -> anyhow::Result<()> {
-        let client = self.get_client().unwrap();
+        let client = self.get_client()?;
         let url = get_url(&self.url)?.join("api/v3/command")?;
         let payload = Command::RefreshMovie(RefreshMovie { movie_ids });
 

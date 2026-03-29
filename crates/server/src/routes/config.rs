@@ -1,6 +1,5 @@
-use crate::middleware::auth::check_auth;
+use crate::middleware::auth::AuthenticatedUser;
 use actix_web::{get, web, HttpResponse, Result};
-use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_database::conn::DatabaseType;
 use autopulse_service::manager::PulseManager;
 use autopulse_service::settings::app::App;
@@ -48,18 +47,9 @@ pub struct TemplateResponse {
 #[get("/api/config-template")]
 pub async fn config_template(
     query: web::Query<TemplateQuery>,
-    auth: Option<BasicAuth>,
-    manager: web::Data<PulseManager>,
+    _auth: AuthenticatedUser,
+    _manager: web::Data<PulseManager>,
 ) -> Result<HttpResponse> {
-    if !check_auth(
-        &auth,
-        &manager.settings.auth.enabled,
-        &manager.settings.auth.username,
-        &manager.settings.auth.password,
-    ) {
-        return Ok(HttpResponse::Unauthorized().json("Authentication required"));
-    }
-
     let response = generate_config_template(
         &query.database,
         &serde_json::from_str::<Vec<TriggerType>>(&format!(
@@ -92,7 +82,7 @@ pub async fn config_template(
     )
     .map_err(|e| {
         actix_web::error::ErrorInternalServerError(format!(
-            "falsed to generate config template: {}",
+            "failed to generate config template: {}",
             e
         ))
     })?;
@@ -197,6 +187,9 @@ fn generate_config_template(
                 TargetType::Autopulse => {
                     Target::Autopulse(serde_json::from_str(r#"{"url": "{url}", "auth": {"username": "{username}", "password": "{password}" }}"#)?)
                 }
+                TargetType::Audiobookshelf => Target::Audiobookshelf(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
             },
         );
     }

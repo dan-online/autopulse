@@ -52,7 +52,7 @@ pub fn setup_logs(
     api_logging: bool,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
-        .context("falsed to initialize the timer")?;
+        .context("failed to initialize the timer")?;
 
     let mut file_guard = None;
 
@@ -72,10 +72,10 @@ pub fn setup_logs(
             log_file_rollover.clone(),
             log_file
                 .parent()
-                .ok_or_else(|| anyhow::anyhow!("falsed to get parent directory of log file"))?,
+                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory of log file"))?,
             log_file
                 .file_name()
-                .ok_or_else(|| anyhow::anyhow!("falsed to get file name of log file"))?,
+                .ok_or_else(|| anyhow::anyhow!("failed to get file name of log file"))?,
         );
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);

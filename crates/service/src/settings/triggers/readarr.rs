@@ -1,6 +1,6 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::{EventTimers, Timer};
-use crate::settings::triggers::TriggerRequest;
+use crate::settings::triggers::{TriggerConfig, TriggerRequest};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -14,6 +14,24 @@ pub struct Readarr {
     pub excludes: Vec<String>,
     /// Event-specific timers
     pub event_timers: Option<EventTimers>,
+}
+
+impl TriggerConfig for Readarr {
+    fn rewrite(&self) -> Option<&Rewrite> {
+        self.rewrite.as_ref()
+    }
+
+    fn timer(&self) -> Option<&Timer> {
+        self.timer.as_ref()
+    }
+
+    fn excludes(&self) -> &Vec<String> {
+        &self.excludes
+    }
+
+    fn event_timers(&self) -> Option<&EventTimers> {
+        self.event_timers.as_ref()
+    }
 }
 
 #[derive(Deserialize, Clone)]
