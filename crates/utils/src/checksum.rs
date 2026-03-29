@@ -23,7 +23,7 @@ pub fn sha256checksum(file_path: &PathBuf) -> anyhow::Result<String> {
     let digest = hasher.finalize();
     let mut hash = String::with_capacity(digest.len() * 2);
     for byte in digest {
-        write!(&mut hash, "{byte:02x}")?;
+        write!(&mut hash, "{byte:02x}").unwrap();
     }
     Ok(hash)
 }
