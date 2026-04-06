@@ -1,8 +1,8 @@
 use crate::middleware::auth::check_auth;
 use actix_web::{
     get, post,
-    web::{Data, Json, Path, Query},
-    HttpResponse, Result,
+    web::{Data, Path, Query},
+    HttpRequest, HttpResponse, Result,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_database::models::{FoundStatus, NewScanEvent};
@@ -24,10 +24,11 @@ enum TriggerQueryParams {
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
+    req: HttpRequest,
     trigger: Path<String>,
     manager: Data<PulseManager>,
     auth: Option<BasicAuth>,
-    body: Json<serde_json::Value>,
+    body: actix_web::web::Bytes,
 ) -> Result<HttpResponse> {
     if !check_auth(
         &auth,
@@ -46,13 +47,39 @@ pub async fn trigger_post(
 
     let trigger_settings = trigger_settings.unwrap();
 
+    // Support legacy autoscan behavior: POST with query params and no JSON body.
+    // The original autoscan (github.com/cloudbox/autoscan) sends scan requests as
+    // POST /triggers/manual?dir=/path with an empty body when forwarding between
+    // autoscan instances. Handle this by falling through to the GET-style query
+    // param handler when the body is absent or empty.
+    let parsed_body: Option<serde_json::Value> = if body.is_empty() {
+        None
+    } else {
+        serde_json::from_slice(&body).ok()
+    };
+
+    let has_body = parsed_body
+        .as_ref()
+        .map(|b| !b.is_null())
+        .unwrap_or(false);
+
+    if !has_body {
+        if let Ok(query) =
+            Query::<TriggerQueryParams>::from_query(req.query_string())
+        {
+            return trigger_get_inner(&trigger, query.into_inner(), &manager, trigger_settings)
+                .await;
+        }
+    }
+
     match trigger_settings {
         Trigger::Manual(_) | Trigger::Notify(_) => {
             Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
-            let decoded = trigger_settings.paths(body.into_inner());
+            let body_value = parsed_body.unwrap_or(serde_json::Value::Null);
+            let decoded = trigger_settings.paths(body_value);
 
             if let Err(e) = decoded {
                 error!("failed to decode request: {e}");
@@ -147,14 +174,24 @@ pub async fn trigger_get(
 
     let trigger_settings = trigger_settings.unwrap();
 
+    trigger_get_inner(&trigger, query.into_inner(), &manager, trigger_settings).await
+}
+
+/// Shared handler for query-param-based trigger requests (used by both GET and
+/// POST-with-query-params code paths).
+async fn trigger_get_inner(
+    trigger: &str,
+    query: TriggerQueryParams,
+    manager: &PulseManager,
+    trigger_settings: &Trigger,
+) -> Result<HttpResponse> {
     match &trigger_settings {
         Trigger::Manual(trigger_settings) | Trigger::Bazarr(trigger_settings) => {
-            match query.into_inner() {
+            match query {
                 TriggerQueryParams::Manual(query) => {
                     let mut file_path = query.path.clone();
 
                     if let Some(rewrite) = &trigger_settings.rewrite {
-                        // file_path = rewrite_path(file_path, rewrite);
                         file_path = rewrite.rewrite_path(file_path);
                     }
 
@@ -202,7 +239,7 @@ pub async fn trigger_get(
                 _ => Ok(HttpResponse::BadRequest().body("Invalid query parameters")),
             }
         }
-        Trigger::Autoscan(trigger_settings) => match query.into_inner() {
+        Trigger::Autoscan(trigger_settings) => match query {
             TriggerQueryParams::Autoscan(query) => {
                 let dir_path = query.dir.clone();
 
