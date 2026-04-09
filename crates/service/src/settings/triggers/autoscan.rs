@@ -1,5 +1,6 @@
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
+use crate::settings::triggers::TriggerConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -11,6 +12,20 @@ pub struct Autoscan {
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
+}
+
+impl TriggerConfig for Autoscan {
+    fn rewrite(&self) -> Option<&Rewrite> {
+        self.rewrite.as_ref()
+    }
+
+    fn timer(&self) -> Option<&Timer> {
+        self.timer.as_ref()
+    }
+
+    fn excludes(&self) -> &Vec<String> {
+        &self.excludes
+    }
 }
 
 /// Autoscan trigger query parameters

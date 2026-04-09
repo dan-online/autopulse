@@ -137,8 +137,8 @@ impl Plex {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
-        headers.insert("X-Plex-Token", self.token.parse().unwrap());
-        headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("X-Plex-Token", self.token.parse()?);
+        headers.insert("Accept", "application/json".parse()?);
 
         self.request
             .client_builder(headers)

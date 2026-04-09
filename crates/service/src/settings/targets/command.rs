@@ -61,9 +61,9 @@ impl Command {
                 .arg(&raw)
                 .output();
 
-            let timeout = self.timeout.unwrap_or(10000);
+            let timeout = self.timeout.unwrap_or(10);
 
-            let output = tokio::time::timeout(std::time::Duration::from_millis(timeout), output)
+            let output = tokio::time::timeout(std::time::Duration::from_secs(timeout), output)
                 .await
                 .map_err(|_| anyhow::anyhow!("command timed out"))??;
 

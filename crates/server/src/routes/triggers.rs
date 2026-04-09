@@ -1,10 +1,9 @@
-use crate::middleware::auth::check_auth;
+use crate::middleware::auth::AuthenticatedUser;
 use actix_web::{
     get, post,
     web::{Data, Json, Path, Query},
     HttpResponse, Result,
 };
-use actix_web_httpauth::extractors::basic::BasicAuth;
 use autopulse_database::models::{FoundStatus, NewScanEvent};
 use autopulse_service::settings::triggers::{autoscan::AutoscanQueryParams, Trigger};
 use autopulse_service::{
@@ -26,18 +25,9 @@ enum TriggerQueryParams {
 pub async fn trigger_post(
     trigger: Path<String>,
     manager: Data<PulseManager>,
-    auth: Option<BasicAuth>,
+    _auth: AuthenticatedUser,
     body: Json<serde_json::Value>,
 ) -> Result<HttpResponse> {
-    if !check_auth(
-        &auth,
-        &manager.settings.auth.enabled,
-        &manager.settings.auth.username,
-        &manager.settings.auth.password,
-    ) {
-        return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-    }
-
     let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
 
     if trigger_settings.is_none() {
@@ -115,7 +105,7 @@ pub async fn trigger_post(
             });
 
             if scan_events.len() != paths.len() {
-                return Ok(HttpResponse::InternalServerError().body("falsed to add all events"));
+                return Ok(HttpResponse::InternalServerError().body("failed to add all events"));
             }
 
             Ok(HttpResponse::Ok().json(scan_events))
@@ -128,17 +118,8 @@ pub async fn trigger_get(
     query: Query<TriggerQueryParams>,
     trigger: Path<String>,
     manager: Data<PulseManager>,
-    auth: Option<BasicAuth>,
+    _auth: AuthenticatedUser,
 ) -> Result<HttpResponse> {
-    if !check_auth(
-        &auth,
-        &manager.settings.auth.enabled,
-        &manager.settings.auth.username,
-        &manager.settings.auth.password,
-    ) {
-        return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-    }
-
     let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
 
     if trigger_settings.is_none() {

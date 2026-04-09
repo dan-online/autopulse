@@ -204,6 +204,7 @@ pub mod readarr;
 /// See [`Sonarr`] for all options
 pub mod sonarr;
 
+use crate::settings::timer::EventTimers;
 use crate::settings::timer::Timer;
 use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
 use serde::{Deserialize, Serialize};
@@ -223,6 +224,15 @@ pub trait TriggerRequest {
 
     // where the bool represents whether to check found status
     fn paths(&self) -> Vec<(String, bool)>;
+}
+
+pub trait TriggerConfig {
+    fn rewrite(&self) -> Option<&Rewrite>;
+    fn timer(&self) -> Option<&Timer>;
+    fn excludes(&self) -> &Vec<String>;
+    fn event_timers(&self) -> Option<&EventTimers> {
+        None
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -252,47 +262,29 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub const fn get_rewrite(&self) -> Option<&Rewrite> {
-        match &self {
-            Self::Sonarr(trigger) => trigger.rewrite.as_ref(),
-            Self::Radarr(trigger) => trigger.rewrite.as_ref(),
-            Self::Lidarr(trigger) => trigger.rewrite.as_ref(),
-            Self::Bazarr(trigger) => trigger.rewrite.as_ref(),
-            Self::Readarr(trigger) => trigger.rewrite.as_ref(),
-            Self::Autoscan(trigger) => trigger.rewrite.as_ref(),
-            Self::Manual(trigger) => trigger.rewrite.as_ref(),
-            Self::Notify(trigger) => trigger.rewrite.as_ref(),
+    fn as_config(&self) -> &dyn TriggerConfig {
+        match self {
+            Self::Manual(trigger) | Self::Bazarr(trigger) => trigger,
+            Self::Autoscan(trigger) => trigger,
+            Self::Radarr(trigger) => trigger,
+            Self::Sonarr(trigger) => trigger,
+            Self::Lidarr(trigger) => trigger,
+            Self::Readarr(trigger) => trigger,
+            Self::Notify(trigger) => trigger,
         }
     }
 
-    pub fn get_timer(&self, event_name: Option<String>) -> Timer {
-        let mut base_timer = match self.clone() {
-            Self::Sonarr(trigger) => trigger.timer,
-            Self::Radarr(trigger) => trigger.timer,
-            Self::Lidarr(trigger) => trigger.timer,
-            Self::Bazarr(trigger) => trigger.timer,
-            Self::Readarr(trigger) => trigger.timer,
-            Self::Manual(trigger) => trigger.timer,
-            Self::Notify(trigger) => trigger.timer,
-            Self::Autoscan(trigger) => trigger.timer,
-        }
-        .unwrap_or_default();
+    pub fn get_rewrite(&self) -> Option<&Rewrite> {
+        self.as_config().rewrite()
+    }
 
-        let event_specific_timer = match &self {
-            Self::Sonarr(trigger) => event_name
-                .as_ref()
-                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
-            Self::Radarr(trigger) => event_name
-                .as_ref()
-                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
-            Self::Lidarr(trigger) => event_name
-                .as_ref()
-                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
-            Self::Readarr(trigger) => event_name
-                .as_ref()
-                .and_then(|event| trigger.event_timers.as_ref().and_then(|map| map.get(event))),
-            _ => None,
-        };
+    pub fn get_timer(&self, event_name: Option<String>) -> Timer {
+        let config = self.as_config();
+        let mut base_timer = config.timer().cloned().unwrap_or_default();
+
+        let event_specific_timer = event_name
+            .as_ref()
+            .and_then(|event| config.event_timers().and_then(|timers| timers.get(event)));
 
         if let Some(event_timer) = event_specific_timer {
             base_timer = base_timer.chain(event_timer);
@@ -317,16 +309,7 @@ impl Trigger {
         Ok((event_name, paths))
     }
 
-    pub const fn excludes(&self) -> &Vec<String> {
-        match &self {
-            Self::Manual(trigger) => &trigger.excludes,
-            Self::Radarr(trigger) => &trigger.excludes,
-            Self::Sonarr(trigger) => &trigger.excludes,
-            Self::Lidarr(trigger) => &trigger.excludes,
-            Self::Bazarr(trigger) => &trigger.excludes,
-            Self::Readarr(trigger) => &trigger.excludes,
-            Self::Notify(trigger) => &trigger.excludes,
-            Self::Autoscan(trigger) => &trigger.excludes,
-        }
+    pub fn excludes(&self) -> &Vec<String> {
+        self.as_config().excludes()
     }
 }

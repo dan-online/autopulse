@@ -272,6 +272,7 @@ pub enum TargetType {
     Command,
     FileFlows,
     Autopulse,
+    Audiobookshelf,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
