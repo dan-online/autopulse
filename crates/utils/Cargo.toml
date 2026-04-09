@@ -24,6 +24,7 @@ tracing-subscriber = { version = "0.3.19", features = [
 ] }
 
 # Hashing
+base16ct = { version = "1.0.0", features = ["alloc"] }
 sha2 = "0.11.0"
 
 # Rewrites

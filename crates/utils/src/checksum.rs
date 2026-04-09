@@ -19,5 +19,7 @@ pub fn sha256checksum(file_path: &PathBuf) -> anyhow::Result<String> {
         hasher.update(&buffer[..bytes_read]);
     }
 
-    Ok(format!("{:x}", hasher.finalize()))
+    let hash = hasher.finalize();
+
+    Ok(base16ct::lower::encode_string(&hash))
 }

@@ -24,4 +24,21 @@ mod tests {
             "c0ddd62c7717180e7ffb8a15bb9674d3ec92592e0b7ac7d1d5289836b4553be2"
         );
     }
+
+    #[test]
+    fn test_sha256checksum_empty_file() {
+        let tmp_dir = env::temp_dir();
+        let path = tmp_dir.join("test_checksum_empty.txt");
+
+        File::create(&path).unwrap();
+
+        let checksum = sha256checksum(&path).unwrap();
+
+        remove_file(&path).unwrap();
+
+        assert_eq!(
+            checksum,
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
 }

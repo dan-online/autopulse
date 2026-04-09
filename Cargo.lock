@@ -349,6 +349,7 @@ name = "autopulse-utils"
 version = "1.6.0"
 dependencies = [
  "anyhow",
+ "base16ct",
  "chrono",
  "regex",
  "serde",
@@ -382,6 +383,12 @@ dependencies = [
  "dunce",
  "fs_extra",
 ]
+
+[[package]]
+name = "base16ct"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd307490d624467aa6f74b0eabb77633d1f758a7b25f12bceb0b22e08d9726f6"
 
 [[package]]
 name = "base64"
