@@ -1,4 +1,3 @@
-use crate::middleware::auth::AuthenticatedUser;
 use actix_web::{get, web::Data, HttpResponse, Responder, Result};
 use autopulse_service::manager::PulseManager;
 use serde::Serialize;
@@ -21,10 +20,7 @@ pub struct StatsResponse {
 
 #[doc(hidden)]
 #[get("/stats")]
-pub async fn stats(
-    manager: Data<PulseManager>,
-    _auth: AuthenticatedUser,
-) -> Result<impl Responder> {
+pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let start = Instant::now();
     let stats = manager.get_stats();
     let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
