@@ -36,4 +36,8 @@ mod tests {
     mod middleware {
         mod check_auth;
     }
+
+    mod routes {
+        mod public_endpoints;
+    }
 }
