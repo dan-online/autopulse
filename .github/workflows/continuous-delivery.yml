@@ -81,7 +81,7 @@ jobs:
       #     choco install postgresql libsqlite3
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Cargo Cache
         uses: actions/cache@v5
