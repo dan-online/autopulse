@@ -154,7 +154,10 @@ mod tests {
             ..
         } = sonarr_request.clone()
         {
-            assert_eq!(episode_file.relative_path, "Season 1/Westworld.S01E01.mkv");
+            assert_eq!(
+                episode_file.unwrap().relative_path,
+                "Season 1/Westworld.S01E01.mkv"
+            );
             assert_eq!(series.path, "/TV/Westworld");
             assert_eq!(
                 sonarr_request.paths(),
@@ -166,5 +169,60 @@ mod tests {
         } else {
             panic!("Unexpected variant");
         }
+    }
+
+    #[test]
+    fn test_from_json_download_import_complete() {
+        let json = serde_json::json!({
+            "eventType": "Download",
+            "episodeFiles": [
+                { "relativePath": "Season 1/Westworld.S01E01.mkv" },
+                { "relativePath": "Season 1/Westworld.S01E02.mkv" }
+            ],
+            "series": {
+                "path": "/TV/Westworld"
+            }
+        });
+
+        let sonarr_request = SonarrRequest::from_json(json).unwrap();
+
+        if let SonarrRequest::Download {
+            episode_file,
+            episode_files,
+            series,
+            ..
+        } = sonarr_request.clone()
+        {
+            assert!(episode_file.is_none());
+            assert_eq!(episode_files.len(), 2);
+            assert_eq!(series.path, "/TV/Westworld");
+            assert_eq!(
+                sonarr_request.paths(),
+                vec![
+                    (
+                        "/TV/Westworld/Season 1/Westworld.S01E01.mkv".to_string(),
+                        true
+                    ),
+                    (
+                        "/TV/Westworld/Season 1/Westworld.S01E02.mkv".to_string(),
+                        true
+                    )
+                ]
+            );
+        } else {
+            panic!("Unexpected variant");
+        }
+    }
+
+    #[test]
+    fn test_from_json_unknown_event_type() {
+        let json = serde_json::json!({
+            "eventType": "Grab",
+            "series": { "path": "/TV/Westworld" }
+        });
+
+        let sonarr_request = SonarrRequest::from_json(json).unwrap();
+        assert!(matches!(sonarr_request, SonarrRequest::Other));
+        assert_eq!(sonarr_request.paths(), vec![]);
     }
 }

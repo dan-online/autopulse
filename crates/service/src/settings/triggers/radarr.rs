@@ -72,6 +72,8 @@ pub enum RadarrRequest {
     Rename { movie: Movie },
     #[serde(rename = "Test")]
     Test,
+    #[serde(other)]
+    Other,
 }
 
 impl TriggerRequest for RadarrRequest {
@@ -108,7 +110,7 @@ impl TriggerRequest for RadarrRequest {
 
                 paths
             }
-            Self::Test => vec![],
+            Self::Test | Self::Other => vec![],
         }
     }
 }

@@ -80,6 +80,8 @@ pub enum ReadarrRequest {
     BookFileDelete { book_file: BookFile },
     #[serde(rename = "Test")]
     Test,
+    #[serde(other)]
+    Other,
 }
 
 impl TriggerRequest for ReadarrRequest {
@@ -108,7 +110,7 @@ impl TriggerRequest for ReadarrRequest {
             Self::BookFileDelete { book_file } => {
                 vec![(book_file.path.clone(), false)]
             }
-            Self::Test => vec![],
+            Self::Test | Self::Other => vec![],
         }
     }
 }
