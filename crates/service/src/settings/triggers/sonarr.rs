@@ -63,7 +63,11 @@ pub enum SonarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
     Download {
-        episode_file: EpisodeFile,
+        /// Single file import (WebhookImportPayload)
+        episode_file: Option<EpisodeFile>,
+        /// Batch import (WebhookImportCompletePayload) - Sonarr sends `episodeFiles` (plural)
+        #[serde(default)]
+        episode_files: Vec<EpisodeFile>,
         #[serde(default)]
         deleted_files: Vec<EpisodeFile>,
         series: Series,
@@ -85,6 +89,8 @@ pub enum SonarrRequest {
     },
     #[serde(rename = "Test")]
     Test,
+    #[serde(other)]
+    Other,
 }
 
 impl TriggerRequest for SonarrRequest {
@@ -116,10 +122,19 @@ impl TriggerRequest for SonarrRequest {
             Self::SeriesDelete { series } => vec![(series.path.clone(), false)],
             Self::Download {
                 episode_file,
+                episode_files,
                 series,
                 deleted_files,
             } => {
-                let mut paths = vec![(join_path(&series.path, &episode_file.relative_path), true)];
+                let mut paths: Vec<(String, bool)> = vec![];
+
+                if let Some(ef) = episode_file {
+                    paths.push((join_path(&series.path, &ef.relative_path), true));
+                }
+
+                for ef in episode_files {
+                    paths.push((join_path(&series.path, &ef.relative_path), true));
+                }
 
                 for file in deleted_files {
                     paths.push((join_path(&series.path, &file.relative_path), false));
@@ -127,7 +142,7 @@ impl TriggerRequest for SonarrRequest {
 
                 paths
             }
-            Self::Test => vec![],
+            Self::Test | Self::Other => vec![],
         }
     }
 }

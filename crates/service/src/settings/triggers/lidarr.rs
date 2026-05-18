@@ -80,6 +80,8 @@ pub enum LidarrRequest {
     AlbumDelete { artist: Artist },
     #[serde(rename = "Test")]
     Test,
+    #[serde(other)]
+    Other,
 }
 
 impl TriggerRequest for LidarrRequest {
@@ -107,7 +109,7 @@ impl TriggerRequest for LidarrRequest {
             Self::ArtistDelete { artist } | Self::AlbumDelete { artist } => {
                 vec![(artist.path.clone(), false)]
             }
-            Self::Test => vec![],
+            Self::Test | Self::Other => vec![],
         }
     }
 }
