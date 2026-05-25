@@ -96,11 +96,10 @@ jobs:
             ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-
 
       - name: Install Rust toolchain
-        uses: taiki-e/github-actions/install-rust@main
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          component: rustfmt,clippy
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
+          components: rustfmt,clippy
 
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:

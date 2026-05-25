@@ -210,11 +210,10 @@ jobs:
           fi
         id: tag
 
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          component: rustfmt,clippy
-          target: ${{ matrix.platform.target }}
+          targets: ${{ matrix.platform.target }}
+          components: rustfmt,clippy
 
       - uses: taiki-e/setup-cross-toolchain-action@main
         with:
