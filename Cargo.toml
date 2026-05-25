@@ -5,7 +5,7 @@ edition = "2021"
 version.workspace = true
 
 [workspace.package]
-version = "1.6.0"
+version = "1.7.0"
 
 [features]
 vendored = ["autopulse-service/vendored", "autopulse-database/vendored"]
