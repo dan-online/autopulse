@@ -1,3 +1,6 @@
+# worktrees
+.worktrees
+
 # direnv
 .envrc
 .direnv
