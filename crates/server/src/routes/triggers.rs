@@ -1,8 +1,8 @@
 use crate::middleware::auth::AuthenticatedUser;
 use actix_web::{
     get, post,
-    web::{Data, Json, Path, Query},
-    HttpResponse, Result,
+    web::{Bytes, Data, Path, Query},
+    HttpRequest, HttpResponse, Result,
 };
 use autopulse_database::models::{FoundStatus, NewScanEvent};
 use autopulse_service::settings::triggers::{autoscan::AutoscanQueryParams, Trigger};
@@ -23,18 +23,28 @@ enum TriggerQueryParams {
 
 #[post("/triggers/{trigger}")]
 pub async fn trigger_post(
+    req: HttpRequest,
     trigger: Path<String>,
     manager: Data<PulseManager>,
     _auth: AuthenticatedUser,
-    body: Json<serde_json::Value>,
+    body: Bytes,
 ) -> Result<HttpResponse> {
-    let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
+    let trigger_name = trigger.into_inner();
 
-    if trigger_settings.is_none() {
-        return Ok(HttpResponse::NotFound().body("Trigger not found"));
+    if body.is_empty() {
+        // Empty body - fall through to query param handling (legacy autoscan compat)
+        let query = Query::<TriggerQueryParams>::from_query(req.query_string())
+            .map_err(actix_web::error::ErrorBadRequest)?;
+        return trigger_get_inner(query.into_inner(), &trigger_name, &manager).await;
     }
 
-    let trigger_settings = trigger_settings.unwrap();
+    // Non-empty body - must be valid JSON
+    let body: serde_json::Value =
+        serde_json::from_slice(&body).map_err(actix_web::error::ErrorBadRequest)?;
+
+    let Some(trigger_settings) = manager.settings.triggers.get(&trigger_name) else {
+        return Ok(HttpResponse::NotFound().body("Trigger not found"));
+    };
 
     match trigger_settings {
         Trigger::Manual(_) | Trigger::Notify(_) => {
@@ -42,7 +52,7 @@ pub async fn trigger_post(
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
-            let decoded = trigger_settings.paths(body.into_inner());
+            let decoded = trigger_settings.paths(body);
 
             if let Err(e) = decoded {
                 error!("failed to decode request: {e}");
@@ -63,7 +73,7 @@ pub async fn trigger_post(
                 }
 
                 let new_scan_event = NewScanEvent {
-                    event_source: trigger.to_string(),
+                    event_source: trigger_name.clone(),
                     file_path: path.clone(),
                     found_status: if !search {
                         FoundStatus::Found.into()
@@ -91,7 +101,7 @@ pub async fn trigger_post(
                 .webhooks
                 .add_event(
                     EventType::New,
-                    Some(trigger.to_string()),
+                    Some(trigger_name.clone()),
                     &paths
                         .clone()
                         .into_iter()
@@ -100,7 +110,7 @@ pub async fn trigger_post(
                 )
                 .await;
 
-            debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+            debug_span!("", trigger = &*trigger_name).in_scope(|| {
                 info!("added {} file{}", scan_events.len(), sify(&scan_events));
             });
 
@@ -113,82 +123,73 @@ pub async fn trigger_post(
     }
 }
 
-#[get("/triggers/{trigger}")]
-pub async fn trigger_get(
-    query: Query<TriggerQueryParams>,
-    trigger: Path<String>,
-    manager: Data<PulseManager>,
-    _auth: AuthenticatedUser,
+async fn trigger_get_inner(
+    query: TriggerQueryParams,
+    trigger_name: &str,
+    manager: &Data<PulseManager>,
 ) -> Result<HttpResponse> {
-    let trigger_settings = manager.settings.triggers.get(&trigger.to_string());
-
-    if trigger_settings.is_none() {
+    let Some(trigger_settings) = manager.settings.triggers.get(trigger_name) else {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
-    }
+    };
 
-    let trigger_settings = trigger_settings.unwrap();
+    match trigger_settings {
+        Trigger::Manual(trigger_settings) | Trigger::Bazarr(trigger_settings) => match query {
+            TriggerQueryParams::Manual(query) => {
+                let mut file_path = query.path.clone();
 
-    match &trigger_settings {
-        Trigger::Manual(trigger_settings) | Trigger::Bazarr(trigger_settings) => {
-            match query.into_inner() {
-                TriggerQueryParams::Manual(query) => {
-                    let mut file_path = query.path.clone();
-
-                    if let Some(rewrite) = &trigger_settings.rewrite {
-                        // file_path = rewrite_path(file_path, rewrite);
-                        file_path = rewrite.rewrite_path(file_path);
-                    }
-
-                    let new_scan_event = NewScanEvent {
-                        event_source: trigger.to_string(),
-                        file_path: file_path.clone(),
-                        file_hash: query.hash.clone(),
-                        can_process: chrono::Utc::now().naive_utc()
-                            + chrono::Duration::seconds(
-                                trigger_settings
-                                    .timer
-                                    .clone()
-                                    .unwrap_or_default()
-                                    .wait
-                                    .unwrap_or(manager.settings.opts.default_timer_wait)
-                                    as i64,
-                            ),
-                        ..Default::default()
-                    };
-
-                    let scan_event = manager.add_event(&new_scan_event);
-
-                    if let Err(e) = scan_event {
-                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                    }
-
-                    manager
-                        .webhooks
-                        .add_event(
-                            EventType::New,
-                            Some(trigger.to_string()),
-                            &[file_path.clone()],
-                        )
-                        .await;
-
-                    debug_span!("", trigger = trigger.to_string()).in_scope(|| {
-                        info!("added 1 file");
-                        debug!("added file '{}'", file_path);
-                    });
-
-                    let scan_event = scan_event.unwrap();
-
-                    Ok(HttpResponse::Ok().json(scan_event))
+                if let Some(rewrite) = &trigger_settings.rewrite {
+                    file_path = rewrite.rewrite_path(file_path);
                 }
-                _ => Ok(HttpResponse::BadRequest().body("Invalid query parameters")),
+
+                let new_scan_event = NewScanEvent {
+                    event_source: trigger_name.to_owned(),
+                    file_path: file_path.clone(),
+                    file_hash: query.hash.clone(),
+                    can_process: chrono::Utc::now().naive_utc()
+                        + chrono::Duration::seconds(
+                            trigger_settings
+                                .timer
+                                .clone()
+                                .unwrap_or_default()
+                                .wait
+                                .unwrap_or(manager.settings.opts.default_timer_wait)
+                                as i64,
+                        ),
+                    ..Default::default()
+                };
+
+                let scan_event = manager.add_event(&new_scan_event);
+
+                if let Err(e) = scan_event {
+                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                }
+
+                manager
+                    .webhooks
+                    .add_event(
+                        EventType::New,
+                        Some(trigger_name.to_owned()),
+                        &[file_path.clone()],
+                    )
+                    .await;
+
+                debug_span!("", trigger = trigger_name).in_scope(|| {
+                    info!("added 1 file");
+                    debug!("added file '{}'", file_path);
+                });
+
+                let scan_event = scan_event.unwrap();
+
+                Ok(HttpResponse::Ok().json(scan_event))
             }
-        }
-        Trigger::Autoscan(trigger_settings) => match query.into_inner() {
+            _ => Ok(HttpResponse::BadRequest().body("Invalid query parameters")),
+        },
+        Trigger::Autoscan(trigger_settings) => match query {
             TriggerQueryParams::Autoscan(query) => {
                 let dir_path = query.dir.clone();
 
                 let new_scan_event = NewScanEvent {
-                    event_source: trigger.to_string(),
+                    event_source: trigger_name.to_owned(),
                     file_path: dir_path.clone(),
                     can_process: chrono::Utc::now().naive_utc()
                         + chrono::Duration::seconds(
@@ -213,12 +214,12 @@ pub async fn trigger_get(
                     .webhooks
                     .add_event(
                         EventType::New,
-                        Some(trigger.to_string()),
+                        Some(trigger_name.to_owned()),
                         std::slice::from_ref(&dir_path),
                     )
                     .await;
 
-                debug_span!("", trigger = trigger.to_string()).in_scope(|| {
+                debug_span!("", trigger = trigger_name).in_scope(|| {
                     info!("added 1 directory");
                     debug!("added directory '{}'", dir_path);
                 });
@@ -231,4 +232,15 @@ pub async fn trigger_get(
         },
         _ => Ok(HttpResponse::Ok().body("Not implemented")),
     }
+}
+
+#[get("/triggers/{trigger}")]
+pub async fn trigger_get(
+    query: Query<TriggerQueryParams>,
+    trigger: Path<String>,
+    manager: Data<PulseManager>,
+    _auth: AuthenticatedUser,
+) -> Result<HttpResponse> {
+    let trigger_name = trigger.into_inner();
+    trigger_get_inner(query.into_inner(), &trigger_name, &manager).await
 }
