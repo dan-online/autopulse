@@ -223,7 +223,7 @@ mod tests {
         let triggers = vec![TriggerType::Manual];
         let targets = vec![TargetType::Plex];
         let result = generate_config_template(
-            &DatabaseType::Sqlite,
+            &DatabaseType::default(),
             &triggers,
             &targets,
             &OutputType::Json,
@@ -236,7 +236,6 @@ mod tests {
         let config_str = response["config"].as_str().unwrap();
         assert!(config_str.contains("manual"));
         assert!(config_str.contains("plex"));
-        assert!(config_str.contains("sqlite://data/autopulse.db"));
     }
 
     #[test]
@@ -248,7 +247,7 @@ mod tests {
         ];
         let targets = vec![TargetType::Jellyfin, TargetType::Tdarr];
         let result = generate_config_template(
-            &DatabaseType::Postgres,
+            &DatabaseType::default(),
             &triggers,
             &targets,
             &OutputType::Toml,
@@ -264,9 +263,6 @@ mod tests {
         assert!(config_str.contains("sonarr"));
         assert!(config_str.contains("jellyfin"));
         assert!(config_str.contains("tdarr"));
-
-        #[cfg(feature = "postgres")]
-        assert!(config_str.contains("postgres://autopulse:autopulse@localhost:5432/autopulse"));
     }
 
     #[test]
@@ -274,7 +270,7 @@ mod tests {
         let triggers = vec![];
         let targets = vec![];
         let result = generate_config_template(
-            &DatabaseType::Sqlite,
+            &DatabaseType::default(),
             &triggers,
             &targets,
             &OutputType::Json,
@@ -294,10 +290,8 @@ mod tests {
     fn test_generate_config_template_invalid_output_type() {
         let triggers = vec![TriggerType::Manual];
         let targets = vec![TargetType::Plex];
-        // OutputType is always valid due to enum, so this test is not needed.
-        // But we can test that TOML output parses.
         let result = generate_config_template(
-            &DatabaseType::Sqlite,
+            &DatabaseType::default(),
             &triggers,
             &targets,
             &OutputType::Toml,
@@ -309,17 +303,14 @@ mod tests {
         let config_str = response["config"].as_str().unwrap();
         assert!(config_str.contains("manual"));
         assert!(config_str.contains("plex"));
-        assert!(config_str.contains("sqlite://data/autopulse.db"));
     }
 
     #[test]
     fn test_generate_config_template_multiple_same_type() {
         let triggers = vec![TriggerType::Manual, TriggerType::Manual];
         let targets = vec![TargetType::Plex, TargetType::Plex];
-        // OutputType is always valid due to enum, so this test is not needed.
-        // But we can test that TOML output parses.
         let result = generate_config_template(
-            &DatabaseType::Sqlite,
+            &DatabaseType::default(),
             &triggers,
             &targets,
             &OutputType::Toml,

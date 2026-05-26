@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Push README to Docker Hub
         uses: christian-korneck/update-container-description-action@v1
         env:
@@ -35,99 +35,6 @@ jobs:
           short_description: '💫 bridge your media server'
           readme_file: 'README.md'
   
-  build_ui:
-    name: Build UI
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to the GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata (labels)
-        id: meta
-        uses: docker/metadata-action@c3b064c6d7c32446d6bc214ea075f1caad2de35a
-        with:
-          images: ghcr.io/dan-online/autopulse,danonline/autopulse
-          # flavor: |
-          #   latest=false
-          #   prefix=ui-,onlatest=true
-          # tags: |
-          #   type=ref,event=pr,prefix=ui-pr-
-
-      - name: Identify tag
-        run: |
-          if [ -n "${{ github.event.number }}" ]; then
-            echo "PR number: ${{ github.event.number }}"
-            echo "tag=ui-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-            echo "tag_dynamic=ui-dynamic-pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "Release tag: ${{ github.event.release.tag_name }}"
-            echo "tag=ui-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "tag_dynamic=ui-dynamic-${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "tag_stable=stable" >> "$GITHUB_OUTPUT"
-          else
-            echo "Not a PR branch"
-            echo "tag=ui" >> "$GITHUB_OUTPUT"
-            echo "tag_dynamic=ui-dynamic" >> "$GITHUB_OUTPUT"
-          fi
-        id: tag
-
-      - name: Build and push (ui)
-        uses: docker/build-push-action@v7
-        with:
-          push: true
-          tags: |
-            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}
-            danonline/autopulse:${{ steps.tag.outputs.tag }}
-          labels: ${{ steps.meta.outputs.labels }}
-          context: ui/
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Build and push (ui) (dynamic)
-        uses: docker/build-push-action@v7
-        with:
-          push: true
-          tags: |
-            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag_dynamic }}
-            danonline/autopulse:${{ steps.tag.outputs.tag_dynamic }}
-          labels: ${{ steps.meta.outputs.labels }}
-          context: ui/
-          file: ui/Dockerfile.build
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      # - name: Login to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # - name: Push Docker Image
-      #   run: |
-      #     docker tag ${{ steps.meta.outputs.tags }} danonline/autopulse-ui:${{ steps.meta.outputs.tags }}
-      #     docker push danonline/autopulse-ui:${{ steps.meta.outputs.tags }}
-
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
     env:
@@ -150,7 +57,7 @@ jobs:
             tag: -arm64
     runs-on: ${{ matrix.platform.runner }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
@@ -158,7 +65,7 @@ jobs:
       #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Login to the GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
@@ -215,7 +122,7 @@ jobs:
           targets: ${{ matrix.platform.target }}
           components: rustfmt,clippy
 
-      - uses: taiki-e/setup-cross-toolchain-action@main
+      - uses: taiki-e/setup-cross-toolchain-action@3d9770ce98eb7dbcf378563182a5e8031165f75b # v1
         with:
           target: ${{ matrix.platform.target }}
 
@@ -227,9 +134,9 @@ jobs:
         if: matrix.feature == 'full'
         run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
 
-      # - name: Test binary
-      #   if: matrix.feature != 'full'
-      #   run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
+      - name: Test binary
+        if: matrix.feature != 'full'
+        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
 
       - name: Build binary
         if: matrix.feature != 'full'
@@ -243,7 +150,7 @@ jobs:
 
       # "latest-platform?" tag, full feature-set
       - name: Create Docker Image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         if: matrix.feature == 'full'
         with:
           push: true
@@ -259,7 +166,7 @@ jobs:
 
       # "feature-platform?" tag, selected feature-set
       - name: Build and push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         if: matrix.feature != 'full'
         with:
           push: true
@@ -280,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       
       - name: Pull Request suffix
         run: |
@@ -298,7 +205,7 @@ jobs:
         id: tag
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Login to the GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121

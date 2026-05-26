@@ -13,11 +13,9 @@ pub async fn status(
     manager: Data<PulseManager>,
     _auth: AuthenticatedUser,
 ) -> Result<impl Responder> {
-    let scan_ev = manager.get_event(&id);
-
-    if let Err(e) = scan_ev {
-        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+    match manager.get_event(&id) {
+        Ok(Some(event)) => Ok(HttpResponse::Ok().json(event)),
+        Ok(None) => Ok(HttpResponse::NotFound().body("Event not found")),
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
     }
-
-    Ok(HttpResponse::Ok().json(scan_ev.unwrap()))
 }

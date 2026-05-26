@@ -24,3 +24,8 @@ result
 # md files
 *.md
 !README.md
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

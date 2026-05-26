@@ -19,7 +19,7 @@ use autopulse_service::settings::Settings;
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 /// Arguments for CLI
 ///
@@ -88,6 +88,10 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         .context("failed to run migrations")?;
 
     let manager = PulseManager::new(settings, pool);
+
+    if manager.settings.auth.is_default_credentials() {
+        warn!("using default credentials (admin/password), change them in your config");
+    }
 
     let handle_events_task = manager.start();
     let handle_webhooks_task = manager.start_webhooks();

@@ -54,6 +54,7 @@
           packages = [
             rust
             pkgs.cargo-nextest
+            pkgs.lefthook
             pkgs.sccache
             formatterPackage
           ];

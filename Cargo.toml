@@ -32,6 +32,11 @@ clap = { version = "4.5.29", default-features = false, features = [
     "help",
 ] }
 
+# LTO lets the linker drop the unreferenced `icondata` Lucide statics that the
+# UI never uses; without it the whole pack is embedded and the binary balloons.
+[profile.release]
+lto = true
+
 [workspace]
 members = ["crates/*"]
 
