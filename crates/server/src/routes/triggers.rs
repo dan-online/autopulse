@@ -180,7 +180,11 @@ async fn trigger_get_inner(
         },
         Trigger::Autoscan(trigger_settings) => match query {
             TriggerQueryParams::Autoscan(query) => {
-                let dir_path = query.dir.clone();
+                let mut dir_path = query.dir.clone();
+
+                if let Some(rewrite) = &trigger_settings.rewrite {
+                    dir_path = rewrite.rewrite_path(dir_path);
+                }
 
                 let new_scan_event = NewScanEvent {
                     event_source: trigger_name.to_owned(),

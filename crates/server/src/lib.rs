@@ -72,5 +72,6 @@ mod tests {
     #[cfg(feature = "sqlite")]
     mod routes {
         mod public_endpoints;
+        mod triggers;
     }
 }
