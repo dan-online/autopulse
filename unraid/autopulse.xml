@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>autopulse</Name>
+  <Repository>ghcr.io/dan-online/autopulse:stable</Repository>
+  <Registry>https://github.com/dan-online/autopulse/pkgs/container/autopulse</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/dan-online/autopulse/issues</Support>
+  <Project>https://github.com/dan-online/autopulse</Project>
+  <Overview>autopulse is a lightweight service that updates media servers like Plex and Jellyfin based on notifications from media organizers like Sonarr, Radarr, Lidarr, and Readarr. Instead of triggering full library scans, autopulse sends targeted refresh requests for the specific items that changed.</Overview>
+  <Category>MediaApp:Other Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:2875]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/dan-online/autopulse/main/unraid/autopulse.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/dan-online/autopulse/main/assets/logo.webp</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <GitHub>https://github.com/dan-online/autopulse</GitHub>
+  <ReadMe>https://github.com/dan-online/autopulse#readme</ReadMe>
+  <ExtraSearchTerms>sonarr radarr lidarr readarr plex jellyfin emby webhook arr</ExtraSearchTerms>
+  <License>MIT</License>
+  <Requires>**Change AUTOPULSE__AUTH__PASSWORD from the default `change-me`** before exposing this service to other hosts on your network.</Requires>
+  <Description>autopulse is a lightweight service that updates media servers like Plex and Jellyfin based on notifications from media organizers like Sonarr, Radarr, Lidarr, and Readarr. Instead of triggering full library scans, autopulse sends targeted refresh requests for the specific items that changed.
+
+Documentation: https://autopulse.dancodes.online/
+
+After install, point Sonarr/Radarr/etc. webhooks at http://&lt;UNRAID_IP&gt;:2875/triggers/&lt;trigger_name&gt; using the basic-auth credentials below.</Description>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>2875</HostPort>
+        <ContainerPort>2875</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/autopulse</HostDir>
+      <ContainerDir>/data</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/media</HostDir>
+      <ContainerDir>/media</ContainerDir>
+      <Mode>ro</Mode>
+    </Volume>
+  </Data>
+  <Environment>
+    <Variable>
+      <Value>sqlite:///data/autopulse.db</Value>
+      <Name>AUTOPULSE__APP__DATABASE_URL</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>admin</Value>
+      <Name>AUTOPULSE__AUTH__USERNAME</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>change-me</Value>
+      <Name>AUTOPULSE__AUTH__PASSWORD</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>info</Value>
+      <Name>AUTOPULSE__APP__LOG_LEVEL</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Config Name="WebUI port" Target="2875" Default="2875" Mode="tcp" Description="HTTP port for the autopulse API and UI" Type="Port" Display="always" Required="true" Mask="false">2875</Config>
+  <Config Name="App data" Target="/data" Default="/mnt/user/appdata/autopulse" Mode="rw" Description="Holds autopulse.db (SQLite) and the session key" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/autopulse</Config>
+  <Config Name="Media share" Target="/media" Default="/mnt/user/media" Mode="ro" Description="Read-only mount of your media library. autopulse only reads file paths, so :ro is intentional. Mirror the paths your Sonarr/Radarr triggers will report." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media</Config>
+  <Config Name="Database URL" Target="AUTOPULSE__APP__DATABASE_URL" Default="sqlite:///data/autopulse.db" Mode="" Description="Connection string. For Postgres use postgres://user:pass@host/db" Type="Variable" Display="advanced" Required="true" Mask="false">sqlite:///data/autopulse.db</Config>
+  <Config Name="Basic-auth username" Target="AUTOPULSE__AUTH__USERNAME" Default="admin" Mode="" Description="Basic-auth username. Change from the default before exposing." Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
+  <Config Name="Basic-auth password" Target="AUTOPULSE__AUTH__PASSWORD" Default="change-me" Mode="" Description="Basic-auth password. Change from the default before exposing." Type="Variable" Display="always" Required="true" Mask="true">change-me</Config>
+  <Config Name="Log level" Target="AUTOPULSE__APP__LOG_LEVEL" Default="info|trace|debug|warn|error" Mode="" Description="Log verbosity" Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+</Container>
