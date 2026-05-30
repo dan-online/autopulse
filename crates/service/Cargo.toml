@@ -28,7 +28,7 @@ reqwest = { version = "0.13.0", features = ["json", "stream"] }
 base64 = "0.22.1"
 
 # Config
-config = "0.15.6"
+figment = { version = "0.10", features = ["toml", "yaml", "json", "env"] }
 
 # File system notifications
 notify-debouncer-full = "0.7.0"
@@ -41,3 +41,6 @@ struson = { version = "0.7.0", features = [
     "simple-api",
     "serde",
 ] } # Parse Jellyfin response as a stream
+
+[dev-dependencies]
+tempfile = "3"

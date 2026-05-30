@@ -154,7 +154,7 @@ For example: `AUTOPULSE__APP__DATABASE_URL`
 
 An example has been provided in the [example](https://github.com/dan-online/autopulse/blob/main/example) directory
 
-> Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
+> Note: You can provide the config as `config.toml`, `config.yaml`, `config.yml`, or `config.json`
 
 > Note: You can also provide the path to a variable by appending `__FILE`
 > For example: `AUTOPULSE__AUTH__PASSWORD__FILE=/run/secrets/autopulse_password`

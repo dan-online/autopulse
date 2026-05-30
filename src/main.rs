@@ -159,6 +159,7 @@ pub fn main() -> anyhow::Result<()> {
     match setup() {
         Ok((settings, guard)) => {
             info!("💫 autopulse v{} starting up...", env!("CARGO_PKG_VERSION"),);
+            settings.log_summary();
 
             if let Err(e) = run(settings, guard) {
                 error!("{:?}", e);
