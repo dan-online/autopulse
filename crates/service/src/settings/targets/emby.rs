@@ -429,3 +429,74 @@ impl TargetProcess for Emby {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lib(name: &str, paths: &[&str]) -> Library {
+        Library {
+            name: name.to_string(),
+            locations: paths.iter().map(|s| (*s).to_string()).collect(),
+            item_id: format!("id-{name}"),
+            collection_type: None,
+        }
+    }
+
+    fn target() -> Emby {
+        Emby {
+            url: "http://x".to_string(),
+            token: "t".to_string(),
+            metadata_refresh_mode: EmbyMetadataRefreshMode::default(),
+            refresh_metadata: true,
+            rewrite: None,
+            request: Request::default(),
+            path_match: PathMatch::default(),
+        }
+    }
+
+    #[test]
+    fn matches_when_library_location_is_exact_prefix() {
+        let libs = vec![lib("TV", &["/media/TV"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show/S01E01.mkv");
+        assert_eq!(m.len(), 1);
+    }
+
+    #[test]
+    fn matches_when_library_location_has_trailing_slash() {
+        let libs = vec![lib("TV", &["/media/TV/"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show/S01E01.mkv");
+        assert_eq!(
+            m.len(),
+            1,
+            "trailing slash on library location must not break match"
+        );
+    }
+
+    #[test]
+    fn no_match_when_path_outside_library() {
+        let libs = vec![lib("TV", &["/data/TV"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show.mkv");
+        assert_eq!(m.len(), 0);
+    }
+
+    #[test]
+    fn case_insensitive_matching_when_opted_in() {
+        let mut t = target();
+        t.path_match = PathMatch::CaseInsensitive;
+        let libs = vec![lib("TV", &["/Media/TV"])];
+        let m = t.get_libraries(&libs, "/media/tv/Show.mkv");
+        assert_eq!(
+            m.len(),
+            1,
+            "case-insensitive must match across case differences"
+        );
+    }
+
+    #[test]
+    fn case_sensitive_matching_by_default() {
+        let libs = vec![lib("TV", &["/Media/TV"])];
+        let m = target().get_libraries(&libs, "/media/tv/Show.mkv");
+        assert_eq!(m.len(), 0);
+    }
+}
