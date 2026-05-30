@@ -258,6 +258,39 @@ Default credentials are `admin` / `password` (the same as the API auth). Change 
 
 To serve the UI behind a reverse proxy with a path prefix, set `app.base_path` and have the proxy pass the prefix through (no strip-prefix). UI routes mount under `base_path` server-side. See [`app` settings](https://autopulse.dancodes.online/autopulse_service/settings/app/struct.App.html) for the full list of relevant options.
 
+### Integrations
+
+#### A-Train (Google Drive)
+
+[A-Train](https://github.com/m0glie/a-train) is a small Python service that watches a Google Drive mount and emits autoscan-style notifications. It works with autopulse out of the box using the built-in `autoscan` trigger:
+
+```toml
+# autopulse config.toml
+[triggers.a_train]
+type = "autoscan"
+
+# Map A-Train's view of the file (its mounted gdrive path)
+# to whatever path your media server expects.
+[triggers.a_train.rewrite]
+from = "/mnt/gdrive"
+to = "/media"
+```
+
+```toml
+# a-train config.toml
+[autoscan]
+url = "http://autopulse:2875/triggers/a_train"
+username = "admin"
+password = "your-password"
+
+[drive]
+account = "./service-account.json"
+```
+
+A-Train will POST file events to `/triggers/a_train`; autopulse applies the rewrite, optionally checks the file (`opts.check_path`), then fans out to your configured targets.
+
+> **Why `autoscan` and not `manual`?** The `manual` trigger expects a single `?path=` query parameter on a GET. The `autoscan` trigger accepts the dir-based payload that A-Train sends and is what its `[autoscan]` block is designed for.
+
 ## To-do
 
 - [x] Add more triggers
