@@ -36,6 +36,20 @@ pub struct Emby {
     /// HTTP request options
     #[serde(default)]
     pub request: Request,
+    /// How library locations are compared to incoming paths. Default `case_sensitive`.
+    #[serde(default)]
+    pub path_match: PathMatch,
+}
+
+/// How library locations are compared to incoming paths.
+#[derive(Serialize, Clone, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum PathMatch {
+    /// Exact byte-for-byte prefix match (default; safe on Linux).
+    #[default]
+    CaseSensitive,
+    /// Lowercase both sides before comparing. Useful on Windows / UNC paths.
+    CaseInsensitive,
 }
 
 /// Metadata refresh mode for Jellyfin/Emby
@@ -128,20 +142,32 @@ impl Emby {
     }
 
     fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
-        let ev_path = Path::new(path);
         let mut matched: Vec<Library> = vec![];
 
         for library in libraries {
             for location in &library.locations {
-                let path = Path::new(location);
-
-                if ev_path.starts_with(path) {
+                if self.path_prefix_matches(location, path) {
                     matched.push(library.clone());
+                    break; // one location is enough to match this library
                 }
             }
         }
 
         matched
+    }
+
+    fn path_prefix_matches(&self, location: &str, ev_path: &str) -> bool {
+        // Trailing `/` or `\` on library locations shouldn't break the prefix check.
+        let trimmed = location.trim_end_matches(['/', '\\']);
+
+        match self.path_match {
+            PathMatch::CaseSensitive => Path::new(ev_path).starts_with(trimmed),
+            PathMatch::CaseInsensitive => {
+                let lhs = ev_path.to_ascii_lowercase();
+                let rhs = trimmed.to_ascii_lowercase();
+                Path::new(&lhs).starts_with(&rhs)
+            }
+        }
     }
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
