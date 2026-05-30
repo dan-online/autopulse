@@ -141,11 +141,41 @@ fn stats_cards(
     search: Option<&str>,
 ) -> Markup {
     let cards: [(_, i64, _, icondata::Icon, Option<&str>); 5] = [
-        ("Pending", stats.pending, "Waiting in queue", icondata::LuLayers, Some("pending")),
-        ("Retrying", stats.retrying, "Failed 1/+ processors", icondata::LuRefreshCw, Some("retry")),
-        ("Processed", stats.processed, "Sent to processors", icondata::LuPackageCheck, Some("complete")),
-        ("Failed", stats.failed, "Failed to process", icondata::LuCircleAlert, Some("failed")),
-        ("Total", stats.total, "Total scan events", icondata::LuCopy, None),
+        (
+            "Pending",
+            stats.pending,
+            "Waiting in queue",
+            icondata::LuLayers,
+            Some("pending"),
+        ),
+        (
+            "Retrying",
+            stats.retrying,
+            "Failed 1/+ processors",
+            icondata::LuRefreshCw,
+            Some("retry"),
+        ),
+        (
+            "Processed",
+            stats.processed,
+            "Sent to processors",
+            icondata::LuPackageCheck,
+            Some("complete"),
+        ),
+        (
+            "Failed",
+            stats.failed,
+            "Failed to process",
+            icondata::LuCircleAlert,
+            Some("failed"),
+        ),
+        (
+            "Total",
+            stats.total,
+            "Total scan events",
+            icondata::LuCopy,
+            None,
+        ),
     ];
 
     html! {
