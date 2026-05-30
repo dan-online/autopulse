@@ -390,7 +390,13 @@ impl TargetProcess for Emby {
                 let matched_libraries = self.get_libraries(&libraries, &ev_path);
 
                 if matched_libraries.is_empty() {
-                    error!("failed to find library for file: {}", ev_path);
+                    let known: Vec<&str> = libraries
+                        .iter()
+                        .flat_map(|l| l.locations.iter().map(String::as_str))
+                        .collect();
+                    error!(
+                        "failed to find library for file '{ev_path}'. Known locations: {known:?}"
+                    );
                     continue;
                 }
 
