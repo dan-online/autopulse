@@ -74,6 +74,30 @@ We use the following terminology:
 - **Webhooks**: allow for notifications to be sent when a file is ready to be processed with Discord, Matrix Hookshot, or generic JSON webhooks
 - **User-Interface**: provides a simple web interface to view/add scan requests
 
+## FAQ
+
+### Why use autopulse instead of Jellyfin's built-in real-time monitoring?
+
+Jellyfin's library monitor (`Library/Watcher` in Emby parlance) watches the filesystem for changes via the host OS's notify primitives. That works well when:
+
+- Your media lives on a local disk
+- File events are reliable for your filesystem (local ext4, btrfs, NTFS)
+- A single Jellyfin instance is your only consumer of the library
+
+autopulse exists for the cases where one or more of those break down:
+
+- **Network shares (SMB/NFS/rclone)** drop or never emit notify events. The reliable workaround is a *push* signal from whatever produced the file (Sonarr/Radarr/etc.), which is exactly what autopulse routes.
+- **Multi-server fan-out**: when the same files need to land in Plex *and* Jellyfin *and* Emby (or two Plex servers in different rooms), autopulse fans the signal out from a single source.
+- **Targeted updates**: Jellyfin's monitor triggers a *library* scan; autopulse sends a file-scoped refresh (item-level when `refresh_metadata` is enabled, otherwise a path-scoped notification), avoiding a full re-scan.
+- **Hashes and waits**: autopulse can verify a file matches a provided sha256 before notifying, and can hold an event for a configurable wait (useful when a post-processing script renames or remuxes the file).
+- **Retries and audit trail**: a target that's temporarily offline produces a retried event, not a lost notification. Every event is in the database for inspection.
+
+If you only have a local Jellyfin and your filesystem reliably emits notify events, the built-in monitor is fine. autopulse is the answer when "fine" stops being true.
+
+### Why not just trigger a full library scan on every event?
+
+That's what [autoscan](https://github.com/Cloudbox/autoscan) did, and it's expensive on large libraries. autopulse locates the specific item in the target and refreshes only that item, so the work scales with the size of the change instead of the size of the library.
+
 ## Getting Started
 
 ### Docker
