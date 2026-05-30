@@ -8,6 +8,8 @@ pub mod settings;
 
 #[cfg(test)]
 mod tests {
+    mod manager_add_event;
     mod targets;
     mod triggers;
+    pub mod util;
 }
