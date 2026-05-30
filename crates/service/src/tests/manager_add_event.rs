@@ -45,6 +45,26 @@ fn dedupe_keeps_the_later_can_process_time() {
 }
 
 #[test]
+fn dedupe_never_shortens_can_process_time() {
+    // Long-then-short ordering: the second arrival must NOT shorten
+    // the wait the first trigger set. Covered by GREATEST/max in the
+    // upsert; without that, the new value would win and shorten the
+    // schedule by 50 seconds in this fixture.
+    let m = fresh_manager("dedupe-no-shorten");
+    let first = m
+        .add_event(&new_event("sonarr", "/media/long.mkv", 60))
+        .unwrap();
+    let second = m
+        .add_event(&new_event("notify", "/media/long.mkv", 10))
+        .unwrap();
+    assert_eq!(first.id, second.id, "must coalesce");
+    assert_eq!(
+        second.can_process, first.can_process,
+        "longer wait must survive a shorter follow-up"
+    );
+}
+
+#[test]
 fn dedupe_does_not_regress_found_status() {
     let m = fresh_manager("dedupe-found");
     let mut found = new_event("sonarr", "/media/c.mkv", 30);

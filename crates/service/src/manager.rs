@@ -7,8 +7,7 @@ use crate::settings::Settings;
 use autopulse_database::diesel::sql_types::{BigInt, Text};
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit,
-    updated_at,
+    created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit, updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
@@ -176,32 +175,18 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        // Dedupe condition (issue #369): if a non-terminal row exists
-        // for the same file_path (Pending or Retry), refresh it
-        // instead of inserting. Terminal states (Complete, Failed)
-        // intentionally do NOT coalesce — a new arrival on a finished
-        // row is genuinely new work. Original event_source preserved
-        // (first-write-wins); we only bump can_process (later of the
-        // two so timer extensions from a second trigger win) and
-        // updated_at. found_status is never touched here — the
-        // runner's verification is authoritative.
-        let pending: String = ProcessStatus::Pending.into();
-        let retry: String = ProcessStatus::Retry.into();
-        let existing = scan_events
-            .filter(file_path.eq(&ev.file_path))
-            .filter(process_status.eq_any(vec![pending, retry]))
-            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
-            .ok();
-
-        let result = if let Some(existing) = existing {
-            let now = chrono::Utc::now().naive_utc();
-            let later_can_process = std::cmp::max(existing.can_process, ev.can_process);
-            diesel::update(&existing)
-                .set((updated_at.eq(now), can_process.eq(later_can_process)))
-                .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?
-        } else {
-            get_conn(&self.pool)?.insert_and_return(ev)?
-        };
+        // Dedupe (issue #369): a non-terminal row (Pending or Retry)
+        // for the same `file_path` is updated in place via the partial
+        // unique index `idx_scan_events_dedupe_pending_retry`. Terminal
+        // rows (Complete, Failed) are not covered by the index, so a
+        // new arrival after a finished row produces a fresh insert.
+        // Single atomic statement — no SELECT-then-INSERT race window.
+        // Coalesce semantics: `event_source`, `found_status`, and
+        // `file_hash` are first-write-wins; `can_process` becomes
+        // `MAX(existing, incoming)` so a longer wait from one trigger
+        // is never shortened by another.
+        let now = chrono::Utc::now().naive_utc();
+        let result = get_conn(&self.pool)?.upsert_pending(ev, now)?;
 
         self.publish(EventType::New, &result);
 
