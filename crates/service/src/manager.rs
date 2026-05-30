@@ -17,7 +17,7 @@ use autopulse_database::{
         TextExpressionMethods,
     },
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
-    schema::scan_events::{dsl::scan_events, found_status, process_status},
+    schema::scan_events::{dsl::scan_events, process_status},
 };
 use notify_debouncer_full::notify;
 use serde::Serialize;
@@ -176,22 +176,28 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        let mut check = scan_events
+        // Dedupe condition (issue #369): if a non-terminal row exists
+        // for the same file_path (Pending or Retry), refresh it
+        // instead of inserting. Terminal states (Complete, Failed)
+        // intentionally do NOT coalesce — a new arrival on a finished
+        // row is genuinely new work. Original event_source preserved
+        // (first-write-wins); we only bump can_process (later of the
+        // two so timer extensions from a second trigger win) and
+        // updated_at. found_status is never touched here — the
+        // runner's verification is authoritative.
+        let pending: String = ProcessStatus::Pending.into();
+        let retry: String = ProcessStatus::Retry.into();
+        let existing = scan_events
             .filter(file_path.eq(&ev.file_path))
-            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .filter(event_source.eq(&ev.event_source))
-            .into_boxed();
+            .filter(process_status.eq_any(vec![pending, retry]))
+            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
+            .ok();
 
-        if ev.found_status == FoundStatus::Found.to_string() {
-            check = check.filter(found_status.eq(&ev.found_status));
-        }
-
-        let result = if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
+        let result = if let Some(existing) = existing {
+            let now = chrono::Utc::now().naive_utc();
+            let later_can_process = std::cmp::max(existing.can_process, ev.can_process);
             diesel::update(&existing)
-                .set((
-                    updated_at.eq(chrono::Utc::now().naive_utc()),
-                    can_process.eq(ev.can_process),
-                ))
+                .set((updated_at.eq(now), can_process.eq(later_can_process)))
                 .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?
         } else {
             get_conn(&self.pool)?.insert_and_return(ev)?
