@@ -7,7 +7,8 @@ use crate::settings::Settings;
 use autopulse_database::diesel::sql_types::BigInt;
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, next_retry_at, updated_at,
+    can_process, created_at, event_source, file_path, id, next_retry_at, processed_at,
+    targets_hit, updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
@@ -18,6 +19,7 @@ use autopulse_database::{
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
+use std::str::FromStr;
 use notify_debouncer_full::notify;
 use serde::Serialize;
 use std::sync::Arc;
@@ -106,38 +108,55 @@ impl PulseManager {
         });
     }
 
-    /// Manual retry: reset `process_status` to Retry with
-    /// `next_retry_at = now`. Preserves `failed_times` — manual retry
-    /// is an impulse, not an erasure of history. Returns the refreshed
-    /// row so the UI can re-render in place.
+    /// Manual retry. Pending is excluded so we never clobber an event the
+    /// runner is mid-pipeline (would dispatch duplicate target scans — the
+    /// thing this service exists to prevent).
     ///
-    /// The update is guarded to terminal/waiting states (Complete,
-    /// Failed, Retry). `Pending` is the state the runner consumes
-    /// directly in `update_process_status`, so an unconditional update
-    /// could clobber an event mid-pipeline and dispatch a duplicate
-    /// scan to a target — the exact thing this service exists to avoid.
-    /// When the guard rejects, diesel returns `NotFound`, which we map
-    /// to a clear error so the UI surfaces a sensible message.
+    /// Complete events also clear `targets_hit` and `processed_at`: every
+    /// target is in `targets_hit`, so the runner's "skip already-hit" filter
+    /// would otherwise produce a no-op. Failed/Retry keep their partial
+    /// `targets_hit` so retry only redoes the targets that actually failed.
+    ///
+    /// `failed_times` is preserved — manual retry is an impulse, not an
+    /// erasure of history.
     pub fn reschedule_event(&self, ev_id: &str) -> anyhow::Result<ScanEvent> {
         let now = chrono::Utc::now().naive_utc();
-        let updated: ScanEvent =
-            diesel::update(scan_events.find(ev_id).filter(process_status.eq_any([
-                String::from(ProcessStatus::Complete),
-                String::from(ProcessStatus::Failed),
-                String::from(ProcessStatus::Retry),
-            ])))
-            .set((
-                process_status.eq::<String>(ProcessStatus::Retry.into()),
-                next_retry_at.eq(Some(now)),
-                updated_at.eq(now),
-            ))
-            .get_result(&mut get_conn(&self.pool)?)
+        let current: ScanEvent = scan_events
+            .find(ev_id)
+            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
             .map_err(|e| match e {
-                diesel::result::Error::NotFound => {
-                    anyhow::anyhow!("event {ev_id} is not in a retryable state")
-                }
+                diesel::result::Error::NotFound => anyhow::anyhow!("event {ev_id} not found"),
                 other => other.into(),
             })?;
+
+        let status = ProcessStatus::from_str(&current.process_status)
+            .map_err(|()| anyhow::anyhow!("event {ev_id} has unknown process_status"))?;
+
+        let updated: ScanEvent = match status {
+            ProcessStatus::Complete => diesel::update(scan_events.find(ev_id))
+                .set((
+                    process_status.eq::<String>(ProcessStatus::Retry.into()),
+                    next_retry_at.eq(Some(now)),
+                    updated_at.eq(now),
+                    targets_hit.eq(String::new()),
+                    processed_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                ))
+                .get_result(&mut get_conn(&self.pool)?)?,
+            ProcessStatus::Failed | ProcessStatus::Retry => {
+                diesel::update(scan_events.find(ev_id))
+                    .set((
+                        process_status.eq::<String>(ProcessStatus::Retry.into()),
+                        next_retry_at.eq(Some(now)),
+                        updated_at.eq(now),
+                    ))
+                    .get_result(&mut get_conn(&self.pool)?)?
+            }
+            ProcessStatus::Pending => {
+                anyhow::bail!("event {ev_id} is not in a retryable state")
+            }
+        };
+
+        self.publish(EventType::Retrying, &updated);
         Ok(updated)
     }
 
