@@ -7,8 +7,8 @@ use crate::settings::Settings;
 use autopulse_database::diesel::sql_types::BigInt;
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, next_retry_at, processed_at,
-    targets_hit, updated_at,
+    can_process, created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit,
+    updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
@@ -19,9 +19,9 @@ use autopulse_database::{
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
-use std::str::FromStr;
 use notify_debouncer_full::notify;
 use serde::Serialize;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::{select, sync::broadcast};
 use tracing::{debug, error, info, warn};
@@ -142,15 +142,13 @@ impl PulseManager {
                     processed_at.eq::<Option<chrono::NaiveDateTime>>(None),
                 ))
                 .get_result(&mut get_conn(&self.pool)?)?,
-            ProcessStatus::Failed | ProcessStatus::Retry => {
-                diesel::update(scan_events.find(ev_id))
-                    .set((
-                        process_status.eq::<String>(ProcessStatus::Retry.into()),
-                        next_retry_at.eq(Some(now)),
-                        updated_at.eq(now),
-                    ))
-                    .get_result(&mut get_conn(&self.pool)?)?
-            }
+            ProcessStatus::Failed | ProcessStatus::Retry => diesel::update(scan_events.find(ev_id))
+                .set((
+                    process_status.eq::<String>(ProcessStatus::Retry.into()),
+                    next_retry_at.eq(Some(now)),
+                    updated_at.eq(now),
+                ))
+                .get_result(&mut get_conn(&self.pool)?)?,
             ProcessStatus::Pending => {
                 anyhow::bail!("event {ev_id} is not in a retryable state")
             }

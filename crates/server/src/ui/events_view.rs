@@ -5,7 +5,11 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use crate::ui::csrf::HEADER_NAME;
 
 pub fn retry_hx_headers() -> String {
-    format!(r#"js:{{"{HEADER_NAME}": document.querySelector('meta[name=csrf]').content}}"#)
+    // Null-guard the meta lookup: auth-disabled pages still emit the meta
+    // tag, but a future layout tweak that drops it shouldn't crash retry.
+    format!(
+        r#"js:{{"{HEADER_NAME}": (document.querySelector('meta[name=csrf]')||{{}}).content||''}}"#
+    )
 }
 
 pub fn event_row(base: &str, ev: &ScanEvent) -> Markup {

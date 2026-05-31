@@ -145,7 +145,9 @@ impl AnyConnection {
             #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => conn.run_pending_migrations(SQLITE_MIGRATIONS),
         }
-        .map_err(|e| anyhow::anyhow!("failed to run migrations: {e}"))?;
+        // Preserve `e.source()` chain via anyhow::Error::from_boxed; the
+        // previous `anyhow!("...{e}")` flattened it to Display only.
+        .map_err(|e| anyhow::Error::from_boxed(e).context("failed to run migrations"))?;
 
         if !migrations_applied.is_empty() {
             info!(

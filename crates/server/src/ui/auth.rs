@@ -54,10 +54,15 @@ struct Attempts {
 }
 
 impl LoginLimiter {
-    /// Returns `true` if the IP is currently locked out. Also lazily
-    /// forgets counters that have been idle past the lockout window.
+    /// `unwrap_or_else(into_inner)` so a panic inside one of the short
+    /// critical sections below doesn't poison the mutex and 500 every
+    /// login attempt for the lifetime of the process.
+    fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<IpAddr, Attempts>> {
+        self.inner.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
     fn is_locked(&self, ip: IpAddr) -> bool {
-        let mut map = self.inner.lock().unwrap();
+        let mut map = self.lock();
         match map.get(&ip) {
             Some(a) if a.count >= LOGIN_MAX_ATTEMPTS && a.last.elapsed() < LOGIN_LOCKOUT => true,
             Some(a) if a.last.elapsed() >= LOGIN_LOCKOUT => {
@@ -69,7 +74,7 @@ impl LoginLimiter {
     }
 
     fn record_failure(&self, ip: IpAddr) {
-        let mut map = self.inner.lock().unwrap();
+        let mut map = self.lock();
         let entry = map.entry(ip).or_insert(Attempts {
             count: 0,
             last: Instant::now(),
@@ -79,7 +84,7 @@ impl LoginLimiter {
     }
 
     fn reset(&self, ip: IpAddr) {
-        self.inner.lock().unwrap().remove(&ip);
+        self.lock().remove(&ip);
     }
 }
 

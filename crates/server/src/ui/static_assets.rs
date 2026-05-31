@@ -22,7 +22,7 @@ pub async fn serve_static(path: Path<String>, req: HttpRequest) -> HttpResponse 
         u64::from_be_bytes(
             file.metadata.sha256_hash()[..8]
                 .try_into()
-                .unwrap_or([0; 8])
+                .expect("sha256 hash is always 32 bytes"),
         )
     );
     if req
