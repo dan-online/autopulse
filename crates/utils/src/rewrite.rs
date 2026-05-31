@@ -23,6 +23,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Clone)]
 pub struct Rewrite {
     pub(crate) rewrites: Vec<SingleRewrite>,
+    #[serde(skip)]
+    compiled: Vec<(Regex, String)>,
 }
 
 impl<'de> Deserialize<'de> for Rewrite {
@@ -46,7 +48,20 @@ impl<'de> Deserialize<'de> for Rewrite {
             Inner::Multiple(multiple) => multiple,
         };
 
-        Ok(Self { rewrites })
+        let compiled = rewrites
+            .iter()
+            .map(|r| {
+                let re = Regex::new(&r.from).map_err(|e| {
+                    serde::de::Error::custom(format!(
+                        "invalid regex '{}' in rewrite 'from' field: {e}",
+                        r.from
+                    ))
+                })?;
+                Ok((re, r.to.clone()))
+            })
+            .collect::<Result<Vec<_>, D::Error>>()?;
+
+        Ok(Self { rewrites, compiled })
     }
 }
 
@@ -62,9 +77,8 @@ impl Rewrite {
     pub fn rewrite_path(&self, path: String) -> String {
         let mut result = path;
 
-        for rewrite in &self.rewrites {
-            let from_regex = Regex::new(&rewrite.from).expect("Invalid regex in 'from' field");
-            result = from_regex.replace_all(&result, &rewrite.to).to_string();
+        for (from_regex, to) in &self.compiled {
+            result = from_regex.replace_all(&result, to).to_string();
         }
 
         result
@@ -72,24 +86,30 @@ impl Rewrite {
 
     #[cfg(test)]
     pub fn single(from: &str, to: &str) -> Self {
-        Self {
-            rewrites: vec![SingleRewrite {
-                from: from.to_string(),
-                to: to.to_string(),
-            }],
-        }
+        let rewrites = vec![SingleRewrite {
+            from: from.to_string(),
+            to: to.to_string(),
+        }];
+        let compiled = rewrites
+            .iter()
+            .filter_map(|r| Regex::new(&r.from).ok().map(|re| (re, r.to.clone())))
+            .collect();
+        Self { rewrites, compiled }
     }
 
     #[cfg(test)]
     pub fn multiple(rewrites: Vec<(&str, &str)>) -> Self {
-        Self {
-            rewrites: rewrites
-                .into_iter()
-                .map(|(from, to)| SingleRewrite {
-                    from: from.to_string(),
-                    to: to.to_string(),
-                })
-                .collect(),
-        }
+        let rewrites: Vec<SingleRewrite> = rewrites
+            .into_iter()
+            .map(|(from, to)| SingleRewrite {
+                from: from.to_string(),
+                to: to.to_string(),
+            })
+            .collect();
+        let compiled = rewrites
+            .iter()
+            .filter_map(|r| Regex::new(&r.from).ok().map(|re| (re, r.to.clone())))
+            .collect();
+        Self { rewrites, compiled }
     }
 }

@@ -152,8 +152,13 @@ impl FileFlows {
 
         let url = get_url(&self.url)?.join("api/library-file/manually-add")?;
 
+        let flow = library
+            .flow
+            .as_ref()
+            .context("library has no flow configured")?;
+
         let req = FileFlowsManuallyAddRequest {
-            flow_uid: library.flow.as_ref().unwrap().uid.clone(),
+            flow_uid: flow.uid.clone(),
             files: files.iter().map(|ev| ev.get_path(&self.rewrite)).collect(),
             custom_variables: HashMap::new(),
         };

@@ -11,24 +11,26 @@ use autopulse_database::{
 };
 use autopulse_utils::sha256checksum;
 use autopulse_utils::sify;
-use std::{path::PathBuf, sync::Arc};
-use tokio::sync::Mutex;
+use std::path::PathBuf;
 use tracing::{debug, error, info, info_span, warn, Instrument};
 
-pub(super) struct PulseRunner<'a> {
-    // webhooks: Arc<WebhookManager>,
-    // settings: Arc<Settings>,
-    // pool: Arc<DbPool>,
-    manager: &'a PulseManager,
+enum FileCheckResult {
+    NotFound,
+    Found,
+    HashMatch,
+    HashMismatch,
+}
 
-    anchors_available: Arc<Mutex<bool>>,
+pub(super) struct PulseRunner<'a> {
+    manager: &'a PulseManager,
+    anchors_available: bool,
 }
 
 impl<'a> PulseRunner<'a> {
     pub fn new(manager: &'a PulseManager) -> Self {
         Self {
             manager,
-            anchors_available: Arc::new(Mutex::new(true)),
+            anchors_available: true,
         }
     }
 
@@ -47,33 +49,54 @@ impl<'a> PulseRunner<'a> {
 
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
+            let mut bus_kind: Option<EventType> = None;
 
-            if file_path.exists() {
-                if let Some(hash) = ev.file_hash.clone() {
-                    let file_hash = sha256checksum(&file_path)?;
-
-                    if hash != file_hash {
-                        if ev.found_status != FoundStatus::HashMismatch.to_string() {
-                            mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
-                        }
-
-                        ev.found_status = FoundStatus::HashMismatch.into();
-                        ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    } else {
-                        ev.found_status = FoundStatus::Found.into();
-                        found_files.push((ev.file_path.clone(), ev.event_source.clone()));
+            let expected_hash = ev.file_hash.clone();
+            let path_clone = file_path.clone();
+            let result: FileCheckResult =
+                tokio::task::spawn_blocking(move || -> anyhow::Result<FileCheckResult> {
+                    if !path_clone.exists() {
+                        return Ok(FileCheckResult::NotFound);
                     }
-                } else {
+                    match expected_hash {
+                        Some(hash) => {
+                            let file_hash = sha256checksum(&path_clone)?;
+                            if hash == file_hash {
+                                Ok(FileCheckResult::HashMatch)
+                            } else {
+                                Ok(FileCheckResult::HashMismatch)
+                            }
+                        }
+                        None => Ok(FileCheckResult::Found),
+                    }
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("file check task failed: {e}"))??;
+
+            match result {
+                FileCheckResult::NotFound => {}
+                FileCheckResult::Found | FileCheckResult::HashMatch => {
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
-
                     ev.found_status = FoundStatus::Found.into();
-
                     found_files.push((ev.file_path.clone(), ev.event_source.clone()));
+                    bus_kind = Some(EventType::Found);
+                }
+                FileCheckResult::HashMismatch => {
+                    if ev.found_status != FoundStatus::HashMismatch.to_string() {
+                        mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
+                        bus_kind = Some(EventType::HashMismatch);
+                    }
+                    ev.found_status = FoundStatus::HashMismatch.into();
+                    ev.found_at = Some(chrono::Utc::now().naive_utc());
                 }
             }
 
             ev.updated_at = chrono::Utc::now().naive_utc();
             get_conn(&self.manager.pool)?.save_changes(ev)?;
+
+            if let Some(kind) = bus_kind {
+                self.manager.publish(kind, ev);
+            }
         }
 
         if !found_files.is_empty() {
@@ -163,6 +186,7 @@ impl<'a> PulseRunner<'a> {
                         std::slice::from_ref(&ev.file_path),
                     )
                     .await;
+                self.manager.publish(EventType::Processed, ev);
             }
         }
 
@@ -183,6 +207,7 @@ impl<'a> PulseRunner<'a> {
                         std::slice::from_ref(&ev.file_path),
                     )
                     .await;
+                self.manager.publish(EventType::Retrying, ev);
             }
         }
 
@@ -204,6 +229,7 @@ impl<'a> PulseRunner<'a> {
                         std::slice::from_ref(&ev.file_path),
                     )
                     .await;
+                self.manager.publish(EventType::Failed, ev);
             }
         }
 
@@ -265,15 +291,13 @@ impl<'a> PulseRunner<'a> {
         for ev in evs.iter_mut() {
             ev.updated_at = chrono::Utc::now().naive_utc();
 
-            let mut conn = get_conn(&self.manager.pool)?;
-
             if failed_ids.contains(&ev.id) {
                 ev.failed_times += 1;
 
                 if ev.failed_times >= self.manager.settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
-                    failed.push(conn.save_changes(ev)?);
+                    failed.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
                 } else {
                     let next_retry = chrono::Utc::now().naive_utc()
                         + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
@@ -281,12 +305,12 @@ impl<'a> PulseRunner<'a> {
                     ev.process_status = ProcessStatus::Retry.into();
                     ev.next_retry_at = Some(next_retry);
 
-                    retrying.push(conn.save_changes(ev)?);
+                    retrying.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
                 }
             } else {
                 ev.process_status = ProcessStatus::Complete.into();
                 ev.processed_at = Some(chrono::Utc::now().naive_utc());
-                succeeded.push(conn.save_changes(ev)?);
+                succeeded.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
             }
         }
 
@@ -313,7 +337,7 @@ impl<'a> PulseRunner<'a> {
         Ok(())
     }
 
-    pub async fn run(&self) -> anyhow::Result<()> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         let set_anchors_available = self
             .manager
             .settings
@@ -321,21 +345,18 @@ impl<'a> PulseRunner<'a> {
             .iter()
             .all(|anchor| anchor.exists());
 
-        let mut anchors_available = self.anchors_available.lock().await;
-        if set_anchors_available != *anchors_available {
+        if set_anchors_available != self.anchors_available {
             if set_anchors_available {
                 info!("anchors are available again, continuing");
             } else {
                 warn!("anchors are not available, pausing");
             }
-            *anchors_available = set_anchors_available;
+            self.anchors_available = set_anchors_available;
         }
 
-        if !*anchors_available {
+        if !self.anchors_available {
             return Ok(());
         }
-
-        drop(anchors_available);
 
         self.update_found_status().await?;
         self.update_process_status().await?;

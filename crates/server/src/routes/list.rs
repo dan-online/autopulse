@@ -46,9 +46,8 @@ pub async fn list(
         query.search.clone(),
     );
 
-    if let Err(e) = scan_evs {
-        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+    match scan_evs {
+        Ok(events) => Ok(HttpResponse::Ok().json(events)),
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
     }
-
-    Ok(HttpResponse::Ok().json(scan_evs.unwrap()))
 }

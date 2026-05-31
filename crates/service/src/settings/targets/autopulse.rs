@@ -38,7 +38,8 @@ impl Autopulse {
 
     async fn scan(&self, ev: &ScanEvent) -> anyhow::Result<()> {
         let client = self.get_client()?;
-        let mut url = get_url(&self.url)?.join("triggers/manual")?;
+        let trigger = self.trigger.as_deref().unwrap_or("manual");
+        let mut url = get_url(&self.url)?.join(&format!("triggers/{trigger}"))?;
 
         url.query_pairs_mut()
             .append_pair("path", &ev.get_path(&self.rewrite));

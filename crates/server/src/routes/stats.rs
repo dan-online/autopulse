@@ -22,20 +22,18 @@ pub struct StatsResponse {
 #[get("/stats")]
 pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let start = Instant::now();
-    let stats = manager.get_stats();
-    let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
 
-    if let Err(e) = stats {
-        error!("failed to get stats: {:?}", e);
-        return Ok(HttpResponse::InternalServerError().finish());
+    match manager.get_stats() {
+        Ok(stats) => {
+            let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
+            Ok(HttpResponse::Ok().json(StatsResponse {
+                stats,
+                speed: elapsed,
+            }))
+        }
+        Err(e) => {
+            error!("failed to get stats: {:?}", e);
+            Ok(HttpResponse::InternalServerError().finish())
+        }
     }
-
-    let stats = stats.unwrap();
-
-    let response = StatsResponse {
-        stats,
-        speed: elapsed,
-    };
-
-    Ok(HttpResponse::Ok().json(response))
 }

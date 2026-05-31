@@ -10,10 +10,12 @@ pub struct Timer {
 impl Timer {
     pub fn chain(&self, link: &Self) -> Self {
         Self {
-            wait: self
-                .wait
-                .or(link.wait)
-                .map(|wait| wait + link.wait.unwrap_or(0)),
+            wait: match (self.wait, link.wait) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
         }
     }
 }
@@ -96,6 +98,30 @@ mod tests {
         let chained_timer = timer1.chain(&timer2);
 
         assert_eq!(chained_timer.wait, Some(15));
+    }
+
+    #[test]
+    fn test_timer_chain_none_self() {
+        let timer1 = Timer { wait: None };
+        let timer2 = Timer { wait: Some(5) };
+        let chained = timer1.chain(&timer2);
+        assert_eq!(chained.wait, Some(5));
+    }
+
+    #[test]
+    fn test_timer_chain_none_link() {
+        let timer1 = Timer { wait: Some(10) };
+        let timer2 = Timer { wait: None };
+        let chained = timer1.chain(&timer2);
+        assert_eq!(chained.wait, Some(10));
+    }
+
+    #[test]
+    fn test_timer_chain_both_none() {
+        let timer1 = Timer { wait: None };
+        let timer2 = Timer { wait: None };
+        let chained = timer1.chain(&timer2);
+        assert_eq!(chained.wait, None);
     }
 
     #[test]

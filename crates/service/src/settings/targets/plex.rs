@@ -154,7 +154,7 @@ impl Plex {
 
         let libraries: LibraryResponse = res.json().await?;
 
-        Ok(libraries.media_container.directory.unwrap())
+        Ok(libraries.media_container.directory.unwrap_or_default())
     }
 
     fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
@@ -437,7 +437,7 @@ impl TargetProcess for Plex {
                                             ev_path
                                         );
 
-                                        *succeeded_entry = true;
+                                        // scan succeeded, no items to refresh/analyze
                                     } else {
                                         trace!("found items for file '{}'", ev_path);
 
@@ -491,21 +491,21 @@ impl TargetProcess for Plex {
                                             processed_items.insert(item.key);
                                         }
 
-                                        if all_success {
-                                            *succeeded_entry &= true;
+                                        if !all_success {
+                                            *succeeded_entry = false;
                                         }
                                     }
                                 }
                                 Err(e) => {
                                     error!("failed to get items for '{}': {:?}", ev_path, e);
+                                    *succeeded_entry = false;
                                 }
                             };
-                        } else {
-                            *succeeded_entry &= true;
                         }
                     }
                     Err(e) => {
                         error!("failed to scan file '{}': {}", ev_path, e);
+                        *succeeded_entry = false;
                     }
                 }
             }

@@ -7,19 +7,30 @@ use crate::settings::Settings;
 use autopulse_database::diesel::sql_types::BigInt;
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, updated_at,
+    can_process, created_at, event_source, file_path, id, next_retry_at, updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
-    diesel::{self, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods},
+    diesel::{
+        self, EscapeExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+        TextExpressionMethods,
+    },
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
     schema::scan_events::{dsl::scan_events, found_status, process_status},
 };
 use notify_debouncer_full::notify;
 use serde::Serialize;
 use std::sync::Arc;
-use tokio::select;
-use tracing::{debug, error, info};
+use tokio::{select, sync::broadcast};
+use tracing::{debug, error, info, warn};
+
+/// Escape LIKE metacharacters so user input is matched literally.
+fn escape_like_pattern(input: &str) -> String {
+    input
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
 
 /// Represents the service statistics.
 #[derive(Clone, Serialize, QueryableByName)]
@@ -41,11 +52,26 @@ pub struct Stats {
     pub pending: i64,
 }
 
+/// In-process broadcast envelope. Subscribers (UI SSE handlers,
+/// future in-process plugins) receive one per state transition.
+/// `ScanEvent` is `Clone` and small; cloning into the channel is cheap.
+#[derive(Clone, Debug)]
+pub struct EventBroadcast {
+    pub kind: EventType,
+    pub event: ScanEvent,
+    pub at: chrono::DateTime<chrono::Utc>,
+}
+
 #[derive(Clone)]
 pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
+    /// In-process broadcast bus for state transitions. `broadcast::Sender`
+    /// is `Clone` and cloning shares the underlying channel — every
+    /// cloned `PulseManager` publishes to and subscribes from the same
+    /// bus.
+    pub bus: broadcast::Sender<EventBroadcast>,
 }
 
 impl PulseManager {
@@ -54,60 +80,86 @@ impl PulseManager {
         let pool = Arc::new(pool);
         let webhooks = Arc::new(WebhookManager::new(settings.clone()));
 
+        // Capacity 1024: absorbs a Sonarr season-import burst (~50
+        // events) with headroom; failure mode under genuine overload
+        // is the `Lagged` branch in the SSE handler, which triggers a
+        // client-side resync.
+        let (bus, _) = broadcast::channel(1024);
+
         Self {
             settings,
             pool,
             webhooks,
+            bus,
         }
     }
 
-    //  pub fn get_stats(&self) -> anyhow::Result<Stats> {
-    //     let stats = sql_query(
-    //         "SELECT
-    //             COUNT(*) as total,
-    //             COALESCE(SUM(CASE WHEN process_status = 'complete' THEN 1 ELSE 0 END), 0) as processed,
-    //             COALESCE(SUM(CASE WHEN process_status = 'retry' THEN 1 ELSE 0 END), 0) as retrying,
-    //             COALESCE(SUM(CASE WHEN process_status = 'failed' THEN 1 ELSE 0 END), 0) as failed,
-    //             COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending
-    //         FROM scan_events",
-    //     )
-    //     .get_result::<Stats>(&mut get_conn(&self.pool)?)?;
+    /// Subscribe to the in-process broadcast bus. Returns a fresh
+    /// receiver; callers (UI SSE handler, future plugins) call once
+    /// per connection.
+    pub fn subscribe(&self) -> broadcast::Receiver<EventBroadcast> {
+        self.bus.subscribe()
+    }
 
-    //     Ok(stats)
-    // }
+    /// Publish a state transition to the bus. Called alongside the
+    /// existing `self.webhooks.add_event(...)` sites in the runner /
+    /// notify consumer / triggers. The webhook batching API is
+    /// unchanged; this is an additive in-process side channel.
+    pub fn publish(&self, kind: EventType, event: &ScanEvent) {
+        let _ = self.bus.send(EventBroadcast {
+            kind,
+            event: event.clone(),
+            at: chrono::Utc::now(),
+        });
+    }
+
+    /// Manual retry: reset `process_status` to Retry with
+    /// `next_retry_at = now`. Preserves `failed_times` — manual retry
+    /// is an impulse, not an erasure of history. Returns the refreshed
+    /// row so the UI can re-render in place.
+    ///
+    /// The update is guarded to terminal/waiting states (Complete,
+    /// Failed, Retry). `Pending` is the state the runner consumes
+    /// directly in `update_process_status`, so an unconditional update
+    /// could clobber an event mid-pipeline and dispatch a duplicate
+    /// scan to a target — the exact thing this service exists to avoid.
+    /// When the guard rejects, diesel returns `NotFound`, which we map
+    /// to a clear error so the UI surfaces a sensible message.
+    pub fn reschedule_event(&self, ev_id: &str) -> anyhow::Result<ScanEvent> {
+        let now = chrono::Utc::now().naive_utc();
+        let updated: ScanEvent =
+            diesel::update(scan_events.find(ev_id).filter(process_status.eq_any([
+                String::from(ProcessStatus::Complete),
+                String::from(ProcessStatus::Failed),
+                String::from(ProcessStatus::Retry),
+            ])))
+            .set((
+                process_status.eq::<String>(ProcessStatus::Retry.into()),
+                next_retry_at.eq(Some(now)),
+                updated_at.eq(now),
+            ))
+            .get_result(&mut get_conn(&self.pool)?)
+            .map_err(|e| match e {
+                diesel::result::Error::NotFound => {
+                    anyhow::anyhow!("event {ev_id} is not in a retryable state")
+                }
+                other => other.into(),
+            })?;
+        Ok(updated)
+    }
 
     pub fn get_stats(&self) -> anyhow::Result<Stats> {
-        let conn = &mut get_conn(&self.pool)?;
-
-        let total = scan_events.count().get_result::<i64>(conn)?;
-
-        let processed = scan_events
-            .filter(process_status.eq::<String>(ProcessStatus::Complete.into()))
-            .count()
-            .get_result::<i64>(conn)?;
-
-        let retrying = scan_events
-            .filter(process_status.eq::<String>(ProcessStatus::Retry.into()))
-            .count()
-            .get_result::<i64>(conn)?;
-
-        let failed = scan_events
-            .filter(process_status.eq::<String>(ProcessStatus::Failed.into()))
-            .count()
-            .get_result::<i64>(conn)?;
-
-        let pending = scan_events
-            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .count()
-            .get_result::<i64>(conn)?;
-
-        Ok(Stats {
-            total,
-            processed,
-            retrying,
-            failed,
-            pending,
-        })
+        diesel::sql_query(
+            "SELECT \
+                COUNT(*) as total, \
+                COALESCE(SUM(CASE WHEN process_status = 'complete' THEN 1 ELSE 0 END), 0) as processed, \
+                COALESCE(SUM(CASE WHEN process_status = 'retry' THEN 1 ELSE 0 END), 0) as retrying, \
+                COALESCE(SUM(CASE WHEN process_status = 'failed' THEN 1 ELSE 0 END), 0) as failed, \
+                COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending \
+            FROM scan_events",
+        )
+        .get_result::<Stats>(&mut get_conn(&self.pool)?)
+        .map_err(Into::into)
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
@@ -121,18 +173,20 @@ impl PulseManager {
             check = check.filter(found_status.eq(&ev.found_status));
         }
 
-        if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
-            let updated = diesel::update(&existing)
+        let result = if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
+            diesel::update(&existing)
                 .set((
                     updated_at.eq(chrono::Utc::now().naive_utc()),
                     can_process.eq(ev.can_process),
                 ))
-                .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?;
+                .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?
+        } else {
+            get_conn(&self.pool)?.insert_and_return(ev)?
+        };
 
-            return Ok(updated);
-        }
+        self.publish(EventType::New, &result);
 
-        get_conn(&self.pool)?.insert_and_return(ev)
+        Ok(result)
     }
 
     pub fn get_event(&self, ev_id: &String) -> anyhow::Result<Option<ScanEvent>> {
@@ -140,6 +194,31 @@ impl PulseManager {
             .find(ev_id)
             .first::<ScanEvent>(&mut get_conn(&self.pool)?)
             .ok())
+    }
+
+    /// Count events matching an optional status filter (and optional
+    /// path search). Used by the UI to show the true total behind a
+    /// paginated view rather than just the current page size.
+    pub fn count_events(
+        &self,
+        status: Option<String>,
+        search: Option<String>,
+    ) -> anyhow::Result<i64> {
+        let mut query = scan_events.into_boxed();
+
+        if let Some(status) = status {
+            query = query.filter(process_status.eq(status));
+        }
+
+        if let Some(search) = search {
+            let escaped = escape_like_pattern(&search);
+            query = query.filter(file_path.like(format!("%{escaped}%")).escape('\\'));
+        }
+
+        query
+            .count()
+            .get_result::<i64>(&mut get_conn(&self.pool)?)
+            .map_err(Into::into)
     }
 
     pub fn get_events(
@@ -150,6 +229,7 @@ impl PulseManager {
         status: Option<String>,
         search: Option<String>,
     ) -> anyhow::Result<Vec<ScanEvent>> {
+        let page = page.max(1);
         let mut query = scan_events.into_boxed();
 
         if let Some(status) = status {
@@ -198,7 +278,8 @@ impl PulseManager {
         }
 
         if let Some(search) = search {
-            query = query.filter(file_path.like(format!("%{search}%")));
+            let escaped = escape_like_pattern(&search);
+            query = query.filter(file_path.like(format!("%{escaped}%")).escape('\\'));
         }
 
         query
@@ -209,11 +290,22 @@ impl PulseManager {
     }
 
     pub async fn start(&self) -> anyhow::Result<()> {
-        let runner = PulseRunner::new(self);
+        let mut runner = PulseRunner::new(self);
         let mut timer = tokio::time::interval(std::time::Duration::from_secs(1));
+        let mut consecutive_errors: u32 = 0;
 
         loop {
-            runner.run().await?;
+            match runner.run().await {
+                Ok(()) => {
+                    consecutive_errors = 0;
+                }
+                Err(e) => {
+                    consecutive_errors = consecutive_errors.saturating_add(1);
+                    let backoff = std::cmp::min(1u64 << consecutive_errors, 60);
+                    error!("event processing error (retry in {backoff}s): {e:?}");
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                }
+            }
 
             timer.tick().await;
         }
@@ -293,22 +385,23 @@ impl PulseManager {
                     ..Default::default()
                 };
 
-                if let Err(e) = manager.add_event(&new_scan_event) {
-                    error!("failed to add notify event: {:?}", e);
-                } else {
-                    info!(
-                        "added 1 {} file from {} trigger",
-                        match reason {
-                            notify::EventKind::Create(_) => "created",
-                            notify::EventKind::Modify(_) => "modified",
-                            notify::EventKind::Remove(_) => "removed",
-                            notify::EventKind::Access(_) => "accessed",
-                            notify::EventKind::Any | notify::EventKind::Other => "changed",
-                        },
-                        name,
-                    );
+                match manager.add_event(&new_scan_event) {
+                    Err(e) => error!("failed to add notify event: {:?}", e),
+                    Ok(_) => {
+                        info!(
+                            "added 1 {} file from {} trigger",
+                            match reason {
+                                notify::EventKind::Create(_) => "created",
+                                notify::EventKind::Modify(_) => "modified",
+                                notify::EventKind::Remove(_) => "removed",
+                                notify::EventKind::Access(_) => "accessed",
+                                notify::EventKind::Any | notify::EventKind::Other => "changed",
+                            },
+                            name,
+                        );
 
-                    debug!("file '{}' added from '{}' trigger", path, name);
+                        debug!("file '{}' added from '{}' trigger", path, name);
+                    }
                 }
 
                 manager
@@ -326,7 +419,9 @@ impl PulseManager {
                     r.map_err(|e| anyhow::anyhow!("notify producer task failed: {:?}", e))??;
                 }
             },
-            _ = consumer => {}
+            _ = consumer => {
+                warn!("notify consumer exited unexpectedly");
+            }
         }
 
         Ok(())

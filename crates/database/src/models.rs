@@ -2,10 +2,10 @@ use autopulse_utils::{generate_uuid, Rewrite};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 /// The status of a scan event being proccessed by [Targets](crate::service::targets).
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProcessStatus {
     Pending,
     Complete,
@@ -41,7 +41,7 @@ impl From<FoundStatus> for String {
     }
 }
 
-impl From<ProcessStatus> for String {
+impl From<ProcessStatus> for &'static str {
     fn from(val: ProcessStatus) -> Self {
         match val {
             ProcessStatus::Pending => "pending",
@@ -49,7 +49,25 @@ impl From<ProcessStatus> for String {
             ProcessStatus::Retry => "retry",
             ProcessStatus::Failed => "failed",
         }
-        .to_string()
+    }
+}
+
+impl From<ProcessStatus> for String {
+    fn from(val: ProcessStatus) -> Self {
+        <&'static str>::from(val).to_string()
+    }
+}
+
+impl FromStr for ProcessStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "pending" => Ok(Self::Pending),
+            "complete" => Ok(Self::Complete),
+            "retry" => Ok(Self::Retry),
+            "failed" => Ok(Self::Failed),
+            _ => Err(()),
+        }
     }
 }
 
@@ -150,4 +168,14 @@ impl Default for NewScanEvent {
             can_process: chrono::Utc::now().naive_utc(),
         }
     }
+}
+
+/// Single-row key/value store backing the UI session-signing key and
+/// any future "must survive restarts without user intervention" config.
+#[derive(Queryable, Selectable, Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::app_state)]
+pub struct AppState {
+    pub key: String,
+    pub value: Vec<u8>,
+    pub updated_at: NaiveDateTime,
 }

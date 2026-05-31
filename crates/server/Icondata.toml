@@ -1,0 +1,25 @@
+# Inventory of the Lucide icons the UI actually renders.
+#
+# NOTE: icondata 0.7.0 (the only published umbrella) ships every icon as an
+# ungated `pub static` with no build script, so it does NOT read this manifest.
+# Tree-shaking is achieved instead by `default-features = false` (drops the
+# other 18 packs) plus `lto = true` (the linker drops the unreferenced Lucide
+# statics). This file is the source of truth for that list and is wired up
+# again the moment the crate ships manifest support.
+include-all = false
+
+icons = [
+  # layout.rs (rail nav + sign-out + drawer toggle)
+  "LuList",
+  "LuPlus",
+  "LuSlidersHorizontal",
+  "LuLogOut",
+  "LuMenu",
+
+  # events.rs (stats + row actions)
+  "LuLayers",
+  "LuRefreshCw",
+  "LuPackageCheck",
+  "LuCircleAlert",
+  "LuCopy",
+]

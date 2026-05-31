@@ -13,7 +13,7 @@ const fn default_port() -> u16 {
 
 #[doc(hidden)]
 fn default_database_url() -> String {
-    "postgres://autopulse:autopulse@localhost:5432/autopulse".to_string()
+    autopulse_database::conn::DatabaseType::default().default_url()
 }
 
 #[doc(hidden)]
@@ -38,6 +38,15 @@ pub struct App {
     /// Whether to include api logging (default: false)
     #[serde(default)]
     pub api_logging: bool,
+    /// Reverse-proxy base path (default: ""). Prefixed onto every UI
+    /// URL (links, hx-* attributes, sse-connect). Mirror your nginx
+    /// `location /autopulse/ { ... }` prefix here.
+    #[serde(default)]
+    pub base_path: String,
+    /// Whether to set the `Secure` flag on the UI session cookie
+    /// (default: false). Enable when serving over HTTPS/TLS.
+    #[serde(default)]
+    pub secure_cookies: bool,
 }
 
 impl Default for App {
@@ -48,6 +57,8 @@ impl Default for App {
             database_url: default_database_url(),
             log_level: default_log_level(),
             api_logging: false,
+            base_path: String::new(),
+            secure_cookies: false,
         }
     }
 }

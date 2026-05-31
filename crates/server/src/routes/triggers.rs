@@ -32,13 +32,11 @@ pub async fn trigger_post(
     let trigger_name = trigger.into_inner();
 
     if body.is_empty() {
-        // Empty body - fall through to query param handling (legacy autoscan compat)
         let query = Query::<TriggerQueryParams>::from_query(req.query_string())
             .map_err(actix_web::error::ErrorBadRequest)?;
         return trigger_get_inner(query.into_inner(), &trigger_name, &manager).await;
     }
 
-    // Non-empty body - must be valid JSON
     let body: serde_json::Value =
         serde_json::from_slice(&body).map_err(actix_web::error::ErrorBadRequest)?;
 
@@ -52,15 +50,13 @@ pub async fn trigger_post(
         }
         _ => {
             let rewrite = trigger_settings.get_rewrite();
-            let decoded = trigger_settings.paths(body);
-
-            if let Err(e) = decoded {
-                error!("failed to decode request: {e}");
-
-                return Ok(HttpResponse::InternalServerError().body("Unable to parse request"));
-            }
-
-            let (event_name, paths) = decoded.unwrap();
+            let (event_name, paths) = match trigger_settings.paths(body) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("failed to decode request: {e}");
+                    return Ok(HttpResponse::InternalServerError().body("Unable to parse request"));
+                }
+            };
             let timer = trigger_settings.get_timer(Some(event_name));
 
             let mut scan_events = vec![];
@@ -90,10 +86,9 @@ pub async fn trigger_post(
                     ..Default::default()
                 };
 
-                let scan_event = manager.add_event(&new_scan_event);
-
-                if let Ok(scan_event) = scan_event {
-                    scan_events.push(scan_event);
+                match manager.add_event(&new_scan_event) {
+                    Ok(scan_event) => scan_events.push(scan_event),
+                    Err(e) => error!("failed to add event for '{}': {e}", path),
                 }
             }
 
@@ -158,11 +153,12 @@ async fn trigger_get_inner(
                     ..Default::default()
                 };
 
-                let scan_event = manager.add_event(&new_scan_event);
-
-                if let Err(e) = scan_event {
-                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                }
+                let scan_event = match manager.add_event(&new_scan_event) {
+                    Ok(ev) => ev,
+                    Err(e) => {
+                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                    }
+                };
 
                 manager
                     .webhooks
@@ -177,8 +173,6 @@ async fn trigger_get_inner(
                     info!("added 1 file");
                     debug!("added file '{}'", file_path);
                 });
-
-                let scan_event = scan_event.unwrap();
 
                 Ok(HttpResponse::Ok().json(scan_event))
             }
@@ -204,11 +198,12 @@ async fn trigger_get_inner(
                     ..Default::default()
                 };
 
-                let scan_event = manager.add_event(&new_scan_event);
-
-                if let Err(e) = scan_event {
-                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                }
+                let scan_event = match manager.add_event(&new_scan_event) {
+                    Ok(ev) => ev,
+                    Err(e) => {
+                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                    }
+                };
 
                 manager
                     .webhooks
@@ -223,8 +218,6 @@ async fn trigger_get_inner(
                     info!("added 1 directory");
                     debug!("added directory '{}'", dir_path);
                 });
-
-                let scan_event = scan_event.unwrap();
 
                 Ok(HttpResponse::Ok().json(scan_event))
             }

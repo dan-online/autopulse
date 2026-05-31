@@ -34,4 +34,18 @@ actix-web = { version = "4.9.0", default-features = false, features = [
     "unicode",
 ] }
 actix-web-httpauth = "0.8.2"
-toml = "1.0.0"
+toml = "0.9.8"
+maud = { version = "0.27.0", features = ["actix-web"] }
+percent-encoding = "2.3"
+actix-session = { version = "0.11.0", features = ["cookie-session"] }
+rust-embed = "8.11.0"
+tokio-stream = { version = "0.1.18", features = ["sync"] }
+actix-web-lab = "0.26.0"
+getrandom = "0.4.2"
+base16ct = { version = "1.0.0", features = ["alloc"] }
+# Umbrella icon crate, `default-features = false` + only the `lucide` pack
+# (drops the other 18 icon packs). Unused Lucide icons are stripped at link
+# time by `lto = true` (release profile); see Icondata.toml for the list.
+icondata = { version = "0.7.0", default-features = false, features = [
+    "lucide",
+] }
