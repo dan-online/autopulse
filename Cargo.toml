@@ -40,6 +40,10 @@ lto = true
 [workspace]
 members = ["crates/*"]
 
+[patch.crates-io]
+# See workspace.dependencies.tracing-appender for context.
+tracing-appender = { git = "https://github.com/dan-online/tracing.git", rev = "76c45b0cedcfbcc71c05da3e528c83a0f42c026f" }
+
 [workspace.dependencies]
 # Crates
 autopulse-server = { path = "crates/server" }
@@ -56,6 +60,11 @@ serde_json = "1.0.139"
 
 # Tracing
 tracing = "0.1.41"
+# Pinned to dan-online/tracing fork (commit 76c45b0c) which backports
+# upstream PR tokio-rs/tracing#3255 onto v0.2.5, adding the `local-time`
+# feature flag. Drop this patch when the upstream PR merges and a release
+# ships.
+tracing-appender = { version = "0.2.5", features = ["local-time"] }
 
 # Date and time
 chrono = { version = "0.4.38", features = ["serde"] }

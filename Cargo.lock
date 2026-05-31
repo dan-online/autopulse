@@ -3626,8 +3626,7 @@ dependencies = [
 [[package]]
 name = "tracing-appender"
 version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "050686193eb999b4bb3bc2acfa891a13da00f79734704c4b8b4ef1a10b368a3c"
+source = "git+https://github.com/dan-online/tracing.git?rev=76c45b0cedcfbcc71c05da3e528c83a0f42c026f#76c45b0cedcfbcc71c05da3e528c83a0f42c026f"
 dependencies = [
  "crossbeam-channel",
  "symlink",

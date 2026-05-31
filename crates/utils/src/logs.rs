@@ -68,6 +68,11 @@ pub fn setup_logs(
     let registry = tracing_subscriber::registry().with(filter);
 
     if let Some(log_file) = log_file {
+        // `tracing-appender` is pinned to a fork (see workspace Cargo.toml)
+        // that enables a `local-time` feature, making the rolled filename
+        // suffix and rotation boundary track the local timezone instead of
+        // UTC. Without that feature, log filenames would be a day off the
+        // record timestamps inside them (#208).
         let writer = RollingFileAppender::new(
             log_file_rollover.clone(),
             log_file
