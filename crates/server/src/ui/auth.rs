@@ -6,9 +6,10 @@ use actix_web::{
     web::{Data, Form},
     Error, FromRequest, HttpRequest, HttpResponse, Responder, Result,
 };
-use autopulse_service::manager::PulseManager;
+use autopulse_service::{manager::PulseManager, settings::auth::Auth};
 use maud::{html, Markup, DOCTYPE};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     future::{ready, Ready},
@@ -20,6 +21,18 @@ use std::{
 use crate::ui::{csrf, layout::Ctx};
 
 const SESSION_USER_KEY: &str = "user";
+/// Fingerprint of the credentials the session was issued under; any change
+/// to `auth.username` / `auth.password` rotates this and invalidates the session.
+const SESSION_AUTH_FP_KEY: &str = "auth_fp";
+
+/// NUL separator prevents `("ab","c")` colliding with `("a","bc")`.
+fn cred_fingerprint(auth: &Auth) -> String {
+    let mut h = Sha256::new();
+    h.update(auth.username.as_bytes());
+    h.update(b"\0");
+    h.update(auth.password.as_bytes());
+    base16ct::lower::encode_string(&h.finalize())
+}
 
 /// Failed logins allowed from one IP before the lockout window kicks in.
 const LOGIN_MAX_ATTEMPTS: u32 = 5;
@@ -91,11 +104,18 @@ impl FromRequest for SessionUser {
         }
 
         let session = req.get_session();
-        let logged_in = matches!(session.get::<String>(SESSION_USER_KEY), Ok(Some(_)));
+        let has_user = matches!(session.get::<String>(SESSION_USER_KEY), Ok(Some(_)));
+        let stored_fp = session.get::<String>(SESSION_AUTH_FP_KEY).ok().flatten();
+        let current_fp = cred_fingerprint(&manager.settings.auth);
+        let fp_ok = stored_fp
+            .as_deref()
+            .is_some_and(|fp| csrf::validate_eq(fp, &current_fp));
 
-        if logged_in {
+        if has_user && fp_ok {
             ready(Ok(Self))
         } else {
+            // Drop the stale cookie so the browser stops re-presenting it.
+            session.purge();
             let base = manager.settings.app.base_path.clone();
             ready(Err(InternalError::from_response(
                 "login required",
@@ -188,9 +208,10 @@ pub async fn login_post(
         }
     }
 
-    // Constant-time compare to avoid timing-leak of match progress.
+    // `&` not `&&`: short-circuiting on a wrong username would leak match
+    // progress via latency, undoing `validate_eq`'s constant-time work.
     let credentials_ok = csrf::validate_eq(&form.username, &auth.username)
-        && csrf::validate_eq(&form.password, &auth.password);
+        & csrf::validate_eq(&form.password, &auth.password);
 
     if !auth.enabled || credentials_ok {
         if let Some(ip) = ip {
@@ -198,6 +219,9 @@ pub async fn login_post(
         }
         session
             .insert(SESSION_USER_KEY, form.username.clone())
+            .map_err(ErrorInternalServerError)?;
+        session
+            .insert(SESSION_AUTH_FP_KEY, cred_fingerprint(auth))
             .map_err(ErrorInternalServerError)?;
         session
             .insert(csrf::SESSION_KEY, csrf::fresh_token()?)

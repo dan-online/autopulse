@@ -449,6 +449,7 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "tokio",
  "tokio-stream",
  "toml 0.9.12+spec-1.1.0",
