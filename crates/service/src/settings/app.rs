@@ -58,11 +58,11 @@ pub struct App {
     /// Whether to include api logging (default: false)
     #[serde(default)]
     pub api_logging: bool,
-    /// Reverse-proxy base path (default: ""). Prefixed onto every UI
-    /// URL (links, hx-* attributes, sse-connect). Mirror your nginx
-    /// `location /autopulse/ { ... }` prefix here. Input is normalized
-    /// at load-time: leading slash is added if missing, trailing slash
-    /// is stripped, and `"/"` collapses to `""`.
+    /// Reverse-proxy base path (default: ""). UI routes are mounted under
+    /// this prefix server-side and generated links include it, so the
+    /// proxy should pass the prefix through verbatim (no strip-prefix).
+    /// Input is normalized: leading slash added if missing, trailing
+    /// slash stripped, `"/"` collapses to `""`.
     #[serde(default, deserialize_with = "normalize_base_path")]
     pub base_path: String,
     /// Whether to set the `Secure` flag on the UI session cookie
