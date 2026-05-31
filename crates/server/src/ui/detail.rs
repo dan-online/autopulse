@@ -68,10 +68,12 @@ pub async fn event_detail(
     let body = html! {
         // SSE wrapper: persists across content swaps so the connection
         // stays open. innerHTML swap replaces only the inner section.
+        // Subscribes to a *per-id* SSE event so only updates for this
+        // event trigger a reload (not every event-row broadcast).
         div.detail-live
             hx-ext="sse"
             sse-connect={ (base) "/ui/events/stream" }
-            hx-trigger="sse:event-row throttle:2s, retry-done"
+            hx-trigger={ "sse:event-row-" (ev.id) " throttle:2s, retry-done" }
             hx-get={ (base) "/ui/events/" (ev.id) }
             hx-select="section.detail"
             hx-swap="innerHTML"

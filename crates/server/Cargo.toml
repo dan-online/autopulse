@@ -39,6 +39,7 @@ maud = { version = "0.27.0", features = ["actix-web"] }
 percent-encoding = "2.3"
 actix-session = { version = "0.11.0", features = ["cookie-session"] }
 rust-embed = "8.11.0"
+tokio = { workspace = true, features = ["sync", "rt"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 actix-web-lab = "0.26.0"
 getrandom = "0.4.2"
