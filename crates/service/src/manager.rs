@@ -52,9 +52,8 @@ pub struct Stats {
     pub pending: i64,
 }
 
-/// In-process broadcast envelope. Subscribers (UI SSE handlers,
-/// future in-process plugins) receive one per state transition.
-/// `ScanEvent` is `Clone` and small; cloning into the channel is cheap.
+/// In-process broadcast envelope, one per state transition. `ScanEvent` is
+/// `Clone` and small enough that channel cloning is cheap.
 #[derive(Clone, Debug)]
 pub struct EventBroadcast {
     pub kind: EventType,
@@ -67,10 +66,8 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
-    /// In-process broadcast bus for state transitions. `broadcast::Sender`
-    /// is `Clone` and cloning shares the underlying channel — every
-    /// cloned `PulseManager` publishes to and subscribes from the same
-    /// bus.
+    /// In-process broadcast bus for state transitions; cloned `PulseManager`s
+    /// share this channel.
     pub bus: broadcast::Sender<EventBroadcast>,
 }
 
@@ -94,17 +91,13 @@ impl PulseManager {
         }
     }
 
-    /// Subscribe to the in-process broadcast bus. Returns a fresh
-    /// receiver; callers (UI SSE handler, future plugins) call once
-    /// per connection.
+    /// Subscribe to the broadcast bus; one receiver per consumer.
     pub fn subscribe(&self) -> broadcast::Receiver<EventBroadcast> {
         self.bus.subscribe()
     }
 
-    /// Publish a state transition to the bus. Called alongside the
-    /// existing `self.webhooks.add_event(...)` sites in the runner /
-    /// notify consumer / triggers. The webhook batching API is
-    /// unchanged; this is an additive in-process side channel.
+    /// Publish a state transition. Additive alongside the webhook bus; the
+    /// `send` error (no subscribers) is intentionally swallowed.
     pub fn publish(&self, kind: EventType, event: &ScanEvent) {
         let _ = self.bus.send(EventBroadcast {
             kind,
@@ -196,9 +189,7 @@ impl PulseManager {
             .ok())
     }
 
-    /// Count events matching an optional status filter (and optional
-    /// path search). Used by the UI to show the true total behind a
-    /// paginated view rather than just the current page size.
+    /// Total matching rows for pagination (independent of LIMIT/OFFSET).
     pub fn count_events(
         &self,
         status: Option<String>,

@@ -1,4 +1,3 @@
-// build.rs
 use std::{
     fs,
     hash::{Hash, Hasher},

@@ -37,9 +37,8 @@ pub async fn serve_static(path: Path<String>, req: HttpRequest) -> HttpResponse 
     HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, content_type_for(&path)))
         .insert_header((ETAG, etag))
-        // `no-cache` = always revalidate via If-None-Match. Etag changes
-        // whenever the binary is rebuilt, so revalidation is free for
-        // hits and instant for misses.
+        // Etag is content-hashed at build time, so revalidation is a no-op cache hit
+        // until the binary changes.
         .insert_header((CACHE_CONTROL, "no-cache"))
         .body(file.data.into_owned())
 }

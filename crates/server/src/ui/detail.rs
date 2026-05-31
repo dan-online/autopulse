@@ -39,9 +39,8 @@ pub async fn event_detail(
     let ctx_ = ctx(&manager, &csrf.0);
     let base = ctx_.base;
 
-    // Pipeline step states.
-    // found_passed is true when the file was explicitly found OR when
-    // the event moved past the found stage (check_path disabled).
+    // `found_passed` is true when the file was explicitly found OR when
+    // the event moved past the found stage (`check_path` disabled).
     let found_done = ev.found_at.is_some();
     let found_err = ev.found_status == "hash_mismatch";
     let found_passed = found_done || (!found_err && status != ProcessStatus::Pending);
@@ -66,10 +65,7 @@ pub async fn event_detail(
     };
 
     let body = html! {
-        // SSE wrapper: persists across content swaps so the connection
-        // stays open. innerHTML swap replaces only the inner section.
-        // Subscribes to a *per-id* SSE event so only updates for this
-        // event trigger a reload (not every event-row broadcast).
+        // Subscribe to the per-id SSE event so only this row's updates trigger a reload.
         div.detail-live
             hx-ext="sse"
             sse-connect={ (base) "/ui/events/stream" }

@@ -107,7 +107,6 @@ fn doc_for(path: &[&str]) -> Option<String> {
     // The docs site serves canonical URLs without the `.html` extension
     // (the `.html` form 308-redirects to these), so link directly.
     let url = match path {
-        // sections
         ["app"] => format!("{DOCS}/app/struct.App"),
         ["auth"] => format!("{DOCS}/auth/struct.Auth"),
         ["opts"] => format!("{DOCS}/opts/struct.Opts"),

@@ -27,9 +27,9 @@ const LOGIN_MAX_ATTEMPTS: u32 = 5;
 /// and the idle window after which a stale counter is forgotten.
 const LOGIN_LOCKOUT: Duration = Duration::from_secs(60);
 
-/// Minimal in-memory per-IP failed-login throttle. Stored as actix
-/// `app_data` so it is shared across workers. Not persisted: a restart
-/// clears all counters, which is acceptable for a brute-force speed bump.
+/// In-memory per-IP failed-login throttle. Wrapped in `Data::new` outside
+/// the `HttpServer` factory so the Arc is shared across workers; a restart
+/// clears all counters (acceptable for a speed bump, not a security boundary).
 #[derive(Default)]
 pub struct LoginLimiter {
     inner: Mutex<HashMap<IpAddr, Attempts>>,
@@ -176,7 +176,8 @@ pub async fn login_post(
     let base = manager.settings.app.base_path.clone();
     let auth = &manager.settings.auth;
 
-    // Maybe will match the proxy IP, but I don't wanna import a dependency for this
+    // `peer_addr` is the proxy in a reverse-proxy deployment; XFF parsing is
+    // intentionally out of scope for this throttle.
     let ip = req.peer_addr().map(|addr| addr.ip());
 
     if let Some(ip) = ip {
@@ -187,9 +188,7 @@ pub async fn login_post(
         }
     }
 
-    // Constant-time credential compare to avoid leaking match progress
-    // via timing. When auth is disabled every UI route is open; the
-    // login page still works as a no-op.
+    // Constant-time compare to avoid timing-leak of match progress.
     let credentials_ok = csrf::validate_eq(&form.username, &auth.username)
         && csrf::validate_eq(&form.password, &auth.password);
 
@@ -231,8 +230,7 @@ pub async fn logout_post(
 ) -> Result<HttpResponse> {
     let base = manager.settings.app.base_path.clone();
 
-    // Validate CSRF from the form field (logout is a plain HTML form,
-    // not an HTMX request - no headers available).
+    // Plain HTML form — CSRF arrives as a form field, not a header.
     if manager.settings.auth.enabled {
         let stored = session
             .get::<String>(csrf::SESSION_KEY)

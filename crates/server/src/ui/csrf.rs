@@ -20,9 +20,8 @@ pub fn fresh_token() -> Result<String, Error> {
     Ok(base16ct::lower::encode_string(&bytes))
 }
 
-/// Read-only extractor; handlers validate via header or form field using
-/// `validate_eq`. Split so GET handlers can render the token and POST
-/// handlers can validate it.
+/// Loads or lazily creates the session CSRF token. Validation lives in
+/// `require_header` / `validate_eq`.
 pub struct CsrfToken(pub String);
 
 impl FromRequest for CsrfToken {
@@ -39,7 +38,6 @@ impl FromRequest for CsrfToken {
             }
         };
 
-        // Auth disabled in config → no CSRF either.
         if !manager.settings.auth.enabled {
             return ready(Ok(CsrfToken(String::new())));
         }
@@ -69,11 +67,9 @@ impl FromRequest for CsrfToken {
 
 /// Validates `X-CSRF-Token` header against session token. 403 on mismatch.
 pub fn require_header(req: &HttpRequest, stored: &CsrfToken) -> Result<(), Error> {
-    // Auth-disabled → nothing to validate.
     if stored.0.is_empty() {
         return Ok(());
     }
-    // Non-mutating methods never need to validate.
     if matches!(*req.method(), Method::GET | Method::HEAD | Method::OPTIONS) {
         return Ok(());
     }

@@ -32,8 +32,7 @@ fn default_page() -> u64 {
 /// input uses `hx-preserve` so HTMX keeps the focused DOM element across
 /// swaps instead of destroying and recreating it.
 fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
-    // Normalize empty strings to None so `?status=` (sent by the hidden
-    // carrier input when no filter is active) doesn't filter for "".
+    // Empty strings come from the hidden status carrier; treat as "no filter".
     let status = q.status.as_deref().filter(|s| !s.is_empty());
     let search = q.search.as_deref().filter(|s| !s.is_empty());
 
@@ -77,8 +76,7 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
 
             (stats_cards(base, &stats, status, search))
 
-            // hx-preserve keeps the focused input across outerHTML swaps
-            // so typing doesn't lose cursor position or focus.
+            // Search input lives inside the outerHTML swap target — preserve focus/value.
             .events__search {
                 input #events-search .search__input
                     hx-preserve
@@ -280,7 +278,6 @@ pub async fn events_rows(
     ))
 }
 
-/// `failed_times` preserved — manual retry is an impulse, not history-erase.
 #[post("/ui/events/{id}/retry")]
 pub async fn event_retry(
     manager: Data<PulseManager>,

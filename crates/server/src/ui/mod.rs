@@ -1,5 +1,4 @@
-//! Mounted under `/ui/*` while the SvelteKit UI ships as the default;
-//! cutover to `/` happens in a later release window.
+//! Maud + HTMX server-rendered UI mounted at `/ui/*`.
 
 pub mod add;
 pub mod auth;

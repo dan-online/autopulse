@@ -8,7 +8,6 @@ pub fn retry_hx_headers() -> String {
     format!(r#"js:{{"{HEADER_NAME}": document.querySelector('meta[name=csrf]').content}}"#)
 }
 
-/// Used by: full page loop, HTMX rows partial, SSE stream, retry handler.
 pub fn event_row(base: &str, ev: &ScanEvent) -> Markup {
     let status: ProcessStatus = ev.process_status.parse().unwrap_or(ProcessStatus::Pending);
     let status_str: &'static str = status.into();

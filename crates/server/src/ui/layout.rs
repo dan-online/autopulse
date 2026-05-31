@@ -25,8 +25,6 @@ pub fn page(ctx: &Ctx<'_>, title: &str, nav: &str, content: Markup) -> Markup {
             }
             body {
                 .shell {
-                    // Mobile-only drawer toggle; the rail is off-canvas below
-                    // the breakpoint and slides in when this is pressed.
                     button.rail-toggle #rail-toggle type="button"
                         aria-label="Toggle navigation"
                         aria-controls="rail" aria-expanded="false"
@@ -39,8 +37,6 @@ pub fn page(ctx: &Ctx<'_>, title: &str, nav: &str, content: Markup) -> Markup {
                             img.rail__logo src={ (base) "/ui/static/logo.webp" } alt="autopulse";
                             .rail__brand-text {
                                 span.rail__brand-name { "autopulse" }
-                                // same version string the `/` route reports
-                                // (git describe --always --tags; includes the `v`)
                                 span.rail__brand-sub { (env!("GIT_REVISION")) }
                             }
                         }
@@ -51,9 +47,6 @@ pub fn page(ctx: &Ctx<'_>, title: &str, nav: &str, content: Markup) -> Markup {
                         }
                         .rail__spacer {}
                         .rail__foot {
-                            // dot + label reflect live SSE bus state; the
-                            // client script in <head> toggles these on the
-                            // htmx sse lifecycle events.
                             .rail__status #bus-status {
                                 span.rail__status-dot #bus-dot {}
                                 span.rail__status-label #bus-label { "Idle" }

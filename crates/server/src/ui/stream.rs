@@ -9,33 +9,20 @@ use tokio_stream::StreamExt as _;
 
 use crate::ui::{auth::SessionUser, events_view};
 
-/// SSE feed of event updates.
+/// SSE feed of state transitions. For each broadcast we emit:
+/// 1. `event-row` — the rendered row, with an OOB `hx-swap-oob="delete"`
+///    marker so updates replace any existing row in place (CSP-safe vs. inline JS).
+/// 2. `event-row-{id}` — empty, used by the detail page as a per-id trigger.
 ///
-/// For each broadcast message the stream emits two frames:
-/// 1. `event: event-row` carrying the rendered row HTML, consumed by
-///    the events list (prepended via `hx-swap="afterbegin"`).
-/// 2. `event: event-row-{id}` carrying an empty payload, used by the
-///    detail page as a *targeted* trigger so it only reloads itself
-///    when its own event updates (not on every other event).
-///
-/// The list-row payload includes an out-of-band delete marker
-/// (`hx-swap-oob="delete"`) for the same `id`, so updates replace any
-/// existing row in place rather than duplicating it. This is the
-/// CSP-safe equivalent of an inline `<script>` remove.
-///
-/// On channel lag (slow consumer during burst), emits `event: resync`
-/// so HTMX re-fetches the rows partial instead of losing events.
-///
-/// 15s keep-alive prevents Cloudflare/nginx ~100s idle disconnect.
+/// On `Lagged`, emit `resync` so HTMX re-fetches rather than dropping events.
+/// 15s keep-alive defeats Cloudflare/nginx ~100s idle disconnect.
 #[get("/ui/events/stream")]
 pub async fn events_stream(manager: Data<PulseManager>, _user: SessionUser) -> impl Responder {
     let rx = manager.subscribe();
     let base = manager.settings.app.base_path.clone();
 
-    // Each broadcast message expands to multiple SSE frames, so we pump
-    // through a bounded mpsc instead of using `.map` (which is 1:1).
-    // When the client disconnects, the receiver is dropped, the next
-    // `send` returns Err, and the pump task exits cleanly.
+    // Each broadcast expands to multiple SSE frames, so pump through a bounded
+    // mpsc instead of `.map` (which is 1:1).
     let (tx, rx_out) = mpsc::channel::<Result<sse::Event, Infallible>>(64);
     tokio::spawn(async move {
         let mut input = BroadcastStream::new(rx);
@@ -44,15 +31,9 @@ pub async fn events_stream(manager: Data<PulseManager>, _user: SessionUser) -> i
                 Ok(b) => {
                     let id = b.event.id.clone();
                     let row = events_view::event_row(&base, &b.event).into_string();
-                    // OOB delete targets any existing #evt-{id} row (no-op
-                    // if absent); the second <tr> is the main payload
-                    // that the tbody's hx-swap="afterbegin" prepends.
                     let row_html = format!(r#"<tr id="evt-{id}" hx-swap-oob="delete"></tr>{row}"#);
                     vec![
                         sse::Event::Data(sse::Data::new(row_html).event("event-row")),
-                        // Per-id signal so only the matching detail view
-                        // reloads. Empty payload is intentional: the
-                        // detail page uses this purely as a trigger.
                         sse::Event::Data(sse::Data::new("").event(format!("event-row-{id}"))),
                     ]
                 }
