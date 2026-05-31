@@ -21,6 +21,26 @@ fn default_log_level() -> LogLevel {
     LogLevel::default()
 }
 
+/// Normalize `base_path` so downstream `format!("{base}/ui/...")` is
+/// always well-formed. Accepts any of `""`, `"/"`, `"autopulse"`,
+/// `"/autopulse"`, `"/autopulse/"`, `"  /autopulse/  "` and yields
+/// either `""` or `"/autopulse"`.
+fn normalize_base_path<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = String::deserialize(deserializer)?;
+    let trimmed = raw.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return Ok(String::new());
+    }
+    Ok(if trimmed.starts_with('/') {
+        trimmed.to_string()
+    } else {
+        format!("/{trimmed}")
+    })
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct App {
     /// Hostname to bind to, (default: 0.0.0.0)
@@ -40,8 +60,10 @@ pub struct App {
     pub api_logging: bool,
     /// Reverse-proxy base path (default: ""). Prefixed onto every UI
     /// URL (links, hx-* attributes, sse-connect). Mirror your nginx
-    /// `location /autopulse/ { ... }` prefix here.
-    #[serde(default)]
+    /// `location /autopulse/ { ... }` prefix here. Input is normalized
+    /// at load-time: leading slash is added if missing, trailing slash
+    /// is stripped, and `"/"` collapses to `""`.
+    #[serde(default, deserialize_with = "normalize_base_path")]
     pub base_path: String,
     /// Whether to set the `Secure` flag on the UI session cookie
     /// (default: false). Enable when serving over HTTPS/TLS.
@@ -60,5 +82,57 @@ impl Default for App {
             base_path: String::new(),
             secure_cookies: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::App;
+
+    fn base_path_of(json: &str) -> String {
+        let app: App = serde_json::from_str(json).expect("valid app json");
+        app.base_path
+    }
+
+    #[test]
+    fn base_path_empty_stays_empty() {
+        assert_eq!(base_path_of(r#"{"base_path": ""}"#), "");
+    }
+
+    #[test]
+    fn base_path_lone_slash_collapses_to_empty() {
+        assert_eq!(base_path_of(r#"{"base_path": "/"}"#), "");
+    }
+
+    #[test]
+    fn base_path_missing_leading_slash_gets_one() {
+        assert_eq!(base_path_of(r#"{"base_path": "autopulse"}"#), "/autopulse");
+    }
+
+    #[test]
+    fn base_path_trailing_slash_stripped() {
+        assert_eq!(
+            base_path_of(r#"{"base_path": "/autopulse/"}"#),
+            "/autopulse"
+        );
+    }
+
+    #[test]
+    fn base_path_already_normalized_unchanged() {
+        assert_eq!(base_path_of(r#"{"base_path": "/autopulse"}"#), "/autopulse");
+    }
+
+    #[test]
+    fn base_path_trims_whitespace_and_trailing_slashes() {
+        assert_eq!(
+            base_path_of(r#"{"base_path": "  /autopulse//  "}"#),
+            "/autopulse"
+        );
+    }
+
+    #[test]
+    fn base_path_default_is_empty() {
+        let app: App = serde_json::from_str("{}").expect("valid empty app json");
+        assert_eq!(app.base_path, "");
     }
 }
