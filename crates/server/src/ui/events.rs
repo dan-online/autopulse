@@ -52,14 +52,14 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
     let base = manager.settings.app.base_path.as_str();
     let stats = manager.get_stats().map_err(ErrorInternalServerError)?;
 
+    let filter_qs = filter_query(status, search);
+
     Ok(html! {
-        // Single SSE source for the whole events view. Both the tbody
-        // and the stats cards register listeners against this ancestor
-        // (via `sse-swap` / `hx-trigger="sse:..."`) so a tab only opens
-        // one EventSource, not one per consumer.
+        // One EventSource per tab; the stream URL carries the active filter
+        // so the server only emits rows that belong in this view.
         section.events #events-section
             hx-ext="sse"
-            sse-connect={ (base) "/ui/events/stream" }
+            sse-connect={ (base) "/ui/events/stream" (filter_qs) }
         {
             // Carries the active status filter for the search input's
             // hx-include so search requests always compose both filters.
@@ -76,7 +76,9 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
 
             (stats_cards(base, &stats, status, search))
 
-            // Search input lives inside the outerHTML swap target — preserve focus/value.
+            // hx-preserve keeps focus/value across the section's outerHTML swaps.
+            // The trigger filter skips 1-2 char inputs (cheap LIKE-scan suppression)
+            // while still firing on empty to clear the filter.
             .events__search {
                 input #events-search .search__input
                     hx-preserve
@@ -85,7 +87,7 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
                     placeholder="Search file paths\u{2026}"
                     value=(search.unwrap_or(""))
                     hx-get={ (base) "/ui/events" }
-                    hx-trigger="input changed delay:300ms, search"
+                    hx-trigger="input changed delay:500ms[this.value.length===0||this.value.length>=3], search"
                     hx-target="#events-section"
                     hx-swap="outerHTML"
                     hx-replace-url="true"
@@ -93,6 +95,16 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
                     autocomplete="off"
                 ;
             }
+
+            // Resync handler split off tbody so its innerHTML swap doesn't
+            // collide with tbody's afterbegin sse-swap (which would prepend
+            // a duplicate copy of every row on every reconnect).
+            div #events-resync
+                hx-trigger="sse:resync"
+                hx-get={ (base) "/ui/events/rows" (filter_qs) }
+                hx-target="#events-body"
+                hx-swap="innerHTML"
+                hidden {}
 
             .events__table-wrap {
               .events__table-scroll {
@@ -104,12 +116,6 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
                     tbody #events-body
                         sse-swap="event-row"
                         hx-swap="afterbegin"
-                        hx-trigger="sse:resync"
-                        // Carry the active filter on resync so a lagged
-                        // reconnect doesn't snap the user back to the
-                        // unfiltered list.
-                        hx-get={ (base) "/ui/events/rows" (filter_query(status, search)) }
-                        hx-target="this"
                     {
                         (events_view::rows_page(base, &events, status, search, q.page, PAGE_SIZE))
                     }
