@@ -54,7 +54,14 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
     let stats = manager.get_stats().map_err(ErrorInternalServerError)?;
 
     Ok(html! {
-        section.events #events-section {
+        // Single SSE source for the whole events view. Both the tbody
+        // and the stats cards register listeners against this ancestor
+        // (via `sse-swap` / `hx-trigger="sse:..."`) so a tab only opens
+        // one EventSource, not one per consumer.
+        section.events #events-section
+            hx-ext="sse"
+            sse-connect={ (base) "/ui/events/stream" }
+        {
             // Carries the active status filter for the search input's
             // hx-include so search requests always compose both filters.
             input #events-status type="hidden" name="status"
@@ -97,8 +104,6 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
                         th { "Status" } th { "Failure" } th {}
                     } }
                     tbody #events-body
-                        hx-ext="sse"
-                        sse-connect={ (base) "/ui/events/stream" }
                         sse-swap="event-row"
                         hx-swap="afterbegin"
                         hx-trigger="sse:resync"
@@ -180,8 +185,6 @@ fn stats_cards(
 
     html! {
         .stats
-            hx-ext="sse"
-            sse-connect={ (base) "/ui/events/stream" }
             hx-trigger="sse:event-row throttle:5s"
             // Carry the active filter so the periodic refresh keeps the
             // selected card's `.is-active` highlight (counts themselves
