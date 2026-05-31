@@ -59,21 +59,31 @@ fn redact(v: &mut Value, in_webhooks: bool) {
     match v {
         Value::Object(map) => {
             for (k, val) in map.iter_mut() {
-                let kl = k.to_lowercase();
+                // Strip non-alphanumerics so `X-Api-Key`, `X_API_KEY`, `apiKey`
+                // all normalize to the same `xapikey` and match `apikey`.
+                let kn: String = k
+                    .to_ascii_lowercase()
+                    .chars()
+                    .filter(|c| c.is_ascii_alphanumeric())
+                    .collect();
                 let secret = [
                     "password",
                     "token",
                     "secret",
                     "apikey",
-                    "api_key",
                     "authorization",
+                    "authkey",
+                    "authtoken",
+                    "cookie",
                 ]
                 .iter()
-                .any(|s| kl.contains(s));
+                .any(|s| kn.contains(s));
 
-                if secret || (kl == "url" && in_webhooks) {
+                // Only redact string leaves: prevents `secure_cookies: bool`
+                // and similarly-named struct fields from being clobbered.
+                if (secret && val.is_string()) || (kn == "url" && in_webhooks) {
                     *val = Value::String(MASK.into());
-                } else if kl == "database_url" {
+                } else if kn == "databaseurl" {
                     if let Some(s) = val.as_str() {
                         *val = Value::String(mask_db_url(s));
                     }
@@ -183,5 +193,80 @@ fn render_value(v: &Value, depth: usize, path: &[&str]) -> Markup {
                 }
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{redact, MASK};
+    use serde_json::json;
+
+    fn redacted(v: serde_json::Value) -> serde_json::Value {
+        let mut v = v;
+        redact(&mut v, false);
+        v
+    }
+
+    #[test]
+    fn redacts_obvious_secret_fields() {
+        let out = redacted(json!({
+            "password": "hunter2",
+            "token": "abc",
+            "api_key": "xyz",
+            "Authorization": "Bearer foo",
+        }));
+        assert_eq!(out["password"], MASK);
+        assert_eq!(out["token"], MASK);
+        assert_eq!(out["api_key"], MASK);
+        assert_eq!(out["Authorization"], MASK);
+    }
+
+    #[test]
+    fn redacts_custom_credential_headers() {
+        let out = redacted(json!({
+            "headers": {
+                "X-Api-Key": "secret",
+                "X-Auth-Token": "secret",
+                "X_AUTH_KEY": "secret",
+                "Cookie": "sid=abc",
+                "Set-Cookie": "sid=abc",
+            }
+        }));
+        let h = &out["headers"];
+        assert_eq!(h["X-Api-Key"], MASK);
+        assert_eq!(h["X-Auth-Token"], MASK);
+        assert_eq!(h["X_AUTH_KEY"], MASK);
+        assert_eq!(h["Cookie"], MASK);
+        assert_eq!(h["Set-Cookie"], MASK);
+    }
+
+    #[test]
+    fn does_not_clobber_bool_fields_with_credential_substrings() {
+        // `secure_cookies` would match "cookie" by substring; the
+        // `is_string()` guard keeps it intact.
+        let out = redacted(json!({ "secure_cookies": true, "is_secret": false }));
+        assert_eq!(out["secure_cookies"], true);
+        assert_eq!(out["is_secret"], false);
+    }
+
+    #[test]
+    fn webhook_url_masked_only_inside_webhooks() {
+        let out = redacted(json!({
+            "targets": { "plex": { "url": "http://plex:32400" } },
+            "webhooks": { "discord": { "url": "https://discord.com/api/..." } },
+        }));
+        assert_eq!(out["targets"]["plex"]["url"], "http://plex:32400");
+        assert_eq!(out["webhooks"]["discord"]["url"], MASK);
+    }
+
+    #[test]
+    fn database_url_masks_credentials_only() {
+        let out = redacted(json!({
+            "database_url": "postgres://user:secret@localhost:5432/db",
+        }));
+        assert_eq!(
+            out["database_url"],
+            format!("postgres://user:{MASK}@localhost:5432/db")
+        );
     }
 }
