@@ -49,7 +49,6 @@ impl<'a> PulseRunner<'a> {
 
         for ev in &mut evs {
             let file_path = PathBuf::from(&ev.file_path);
-            let mut bus_kind: Option<EventType> = None;
 
             let expected_hash = ev.file_hash.clone();
             let path_clone = file_path.clone();
@@ -73,30 +72,38 @@ impl<'a> PulseRunner<'a> {
                 .await
                 .map_err(|e| anyhow::anyhow!("file check task failed: {e}"))??;
 
-            match result {
-                FileCheckResult::NotFound => {}
+            let bus_kind: EventType = match result {
+                FileCheckResult::NotFound => {
+                    // Nothing transitioned; skip the write so we don't
+                    // churn `updated_at` (and UI ordering) every poll.
+                    continue;
+                }
                 FileCheckResult::Found | FileCheckResult::HashMatch => {
+                    // The outer query filters out rows already in Found,
+                    // so reaching this arm is always a real transition.
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
                     ev.found_status = FoundStatus::Found.into();
                     found_files.push((ev.file_path.clone(), ev.event_source.clone()));
-                    bus_kind = Some(EventType::Found);
+                    EventType::Found
                 }
                 FileCheckResult::HashMismatch => {
-                    if ev.found_status != FoundStatus::HashMismatch.to_string() {
-                        mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
-                        bus_kind = Some(EventType::HashMismatch);
+                    // Only persist on the *first* time we see a mismatch.
+                    // Re-polls of an already-mismatched row must not
+                    // clobber the original `found_at` or churn the row.
+                    if ev.found_status == FoundStatus::HashMismatch.to_string() {
+                        continue;
                     }
                     ev.found_status = FoundStatus::HashMismatch.into();
                     ev.found_at = Some(chrono::Utc::now().naive_utc());
+                    mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
+                    EventType::HashMismatch
                 }
-            }
+            };
 
             ev.updated_at = chrono::Utc::now().naive_utc();
             get_conn(&self.manager.pool)?.save_changes(ev)?;
 
-            if let Some(kind) = bus_kind {
-                self.manager.publish(kind, ev);
-            }
+            self.manager.publish(bus_kind, ev);
         }
 
         if !found_files.is_empty() {
