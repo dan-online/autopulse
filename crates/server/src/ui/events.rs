@@ -118,21 +118,18 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
 }
 
 fn filter_query(status: Option<&str>, search: Option<&str>) -> String {
+    // Encode `status` too: it's normally an enum, but `?status=%26evil%3D1`
+    // would otherwise inject query params into every link on the page.
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let search = search.filter(|s| !s.is_empty());
     match (status, search) {
-        (Some(v), Some(q)) => {
-            format!(
-                "?status={v}&search={}",
-                percent_encoding::utf8_percent_encode(q, percent_encoding::NON_ALPHANUMERIC)
-            )
-        }
-        (Some(v), None) => format!("?status={v}"),
-        (None, Some(q)) => {
-            format!(
-                "?search={}",
-                percent_encoding::utf8_percent_encode(q, percent_encoding::NON_ALPHANUMERIC)
-            )
-        }
+        (Some(v), Some(q)) => format!(
+            "?status={}&search={}",
+            utf8_percent_encode(v, NON_ALPHANUMERIC),
+            utf8_percent_encode(q, NON_ALPHANUMERIC)
+        ),
+        (Some(v), None) => format!("?status={}", utf8_percent_encode(v, NON_ALPHANUMERIC)),
+        (None, Some(q)) => format!("?search={}", utf8_percent_encode(q, NON_ALPHANUMERIC)),
         (None, None) => String::new(),
     }
 }

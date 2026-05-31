@@ -59,16 +59,22 @@ pub fn event_rows(base: &str, events: &[ScanEvent]) -> Markup {
 /// bare `<tr>` via `outerHTML` dissolves the parent `<tbody>`, breaking
 /// the `#events-body` SSE/filter target.
 pub fn load_more(base: &str, status: Option<&str>, search: Option<&str>, next_page: u64) -> Markup {
+    // Encode `status` too: an attacker-crafted `?status=%26page%3D999` would
+    // otherwise corrupt the infinite-scroll URL.
     let query = match (status, search.filter(|s| !s.is_empty())) {
-        (Some(s), Some(q)) => {
-            let enc = utf8_percent_encode(q, NON_ALPHANUMERIC);
-            format!("?status={s}&search={enc}&page={next_page}")
-        }
-        (Some(s), None) => format!("?status={s}&page={next_page}"),
-        (None, Some(q)) => {
-            let enc = utf8_percent_encode(q, NON_ALPHANUMERIC);
-            format!("?search={enc}&page={next_page}")
-        }
+        (Some(s), Some(q)) => format!(
+            "?status={}&search={}&page={next_page}",
+            utf8_percent_encode(s, NON_ALPHANUMERIC),
+            utf8_percent_encode(q, NON_ALPHANUMERIC)
+        ),
+        (Some(s), None) => format!(
+            "?status={}&page={next_page}",
+            utf8_percent_encode(s, NON_ALPHANUMERIC)
+        ),
+        (None, Some(q)) => format!(
+            "?search={}&page={next_page}",
+            utf8_percent_encode(q, NON_ALPHANUMERIC)
+        ),
         (None, None) => format!("?page={next_page}"),
     };
     html! {
