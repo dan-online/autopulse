@@ -90,9 +90,15 @@ impl Rewrite {
             from: from.to_string(),
             to: to.to_string(),
         }];
+        // In test helpers, an invalid pattern should fail loudly rather
+        // than silently produce a no-op rewrite that hides setup bugs.
         let compiled = rewrites
             .iter()
-            .filter_map(|r| Regex::new(&r.from).ok().map(|re| (re, r.to.clone())))
+            .map(|r| {
+                let re = Regex::new(&r.from)
+                    .unwrap_or_else(|e| panic!("invalid regex {:?} in test helper: {e}", r.from));
+                (re, r.to.clone())
+            })
             .collect();
         Self { rewrites, compiled }
     }
@@ -108,7 +114,11 @@ impl Rewrite {
             .collect();
         let compiled = rewrites
             .iter()
-            .filter_map(|r| Regex::new(&r.from).ok().map(|re| (re, r.to.clone())))
+            .map(|r| {
+                let re = Regex::new(&r.from)
+                    .unwrap_or_else(|e| panic!("invalid regex {:?} in test helper: {e}", r.from));
+                (re, r.to.clone())
+            })
             .collect();
         Self { rewrites, compiled }
     }
