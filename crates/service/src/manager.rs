@@ -301,7 +301,11 @@ impl PulseManager {
                 }
                 Err(e) => {
                     consecutive_errors = consecutive_errors.saturating_add(1);
-                    let backoff = std::cmp::min(1u64 << consecutive_errors, 60);
+                    // Clamp the shift exponent before the cap: `1u64 << 64` panics in
+                    // debug and wraps in release. The 60s cap is already reached at
+                    // shift==6 (1<<6 == 64), so anything beyond 6 is dead weight.
+                    let shift = consecutive_errors.min(6);
+                    let backoff = std::cmp::min(1u64 << shift, 60);
                     error!("event processing error (retry in {backoff}s): {e:?}");
                     tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
                 }
