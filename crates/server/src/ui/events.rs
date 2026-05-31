@@ -102,7 +102,10 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
                         sse-swap="event-row"
                         hx-swap="afterbegin"
                         hx-trigger="sse:resync"
-                        hx-get={ (base) "/ui/events/rows" }
+                        // Carry the active filter on resync so a lagged
+                        // reconnect doesn't snap the user back to the
+                        // unfiltered list.
+                        hx-get={ (base) "/ui/events/rows" (filter_query(status, search)) }
                         hx-target="this"
                     {
                         (events_view::rows_page(base, &events, status, search, q.page, PAGE_SIZE))
@@ -183,7 +186,10 @@ fn stats_cards(
             hx-ext="sse"
             sse-connect={ (base) "/ui/events/stream" }
             hx-trigger="sse:event-row throttle:5s"
-            hx-get={ (base) "/ui/events/stats" }
+            // Carry the active filter so the periodic refresh keeps the
+            // selected card's `.is-active` highlight (counts themselves
+            // are global; the filter just drives the highlight state).
+            hx-get={ (base) "/ui/events/stats" (filter_query(status, search)) }
             hx-swap="outerHTML"
         {
             @for (label, value, sub, ico, filter) in cards {
