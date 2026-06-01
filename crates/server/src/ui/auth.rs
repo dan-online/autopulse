@@ -39,6 +39,11 @@ const LOGIN_MAX_ATTEMPTS: u32 = 5;
 /// How long an IP stays locked out after exceeding the attempt limit,
 /// and the idle window after which a stale counter is forgotten.
 const LOGIN_LOCKOUT: Duration = Duration::from_secs(60);
+/// Hard cap so a flood of distinct source IPs can't grow the throttle map
+/// without bound. At cap we drop the oldest entry; well above the realistic
+/// concurrent-failure load and small enough that the per-failure O(n) scan
+/// for the oldest stays cheap.
+const LOGIN_TRACKED_IPS_CAP: usize = 10_000;
 
 /// In-memory per-IP failed-login throttle. Wrapped in `Data::new` outside
 /// the `HttpServer` factory so the Arc is shared across workers; a restart
@@ -75,6 +80,17 @@ impl LoginLimiter {
 
     fn record_failure(&self, ip: IpAddr) {
         let mut map = self.lock();
+        // Drop counters past their lockout window first; new failures get a
+        // clean slot and well-behaved clients don't pay forever for one bad
+        // attempt months ago.
+        map.retain(|_, a| a.last.elapsed() < LOGIN_LOCKOUT);
+        // If still at cap (sustained distinct-IP flood), evict the LRU entry
+        // so legitimate new failures still get tracked.
+        if !map.contains_key(&ip) && map.len() >= LOGIN_TRACKED_IPS_CAP {
+            if let Some(oldest) = map.iter().min_by_key(|(_, a)| a.last).map(|(k, _)| *k) {
+                map.remove(&oldest);
+            }
+        }
         let entry = map.entry(ip).or_insert(Attempts {
             count: 0,
             last: Instant::now(),
