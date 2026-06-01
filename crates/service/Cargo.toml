@@ -5,7 +5,7 @@ edition = "2021"
 version.workspace = true
 
 [features]
-vendored = ["reqwest/native-tls-vendored"]
+vendored = []
 
 [dependencies]
 # Crates
@@ -22,7 +22,14 @@ tokio = { workspace = true, features = ["macros", "process"] }
 futures = { workspace = true }
 
 # HTTP client
-reqwest = { version = "0.13.0", features = ["json", "stream"] }
+reqwest = { version = "0.13.0", default-features = false, features = [
+    "charset",
+    "http2",
+    "json",
+    "rustls",
+    "stream",
+    "system-proxy",
+] }
 
 # Credential encoding
 base64 = "0.22.1"

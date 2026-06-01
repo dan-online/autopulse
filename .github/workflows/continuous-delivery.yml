@@ -6,8 +6,7 @@ permissions:
 on:
   release:
     types: [published]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: continuous-delivery-${{ github.ref }}
@@ -142,4 +141,4 @@ jobs:
           zip: windows
           features: ${{ (contains(matrix.target, '-musl') || startsWith(matrix.os, 'windows')) && 'vendored' || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          dry-run: ${{ github.event_name == 'pull_request' }}
+          dry-run: ${{ github.event_name != 'release' }}
