@@ -88,6 +88,31 @@ impl LoginLimiter {
     }
 }
 
+/// Real client IP for the login throttle. If `peer_addr` is on the configured
+/// trusted-proxy list, walk `X-Forwarded-For` right-to-left and return the
+/// rightmost address not on the list; otherwise return `peer_addr`. Empty
+/// `trusted_proxies` (the default) means the throttle keys by `peer_addr`.
+fn client_ip(req: &HttpRequest, trusted: &[IpAddr]) -> Option<IpAddr> {
+    let peer = req.peer_addr().map(|a| a.ip())?;
+    if trusted.is_empty() || !trusted.contains(&peer) {
+        return Some(peer);
+    }
+    if let Some(xff) = req
+        .headers()
+        .get("X-Forwarded-For")
+        .and_then(|h| h.to_str().ok())
+    {
+        for raw in xff.split(',').rev() {
+            if let Ok(ip) = raw.trim().parse::<IpAddr>() {
+                if !trusted.contains(&ip) {
+                    return Some(ip);
+                }
+            }
+        }
+    }
+    Some(peer)
+}
+
 /// On miss, returns 303 → `/ui/login` instead of the JSON 401 that
 /// `AuthenticatedUser` produces for API routes.
 pub struct SessionUser;
@@ -201,9 +226,7 @@ pub async fn login_post(
     let base = manager.settings.app.base_path.clone();
     let auth = &manager.settings.auth;
 
-    // `peer_addr` is the proxy in a reverse-proxy deployment; XFF parsing is
-    // intentionally out of scope for this throttle.
-    let ip = req.peer_addr().map(|addr| addr.ip());
+    let ip = client_ip(&req, &manager.settings.app.trusted_proxies);
 
     if let Some(ip) = ip {
         if auth.enabled && limiter.is_locked(ip) {
@@ -282,5 +305,70 @@ pub fn ctx<'a>(manager: &'a PulseManager, csrf_token: &'a str) -> Ctx<'a> {
     Ctx {
         base: manager.settings.app.base_path.as_str(),
         csrf: csrf_token,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::client_ip;
+    use actix_web::test::TestRequest;
+    use std::net::IpAddr;
+
+    fn ip(s: &str) -> IpAddr {
+        s.parse().unwrap()
+    }
+
+    #[test]
+    fn empty_trusted_list_returns_peer_addr() {
+        let req = TestRequest::default()
+            .peer_addr("203.0.113.7:1234".parse().unwrap())
+            .insert_header(("X-Forwarded-For", "10.0.0.5"))
+            .to_http_request();
+        assert_eq!(client_ip(&req, &[]), Some(ip("203.0.113.7")));
+    }
+
+    #[test]
+    fn untrusted_peer_returns_peer_addr() {
+        let req = TestRequest::default()
+            .peer_addr("203.0.113.7:1234".parse().unwrap())
+            .insert_header(("X-Forwarded-For", "10.0.0.5, 198.51.100.1"))
+            .to_http_request();
+        let trusted = [ip("10.0.0.1")];
+        assert_eq!(client_ip(&req, &trusted), Some(ip("203.0.113.7")));
+    }
+
+    #[test]
+    fn trusted_peer_takes_rightmost_untrusted_from_xff() {
+        let req = TestRequest::default()
+            .peer_addr("10.0.0.1:443".parse().unwrap())
+            .insert_header(("X-Forwarded-For", "203.0.113.7, 10.0.0.5"))
+            .to_http_request();
+        let trusted = [ip("10.0.0.1"), ip("10.0.0.5")];
+        assert_eq!(client_ip(&req, &trusted), Some(ip("203.0.113.7")));
+    }
+
+    #[test]
+    fn trusted_peer_with_no_xff_falls_back_to_peer() {
+        let req = TestRequest::default()
+            .peer_addr("10.0.0.1:443".parse().unwrap())
+            .to_http_request();
+        let trusted = [ip("10.0.0.1")];
+        assert_eq!(client_ip(&req, &trusted), Some(ip("10.0.0.1")));
+    }
+
+    #[test]
+    fn malformed_xff_entries_are_skipped() {
+        let req = TestRequest::default()
+            .peer_addr("10.0.0.1:443".parse().unwrap())
+            .insert_header(("X-Forwarded-For", "not-an-ip, 203.0.113.7, also-bogus"))
+            .to_http_request();
+        let trusted = [ip("10.0.0.1")];
+        assert_eq!(client_ip(&req, &trusted), Some(ip("203.0.113.7")));
+    }
+
+    #[test]
+    fn no_peer_addr_returns_none() {
+        let req = TestRequest::default().to_http_request();
+        assert_eq!(client_ip(&req, &[]), None);
     }
 }

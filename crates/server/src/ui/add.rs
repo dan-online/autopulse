@@ -254,7 +254,7 @@ pub async fn add_post(
         .add_event(
             EventType::New,
             Some(BUILTIN_TRIGGER.to_string()),
-            &[ev.file_path.clone()],
+            std::slice::from_ref(&ev.file_path),
         )
         .await;
 

@@ -1,5 +1,6 @@
 use autopulse_utils::LogLevel;
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 
 #[doc(hidden)]
 fn default_hostname() -> String {
@@ -69,6 +70,13 @@ pub struct App {
     /// (default: false). Enable when serving over HTTPS/TLS.
     #[serde(default)]
     pub secure_cookies: bool,
+    /// Reverse-proxy IPs whose `X-Forwarded-For` / `Forwarded` headers
+    /// we trust to identify the real client. When `peer_addr` is on this
+    /// list the rightmost untrusted XFF entry is used for the login
+    /// throttle; otherwise `peer_addr` is used directly. Default: empty
+    /// (trust nothing — `peer_addr` is the client).
+    #[serde(default)]
+    pub trusted_proxies: Vec<IpAddr>,
 }
 
 impl Default for App {
@@ -81,6 +89,7 @@ impl Default for App {
             api_logging: false,
             base_path: String::new(),
             secure_cookies: false,
+            trusted_proxies: Vec::new(),
         }
     }
 }
