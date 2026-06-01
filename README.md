@@ -256,13 +256,7 @@ Default credentials are `admin` / `password` (the same as the API auth). Change 
 
 ##### Reverse Proxy
 
-To serve the UI behind a reverse proxy with a path prefix, set `app.base_path` to that prefix and have the proxy pass it through (no strip-prefix). UI routes are mounted under the configured `base_path`, and generated links include it.
-
-| Config key | Purpose | Example |
-| --- | --- | --- |
-| `app.base_path` | Prefix for UI routes and generated URLs | `/autopulse` |
-| `app.secure_cookies` | Set `Secure` on the session cookie when serving over HTTPS | `true` |
-| `app.trusted_proxies` | Proxy IPs whose `X-Forwarded-For` is honored by the login throttle | `["10.0.0.1"]` |
+To serve the UI behind a reverse proxy with a path prefix, set `app.base_path` and have the proxy pass the prefix through (no strip-prefix). UI routes mount under `base_path` server-side. See [`app` settings](https://autopulse.dancodes.online/autopulse_service/settings/app/struct.App.html) for the full list of relevant options.
 
 ## To-do
 
