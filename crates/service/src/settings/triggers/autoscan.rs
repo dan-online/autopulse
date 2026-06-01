@@ -3,7 +3,7 @@ use crate::settings::timer::Timer;
 use crate::settings::triggers::TriggerConfig;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Autoscan {
     /// Rewrite path
     pub rewrite: Option<Rewrite>,
