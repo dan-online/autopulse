@@ -1,3 +1,4 @@
+use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::EventTimers;
 use crate::settings::{
@@ -15,6 +16,9 @@ pub struct Lidarr {
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
+    /// Path filter matched against the rewritten file path.
+    #[serde(default)]
+    pub filter: PathFilter,
     /// Event-specific timers
     pub event_timers: Option<EventTimers>,
 }
@@ -30,6 +34,10 @@ impl TriggerConfig for Lidarr {
 
     fn excludes(&self) -> &Vec<String> {
         &self.excludes
+    }
+
+    fn filter(&self) -> &PathFilter {
+        &self.filter
     }
 
     fn event_timers(&self) -> Option<&EventTimers> {

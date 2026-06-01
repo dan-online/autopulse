@@ -1,4 +1,5 @@
 use super::{Request, RequestBuilderPerform};
+use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
@@ -17,6 +18,9 @@ pub struct Audiobookshelf {
     pub token: String,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// Path filter matched against the target-rewritten path.
+    #[serde(default)]
+    pub filter: PathFilter,
     /// HTTP request options
     #[serde(default)]
     pub request: Request,

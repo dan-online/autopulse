@@ -60,12 +60,21 @@ pub async fn trigger_post(
             let timer = trigger_settings.get_timer(Some(event_name));
 
             let mut scan_events = vec![];
+            let mut queued_paths = vec![];
+
+            let mut excluded_paths: Vec<String> = vec![];
 
             for path in &paths {
                 let (mut path, search) = path.clone();
 
                 if let Some(rewrite) = &rewrite {
                     path = rewrite.rewrite_path(path);
+                }
+
+                if !trigger_settings.should_process_path(&path) {
+                    tracing::trace!("trigger '{trigger_name}' filtered path '{path}'");
+                    excluded_paths.push(path);
+                    continue;
                 }
 
                 let new_scan_event = NewScanEvent {
@@ -87,31 +96,28 @@ pub async fn trigger_post(
                 };
 
                 match manager.add_event(&new_scan_event) {
-                    Ok(scan_event) => scan_events.push(scan_event),
+                    Ok(scan_event) => {
+                        queued_paths.push(path.clone());
+                        scan_events.push(scan_event);
+                    }
                     Err(e) => error!("failed to add event for '{}': {e}", path),
                 }
             }
 
-            manager
-                .webhooks
-                .add_event(
-                    EventType::New,
-                    Some(trigger_name.clone()),
-                    &paths
-                        .clone()
-                        .into_iter()
-                        .map(|p| p.0)
-                        .collect::<Vec<String>>(),
-                )
-                .await;
+            if scan_events.len() + excluded_paths.len() != paths.len() {
+                return Ok(HttpResponse::InternalServerError().body("failed to add all events"));
+            }
+
+            if !queued_paths.is_empty() {
+                manager
+                    .webhooks
+                    .add_event(EventType::New, Some(trigger_name.clone()), &queued_paths)
+                    .await;
+            }
 
             debug_span!("", trigger = &*trigger_name).in_scope(|| {
                 info!("added {} file{}", scan_events.len(), sify(&scan_events));
             });
-
-            if scan_events.len() != paths.len() {
-                return Ok(HttpResponse::InternalServerError().body("failed to add all events"));
-            }
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
@@ -134,6 +140,11 @@ async fn trigger_get_inner(
 
                 if let Some(rewrite) = &trigger_settings.rewrite {
                     file_path = rewrite.rewrite_path(file_path);
+                }
+
+                if !trigger_settings.filter.allows(&file_path) {
+                    tracing::trace!("trigger '{trigger_name}' filtered path '{file_path}'");
+                    return Ok(HttpResponse::NoContent().finish());
                 }
 
                 let new_scan_event = NewScanEvent {
@@ -184,6 +195,11 @@ async fn trigger_get_inner(
 
                 if let Some(rewrite) = &trigger_settings.rewrite {
                     dir_path = rewrite.rewrite_path(dir_path);
+                }
+
+                if !trigger_settings.filter.allows(&dir_path) {
+                    tracing::trace!("trigger '{trigger_name}' filtered path '{dir_path}'");
+                    return Ok(HttpResponse::NoContent().finish());
                 }
 
                 let new_scan_event = NewScanEvent {

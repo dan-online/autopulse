@@ -260,7 +260,12 @@ impl<'a> PulseRunner<'a> {
                         .get(&x.event_source)
                         .is_none_or(|trigger| !trigger.excludes().contains(name))
                 })
+                .filter(|x| target.should_process_event(x))
                 .collect::<Vec<&mut ScanEvent>>();
+
+            if evs.is_empty() {
+                continue;
+            }
 
             let res = target
                 .process(
