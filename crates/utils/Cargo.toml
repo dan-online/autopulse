@@ -34,4 +34,4 @@ regex = "1.11.1"
 uuid = { version = "1.14.0", features = ["v4"] }
 
 # Logging
-tracing-appender = "0.2.3"
+tracing-appender = { workspace = true }
