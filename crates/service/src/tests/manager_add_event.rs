@@ -1,9 +1,16 @@
+#[cfg(feature = "sqlite")]
 use crate::tests::util::fresh_manager;
+#[cfg(feature = "postgres")]
 use crate::{manager::PulseManager, settings::Settings};
+#[cfg(any(feature = "postgres", feature = "sqlite"))]
 use autopulse_database::conn::get_conn;
+#[cfg(feature = "postgres")]
 use autopulse_database::conn::get_pool;
-use autopulse_database::models::{FoundStatus, NewScanEvent, ProcessStatus};
+use autopulse_database::models::NewScanEvent;
+#[cfg(feature = "sqlite")]
+use autopulse_database::models::{FoundStatus, ProcessStatus};
 use chrono::{Duration, Utc};
+#[cfg(feature = "sqlite")]
 use std::sync::{Arc, Barrier};
 
 fn new_event(source: &str, path: &str, can_process_secs: i64) -> NewScanEvent {
@@ -16,6 +23,7 @@ fn new_event(source: &str, path: &str, can_process_secs: i64) -> NewScanEvent {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn dedupes_pending_event_across_triggers_with_same_path() {
     let m = fresh_manager("dedupe-cross-source");
     let a = m
@@ -32,6 +40,7 @@ fn dedupes_pending_event_across_triggers_with_same_path() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn dedupe_keeps_the_later_can_process_time() {
     let m = fresh_manager("dedupe-can-process");
     let first = m
@@ -45,6 +54,7 @@ fn dedupe_keeps_the_later_can_process_time() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn dedupe_never_shortens_can_process_time() {
     // Long-then-short ordering: the second arrival must NOT shorten
     // the wait the first trigger set. Covered by GREATEST/max in the
@@ -65,6 +75,7 @@ fn dedupe_never_shortens_can_process_time() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn dedupe_does_not_regress_found_status() {
     let m = fresh_manager("dedupe-found");
     let mut found = new_event("sonarr", "/media/c.mkv", 30);
@@ -81,6 +92,7 @@ fn dedupe_does_not_regress_found_status() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn dedupe_preserves_later_file_hash_when_existing_row_has_none() {
     let m = fresh_manager("dedupe-file-hash");
     let first = m
@@ -101,6 +113,7 @@ fn dedupe_preserves_later_file_hash_when_existing_row_has_none() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
     const THREADS: usize = 32;
 
@@ -140,6 +153,7 @@ fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
 }
 
 #[test]
+#[cfg(feature = "postgres")]
 fn postgres_upsert_conflict_target_matches_partial_index() {
     let Ok(url) = std::env::var("AUTOPULSE_TEST_POSTGRES_URL") else {
         return;
@@ -169,6 +183,7 @@ fn postgres_upsert_conflict_target_matches_partial_index() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn retry_event_coalesces_with_new_arrival() {
     let m = fresh_manager("dedupe-retry");
     let inserted = m
@@ -194,6 +209,7 @@ fn retry_event_coalesces_with_new_arrival() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn completed_event_does_not_coalesce_with_new_event() {
     let m = fresh_manager("dedupe-complete");
     let inserted = m
@@ -214,6 +230,7 @@ fn completed_event_does_not_coalesce_with_new_event() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn failed_event_does_not_coalesce_with_new_event() {
     let m = fresh_manager("dedupe-failed");
     let inserted = m
