@@ -13,7 +13,7 @@ use autopulse_database::schema::scan_events::{
 use autopulse_database::{
     conn::{get_conn, DbPool},
     diesel::{
-        self, EscapeExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+        self, EscapeExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
         TextExpressionMethods,
     },
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
@@ -34,10 +34,9 @@ fn escape_like_pattern(input: &str) -> String {
         .replace('_', "\\_")
 }
 
-// Portable LOWER(): SQLite's LIKE is case-insensitive for ASCII but
-// Postgres' is case-sensitive. Wrapping both sides in LOWER() gives the
-// same ASCII case-insensitive search across backends — matching what the
-// SSE filter does client-side, so live rows can't drift from page rows.
+// Postgres LIKE is case-sensitive; SQLite's is case-insensitive for ASCII.
+// LOWER() on both sides normalizes so the live SSE filter and the DB query
+// can't disagree on whether a path matches.
 diesel::define_sql_function! {
     fn lower(x: Text) -> Text;
 }
@@ -208,10 +207,12 @@ impl PulseManager {
     }
 
     pub fn get_event(&self, ev_id: &String) -> anyhow::Result<Option<ScanEvent>> {
-        Ok(scan_events
+        // `.optional()` (not `.ok()`) so pool/decode errors don't masquerade as 404s.
+        scan_events
             .find(ev_id)
             .first::<ScanEvent>(&mut get_conn(&self.pool)?)
-            .ok())
+            .optional()
+            .map_err(Into::into)
     }
 
     /// Total matching rows for pagination (independent of LIMIT/OFFSET).
