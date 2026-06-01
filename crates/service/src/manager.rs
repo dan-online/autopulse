@@ -228,11 +228,7 @@ impl PulseManager {
 
         if let Some(search) = search {
             let escaped = escape_like_pattern(&search.to_lowercase());
-            query = query.filter(
-                lower(file_path)
-                    .like(format!("%{escaped}%"))
-                    .escape('\\'),
-            );
+            query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
         }
 
         query
@@ -299,11 +295,7 @@ impl PulseManager {
 
         if let Some(search) = search {
             let escaped = escape_like_pattern(&search.to_lowercase());
-            query = query.filter(
-                lower(file_path)
-                    .like(format!("%{escaped}%"))
-                    .escape('\\'),
-            );
+            query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
         }
 
         query
