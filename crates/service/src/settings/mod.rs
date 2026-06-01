@@ -1,7 +1,8 @@
+use anyhow::Context;
 use app::App;
 use auth::Auth;
 use figment::{
-    providers::{Env, Format, Json, Toml, Yaml},
+    providers::{Env, Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
 use opts::Opts;
@@ -146,6 +147,59 @@ pub struct Settings {
     pub anchors: Vec<PathBuf>,
 }
 
+pub struct LoadedSettings {
+    pub settings: Settings,
+    pub diagnostics: Vec<ConfigDiagnostic>,
+}
+
+impl LoadedSettings {
+    pub fn log_diagnostics(&self) {
+        for diagnostic in &self.diagnostics {
+            diagnostic.log();
+        }
+    }
+}
+
+pub enum ConfigDiagnostic {
+    LoadedFile(PathBuf),
+    LoadedFileEnv {
+        count: usize,
+    },
+    MissingConfig {
+        cwd: PathBuf,
+        searched: Vec<PathBuf>,
+    },
+}
+
+impl ConfigDiagnostic {
+    fn log(&self) {
+        match self {
+            Self::LoadedFile(path) => {
+                tracing::info!(target: "autopulse", "loaded config from {}", path.display());
+            }
+            Self::LoadedFileEnv { count } => {
+                tracing::info!(
+                    target: "autopulse",
+                    "loaded {count} config override(s) from AUTOPULSE__...__FILE"
+                );
+            }
+            Self::MissingConfig { cwd, searched } => {
+                tracing::warn!(
+                    target: "autopulse",
+                    "no config file found in {}. Searched: {:?}. \
+                     Using defaults + environment overrides only. \
+                     Pass --config /path/to/config.toml or place one of the candidate files in the cwd.",
+                    cwd.display(),
+                    searched
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -182,31 +236,35 @@ impl Settings {
             .collect()
     }
 
-    /// Expands `AUTOPULSE__KEY__FILE=/path` environment variables into
-    /// `AUTOPULSE__KEY=<file contents>` so figment's `Env` provider can
-    /// read secrets sourced from files (Docker/Kubernetes secret mounts).
-    ///
-    /// # Safety
-    ///
-    /// Mutates the process environment. Must be called from `get_settings`
-    /// at startup, before any worker thread reads env vars. The trade-off
-    /// vs. a custom Provider is paid here so the figment chain stays
-    /// idiomatic.
-    unsafe fn expand_file_env_vars() {
-        let pending: Vec<(String, String)> = env::vars()
-            .filter_map(|(k, v)| {
-                let base = k.strip_suffix("__FILE")?.to_string();
-                let contents = std::fs::read_to_string(&v).ok()?;
-                Some((base, contents.trim().to_string()))
+    fn file_env_overrides_from(
+        vars: impl IntoIterator<Item = (String, String)>,
+    ) -> anyhow::Result<Vec<(String, String)>> {
+        const PREFIX: &str = "AUTOPULSE__";
+        const SUFFIX: &str = "__FILE";
+
+        vars.into_iter()
+            .filter_map(|(key, path)| {
+                let key_path = key
+                    .strip_prefix(PREFIX)?
+                    .strip_suffix(SUFFIX)?
+                    .replace("__", ".")
+                    .to_ascii_lowercase();
+                Some((key, key_path, path))
             })
-            .collect();
-        for (k, v) in pending {
-            // SAFETY: caller guarantees single-threaded startup context.
-            unsafe { env::set_var(k, v) };
-        }
+            .map(|(key, key_path, path)| {
+                let contents = std::fs::read_to_string(&path)
+                    .with_context(|| format!("failed to read file referenced by {key}: {path}"))?;
+
+                Ok((key_path, contents.trim().to_string()))
+            })
+            .collect()
     }
 
-    pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
+    fn file_env_overrides() -> anyhow::Result<Vec<(String, String)>> {
+        Self::file_env_overrides_from(env::vars())
+    }
+
+    pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<LoadedSettings> {
         let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
         let explicit = optional_config_file.is_some();
@@ -225,9 +283,7 @@ impl Settings {
             }
         }
 
-        // SAFETY: runs once at process startup before tokio spawns workers.
-        unsafe { Self::expand_file_env_vars() };
-
+        let mut diagnostics = vec![];
         let mut fig = Figment::new();
         if let Some(p) = chosen.as_deref() {
             fig = match p.extension().and_then(|s| s.to_str()) {
@@ -240,39 +296,38 @@ impl Settings {
                     p.display()
                 ),
             };
+            diagnostics.push(ConfigDiagnostic::LoadedFile(p.to_path_buf()));
+        } else if !explicit {
+            diagnostics.push(ConfigDiagnostic::MissingConfig {
+                cwd: cwd.clone(),
+                searched: Self::searched_paths(&cwd),
+            });
         }
         // Env overrides file (last-write-wins).
-        fig = fig.merge(Env::prefixed("AUTOPULSE__").split("__"));
+        fig = fig.merge(
+            Env::prefixed("AUTOPULSE__")
+                .filter(|key| !key.as_str().ends_with("__FILE"))
+                .split("__"),
+        );
+        // File-secret env vars override direct env vars, matching the old
+        // config source behavior without mutating the process environment.
+        let file_overrides = Self::file_env_overrides()?;
+        if !file_overrides.is_empty() {
+            diagnostics.push(ConfigDiagnostic::LoadedFileEnv {
+                count: file_overrides.len(),
+            });
+        }
+        for (key, value) in file_overrides {
+            fig = fig.merge(Serialized::default(&key, value));
+        }
 
         let mut settings: Self = fig.extract().map_err(|e| anyhow::anyhow!(e))?;
         settings.add_default_manual_trigger()?;
 
-        // Use figment's own provenance: ask each merged provider where
-        // its data came from. Avoids tracking "loaded_from" ourselves.
-        let mut saw_file = false;
-        for md in fig.metadata() {
-            if let Some(src) = md.source.as_ref() {
-                tracing::info!(target: "autopulse", "loaded config from {} ({})", src, md.name);
-                saw_file = true;
-            } else {
-                tracing::debug!(target: "autopulse", "config provider: {}", md.name);
-            }
-        }
-        if !saw_file && !explicit {
-            tracing::warn!(
-                target: "autopulse",
-                "no config file found in {}. Searched: {:?}. \
-                 Using defaults + environment overrides only. \
-                 Pass --config /path/to/config.toml or place one of the candidate files in the cwd.",
-                cwd.display(),
-                Self::searched_paths(&cwd)
-                    .iter()
-                    .map(|p| p.display().to_string())
-                    .collect::<Vec<_>>(),
-            );
-        }
-
-        Ok(settings)
+        Ok(LoadedSettings {
+            settings,
+            diagnostics,
+        })
     }
 
     /// Emits an INFO-level summary of the effective config shape at startup.
@@ -335,6 +390,65 @@ mod tests {
                 .file_name()
                 .unwrap(),
             "config.toml"
+        );
+    }
+
+    #[test]
+    fn file_env_overrides_read_autopulse_secret_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("password");
+        std::fs::write(&secret, "secret\n").unwrap();
+
+        let vars = vec![
+            (
+                "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+                secret.display().to_string(),
+            ),
+            ("OTHER__PASSWORD__FILE".to_string(), "ignored".to_string()),
+        ];
+
+        let overrides = Settings::file_env_overrides_from(vars).unwrap();
+
+        assert_eq!(
+            overrides,
+            vec![("auth.password".to_string(), "secret".to_string())]
+        );
+    }
+
+    #[test]
+    fn file_env_overrides_key_paths_deserialize_into_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("password");
+        std::fs::write(&secret, "secret\n").unwrap();
+
+        let overrides = Settings::file_env_overrides_from(vec![(
+            "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+            secret.display().to_string(),
+        )])
+        .unwrap();
+        let mut fig = Figment::new();
+        for (key, value) in overrides {
+            fig = fig.merge(Serialized::default(&key, value));
+        }
+
+        let settings = fig.extract::<Settings>().unwrap();
+
+        assert_eq!(settings.auth.password, "secret");
+    }
+
+    #[test]
+    fn file_env_overrides_error_when_secret_file_cannot_be_read() {
+        let vars = vec![(
+            "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+            "/tmp/missing-autopulse-secret".to_string(),
+        )];
+
+        let err = Settings::file_env_overrides_from(vars).unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("failed to read file referenced by AUTOPULSE__AUTH__PASSWORD__FILE"),
+            "{err:?}"
         );
     }
 }
