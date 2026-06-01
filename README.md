@@ -46,6 +46,7 @@ We use the following terminology:
     - MacOS: `FSEvents`
     - Windows: `ReadDirectoryChangesW`
     - Fallback: `polling`
+  - A-Train
 - **Target**: A target is a specification for a library that will be updated when a file is ready to be processed
   - Plex
   - Jellyfin
@@ -305,6 +306,42 @@ Default credentials are `admin` / `password` (the same as the API auth). Change 
 ##### Reverse Proxy
 
 To serve the UI behind a reverse proxy with a path prefix, set `app.base_path` and have the proxy pass the prefix through (no strip-prefix). UI routes mount under `base_path` server-side. See [`app` settings](https://autopulse.dancodes.online/autopulse_service/settings/app/struct.App.html) for the full list of relevant options.
+
+### Integrations
+
+#### A-Train (Google Drive)
+
+[A-Train](https://github.com/m-rots/a-train) is Autoscan's official Google Drive companion: it watches a Shared Drive via a service account and POSTs change sets to an HTTP endpoint. Autopulse ships a dedicated `atrain` trigger that consumes A-Train's payload directly.
+
+A-Train hardcodes its outbound URL to `/triggers/a-train/{drive_id}`, so **the trigger key must be exactly `a-train`** (with a hyphen):
+
+```yml
+# autopulse config.yml
+triggers:
+  a-train:
+    type: atrain
+    # Map A-Train's view of the file (its service-account-mounted gdrive path)
+    # to whatever path your media server expects.
+    rewrite:
+      from: "/mnt/gdrive"
+      to: "/media"
+```
+
+```toml
+# a-train.toml
+[autoscan]
+url = "http://autopulse:2875/"
+username = "admin"
+password = "your-password"
+
+[drive]
+# Path to the service account JSON key file
+account = "./service-account.json"
+# One or more Shared Drive IDs to watch (required by A-Train)
+drives = ["0A1xxxxxxxxxUk9PVA"]
+```
+
+Autopulse exposes `GET /health` so A-Train's startup preflight succeeds, and accepts `POST /triggers/a-train/{drive_id}` with A-Train's `{ "created": [...], "deleted": [...] }` body. Created paths are marked `NotFound` (autopulse verifies them on disk before dispatching); deleted paths skip verification.
 
 ## To-do
 

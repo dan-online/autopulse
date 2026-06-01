@@ -1,3 +1,34 @@
+/// A-Train - Google Drive trigger
+///
+/// Compatibility trigger for [A-Train](https://github.com/m-rots/a-train), Autoscan's
+/// official Google Drive companion. A-Train hardcodes its outbound URL to
+/// `POST /triggers/a-train/{drive_id}` with a JSON body of `{ "created": [...], "deleted": [...] }`,
+/// so the trigger must be named exactly `a-train` for the route to match.
+///
+/// # Example
+///
+/// ```yml
+/// triggers:
+///   a-train:
+///     type: atrain
+/// ```
+///
+/// or
+///
+/// ```yml
+/// triggers:
+///   a-train:
+///     type: atrain
+///     rewrite:
+///       from: "/mnt/gdrive"
+///       to: "/media"
+///     timer:
+///       wait: 30
+///     excludes: [ "ignored_target" ]
+/// ```
+///
+/// See [`ATrain`] for all options
+pub mod a_train;
 /// Autoscan - autoscan compatibility trigger
 ///
 /// Provides a trigger with compatibility for applications that are built for autoscan
@@ -9,7 +40,6 @@
 ///   my_autoscan:
 ///     type: autoscan
 /// ```
-///
 /// or
 ///
 /// ```yml
@@ -210,6 +240,7 @@ use crate::settings::timer::Timer;
 use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
 use serde::{Deserialize, Serialize};
 use {
+    a_train::{ATrain, ATrainRequest},
     lidarr::{Lidarr, LidarrRequest},
     manual::Manual,
     notify::Notify,
@@ -242,6 +273,7 @@ pub trait TriggerConfig {
 pub enum TriggerType {
     Manual,
     Autoscan,
+    Atrain,
     Radarr,
     Bazarr,
     Sonarr,
@@ -255,6 +287,7 @@ pub enum TriggerType {
 pub enum Trigger {
     Manual(Manual),
     Autoscan(Autoscan),
+    Atrain(ATrain),
     Bazarr(Manual),
     Radarr(Radarr),
     Sonarr(Sonarr),
@@ -268,6 +301,7 @@ impl Trigger {
         match self {
             Self::Manual(trigger) | Self::Bazarr(trigger) => trigger,
             Self::Autoscan(trigger) => trigger,
+            Self::Atrain(trigger) => trigger,
             Self::Radarr(trigger) => trigger,
             Self::Sonarr(trigger) => trigger,
             Self::Lidarr(trigger) => trigger,
@@ -303,6 +337,7 @@ impl Trigger {
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
+            Self::Atrain(_) => Ok(ATrainRequest::from_json(body)?.paths()),
             Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) | Self::Bazarr(_) => {
                 Err(anyhow::anyhow!("Manual trigger does not have paths"))
             }

@@ -11,6 +11,7 @@ use std::env;
 use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
 use targets::Target;
+use tracing::warn;
 use triggers::manual::Manual;
 use triggers::Trigger;
 use webhooks::Webhook;
@@ -339,6 +340,7 @@ impl Settings {
 
     pub fn normalize(&mut self) -> anyhow::Result<()> {
         self.add_default_manual_trigger()?;
+        self.ensure_atrain_alias()?;
 
         Ok(())
     }
@@ -355,6 +357,58 @@ impl Settings {
                 }),
             );
         }
+
+        Ok(())
+    }
+
+    /// A-Train hardcodes its outbound URL to `/triggers/a-train/{drive_id}`,
+    /// so an `atrain` trigger only receives events when it lives under the
+    /// `a-train` HashMap key. If the user picked a different key, mirror the
+    /// trigger under `a-train` so requests still find a home (and warn so
+    /// they understand why the key in their config differs from what shows
+    /// up as `event_source` on dispatched events).
+    pub fn ensure_atrain_alias(&mut self) -> anyhow::Result<()> {
+        let misnamed: Vec<(String, Trigger)> = self
+            .triggers
+            .iter()
+            .filter(|(name, t)| name.as_str() != "a-train" && matches!(t, Trigger::Atrain(_)))
+            .map(|(name, t)| (name.clone(), t.clone()))
+            .collect();
+
+        if misnamed.is_empty() {
+            return Ok(());
+        }
+
+        if let Some(existing) = self.triggers.get("a-train") {
+            // A real `a-train` key already exists. If it's another atrain trigger
+            // we silently route there; if it's something else we warn loudly,
+            // because A-Train's POSTs will be parsed as that other trigger type.
+            if !matches!(existing, Trigger::Atrain(_)) {
+                warn!(
+                    "trigger key `a-train` is reserved for A-Train but resolves to a non-atrain trigger; A-Train requests will be misrouted"
+                );
+            }
+            for (name, _) in &misnamed {
+                warn!(
+                    "trigger `{name}` is type=atrain but A-Train hardcodes /triggers/a-train; an `a-train` trigger already exists, so requests will route to that one instead"
+                );
+            }
+            return Ok(());
+        }
+
+        if misnamed.len() > 1 {
+            let names: Vec<&str> = misnamed.iter().map(|(n, _)| n.as_str()).collect();
+            return Err(anyhow::anyhow!(
+                "multiple `atrain` triggers ({}) are registered under non-`a-train` keys; rename one to `a-train` so A-Train requests have an unambiguous home",
+                names.join(", ")
+            ));
+        }
+
+        let (original_name, trigger) = misnamed.into_iter().next().expect("len == 1 checked above");
+        warn!(
+            "trigger `{original_name}` is type=atrain but A-Train hardcodes /triggers/a-train; aliasing `a-train` -> same config (events will show `event_source: a-train`)"
+        );
+        self.triggers.insert("a-train".to_string(), trigger);
 
         Ok(())
     }
