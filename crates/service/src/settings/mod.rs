@@ -114,22 +114,17 @@ pub fn default_triggers() -> HashMap<String, Trigger> {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Settings {
-    #[serde(default)]
     pub app: App,
 
-    #[serde(default)]
     pub auth: Auth,
 
-    #[serde(default)]
     pub opts: Opts,
 
-    #[serde(default = "default_triggers")]
     pub triggers: HashMap<String, Trigger>,
-    #[serde(default)]
     pub targets: HashMap<String, Target>,
 
-    #[serde(default)]
     pub webhooks: HashMap<String, Webhook>,
 
     /// List of paths to anchor the service to
@@ -143,7 +138,6 @@ pub struct Settings {
     ///  - /mnt/media/tv # Directory
     ///  - /mnt/media/anchor # File
     /// ```
-    #[serde(default)]
     pub anchors: Vec<PathBuf>,
 }
 
@@ -322,7 +316,7 @@ impl Settings {
         }
 
         let mut settings: Self = fig.extract().map_err(|e| anyhow::anyhow!(e))?;
-        settings.add_default_manual_trigger()?;
+        settings.normalize()?;
 
         Ok(LoadedSettings {
             settings,
@@ -341,6 +335,12 @@ impl Settings {
             self.webhooks.len(),
             self.anchors.len(),
         );
+    }
+
+    pub fn normalize(&mut self) -> anyhow::Result<()> {
+        self.add_default_manual_trigger()?;
+
+        Ok(())
     }
 
     pub fn add_default_manual_trigger(&mut self) -> anyhow::Result<()> {
@@ -450,5 +450,36 @@ mod tests {
                 .contains("failed to read file referenced by AUTOPULSE__AUTH__PASSWORD__FILE"),
             "{err:?}"
         );
+    }
+
+    #[test]
+    fn empty_settings_deserialize_like_rust_default() {
+        let settings: Settings = serde_json::from_str("{}").expect("empty settings should load");
+        let default = Settings::default();
+
+        assert_eq!(
+            serde_json::to_value(&settings).expect("settings serialize"),
+            serde_json::to_value(&default).expect("default settings serialize")
+        );
+        assert_eq!(settings.auth.enabled, default.auth.enabled);
+        assert!(matches!(
+            settings.triggers.get("manual"),
+            Some(Trigger::Manual(_))
+        ));
+    }
+
+    #[test]
+    fn normalize_adds_manual_trigger_to_present_empty_trigger_map() {
+        let mut settings: Settings =
+            serde_json::from_str(r#"{"triggers":{}}"#).expect("settings should load");
+
+        assert!(!settings.triggers.contains_key("manual"));
+
+        settings.normalize().expect("settings should normalize");
+
+        assert!(matches!(
+            settings.triggers.get("manual"),
+            Some(Trigger::Manual(_))
+        ));
     }
 }

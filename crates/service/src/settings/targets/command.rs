@@ -35,6 +35,10 @@ impl Command {
             return Err(anyhow::anyhow!("command cannot have both path and raw"));
         }
 
+        if self.path.is_none() && self.raw.is_none() {
+            return Err(anyhow::anyhow!("command requires either path or raw"));
+        }
+
         let ev_path = ev.get_path(&self.rewrite);
 
         if let Some(path) = self.path.clone() {
@@ -98,5 +102,55 @@ impl TargetProcess for Command {
         }
 
         Ok(succeeded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Command;
+    use autopulse_database::models::ScanEvent;
+
+    fn scan_event() -> ScanEvent {
+        let now = chrono::Utc::now().naive_utc();
+
+        ScanEvent {
+            id: "event-id".to_string(),
+            event_source: "manual".to_string(),
+            event_timestamp: now,
+            file_path: "/media/movie.mkv".to_string(),
+            file_hash: None,
+            process_status: "pending".to_string(),
+            found_status: "found".to_string(),
+            failed_times: 0,
+            next_retry_at: None,
+            targets_hit: String::new(),
+            found_at: None,
+            processed_at: None,
+            created_at: now,
+            updated_at: now,
+            can_process: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn run_rejects_command_without_path_or_raw() {
+        let command = Command {
+            path: None,
+            timeout: None,
+            raw: None,
+            rewrite: None,
+            filter: Default::default(),
+        };
+
+        let err = command
+            .run(&scan_event())
+            .await
+            .expect_err("empty command target should fail");
+
+        assert!(
+            err.to_string()
+                .contains("command requires either path or raw"),
+            "unexpected error: {err}"
+        );
     }
 }
