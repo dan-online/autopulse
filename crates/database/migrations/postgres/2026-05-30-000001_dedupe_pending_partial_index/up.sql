@@ -1,10 +1,6 @@
--- Collapse pre-existing duplicates so the partial unique index can be created.
--- For each file_path with multiple pending/retry rows, keep the most recently
--- updated row and drop the rest. Merge the longest can_process and any existing
--- hash into the survivor so upgrading doesn't shorten settle timers or discard
--- hash validation. This is the historical state #369 created before the dedupe
--- logic landed; without it, the CREATE INDEX below would fail on any
--- installation that already accumulated duplicates.
+-- Old installs may already have duplicate queued rows. Merge the values we
+-- care about before deleting extras so upgrades don't shorten waits or drop
+-- hashes.
 UPDATE scan_events AS survivor
 SET
   can_process = (
@@ -46,10 +42,7 @@ WHERE process_status IN ('pending', 'retry')
     WHERE rn = 1
   );
 
--- Partial unique index: enforces "at most one non-terminal row per file_path"
--- at the DB level and gives the upsert path a deterministic conflict target.
--- Terminal rows (complete, failed) remain unconstrained so processing
--- history is preserved across cleanups.
+-- Keep one queued row per path while leaving complete/failed history alone.
 CREATE UNIQUE INDEX idx_scan_events_dedupe_pending_retry
   ON scan_events (file_path)
   WHERE process_status IN ('pending', 'retry');

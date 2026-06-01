@@ -205,13 +205,7 @@ impl AnyConnection {
         }
     }
 
-    /// Atomic dedupe-on-insert backed by the partial unique index
-    /// `idx_scan_events_dedupe_pending_retry`. If a non-terminal row
-    /// (Pending or Retry) exists for the same `file_path`, its
-    /// `updated_at` is refreshed and `can_process` becomes
-    /// `MAX(existing, incoming)` so a longer wait from one trigger is
-    /// never shortened by another. `event_source` and `found_status`
-    /// are first-write-wins; `file_hash` is first-non-null-wins.
+    /// Inserts a queued event, or updates the existing pending/retry row for the path.
     pub fn upsert_pending(
         &mut self,
         ev: &NewScanEvent,
@@ -240,11 +234,8 @@ fn upsert_pending_pg(
     use diesel::upsert::{excluded, DecoratableTarget};
     use diesel::ExpressionMethods;
 
-    // Postgres requires the conflict target's WHERE clause to match
-    // the partial unique index — otherwise inference fails with
-    // "no unique or exclusion constraint matching the ON CONFLICT
-    // specification". Keep this covered by a real Postgres execution
-    // test before changing the predicate shape.
+    // Keep this predicate aligned with the partial index; Postgres checks that
+    // match at runtime, and the smoke test covers it.
     let pending: String = ProcessStatus::Pending.into();
     let retry: String = ProcessStatus::Retry.into();
 
@@ -279,11 +270,8 @@ fn upsert_pending_sqlite(
     use diesel::{ExpressionMethods, QueryDsl};
     use diesel::{OptionalExtension, SelectableHelper};
 
-    // SQLite cannot express `ON CONFLICT (file_path) WHERE …` through
-    // Diesel 2.3.9 — the typed `QueryFragment<Sqlite, _>` impl for
-    // `DecoratedConflictTarget` simply doesn't exist. The SQLite pool
-    // is capped at one connection, so this SELECT-then-write sequence is
-    // serialized at connection acquisition and cannot race itself.
+    // Diesel cannot target SQLite partial indexes here. The SQLite pool has one
+    // connection, so this select-and-write sequence is serialized.
     let pending: String = ProcessStatus::Pending.into();
     let retry: String = ProcessStatus::Retry.into();
 

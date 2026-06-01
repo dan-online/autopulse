@@ -56,10 +56,6 @@ fn dedupe_keeps_the_later_can_process_time() {
 #[test]
 #[cfg(feature = "sqlite")]
 fn dedupe_never_shortens_can_process_time() {
-    // Long-then-short ordering: the second arrival must NOT shorten
-    // the wait the first trigger set. Covered by GREATEST/max in the
-    // upsert; without that, the new value would win and shorten the
-    // schedule by 50 seconds in this fixture.
     let m = fresh_manager("dedupe-no-shorten");
     let first = m
         .add_event(&new_event("sonarr", "/media/long.mkv", 60))
@@ -190,7 +186,7 @@ fn retry_event_coalesces_with_new_arrival() {
         .add_event(&new_event("sonarr", "/media/r.mkv", 30))
         .unwrap();
 
-    // Simulate the runner moving the row into Retry.
+    // Match the state the runner sets before retrying.
     use autopulse_database::diesel::{self, ExpressionMethods, QueryDsl, RunQueryDsl};
     use autopulse_database::schema::scan_events::dsl::{process_status, scan_events};
     diesel::update(scan_events.find(&inserted.id))

@@ -1,7 +1,3 @@
-//! Shared test utilities. Currently: a freshly-migrated `PulseManager`
-//! backed by a unique on-disk SQLite database. Mirrors the existing
-//! `crates/server/src/tests/routes/public_endpoints.rs` pattern.
-
 use crate::manager::PulseManager;
 use crate::settings::Settings;
 use autopulse_database::conn::{get_conn, get_pool};

@@ -175,16 +175,6 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        // Dedupe (issue #369): a non-terminal row (Pending or Retry)
-        // for the same `file_path` is updated in place via the partial
-        // unique index `idx_scan_events_dedupe_pending_retry`. Terminal
-        // rows (Complete, Failed) are not covered by the index, so a
-        // new arrival after a finished row produces a fresh insert.
-        // Single atomic statement — no SELECT-then-INSERT race window.
-        // Coalesce semantics: `event_source`, `found_status`, and
-        // `file_hash` are first-write-wins; `can_process` becomes
-        // `MAX(existing, incoming)` so a longer wait from one trigger
-        // is never shortened by another.
         let now = chrono::Utc::now().naive_utc();
         let result = get_conn(&self.pool)?.upsert_pending(ev, now)?;
 
