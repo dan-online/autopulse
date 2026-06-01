@@ -10,7 +10,8 @@ pub enum SpecialMention {
     Everyone,
 }
 
-/// A user or role mention, written in config as `{ user = "<id>" }` or `{ role = "<id>" }`.
+/// A user or role mention, written in config as a single-key map keyed by
+/// `user` or `role` with a string ID value.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum TaggedMention {
@@ -22,7 +23,7 @@ pub enum TaggedMention {
 ///
 /// In config, accepts either:
 /// - a bare string literal: `"here"` or `"everyone"`
-/// - a single-key object: `{ role = "<id>" }` or `{ user = "<id>" }`
+/// - a single-key map keyed by `role` or `user` with a string ID value
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum MentionTarget {
@@ -33,8 +34,8 @@ pub enum MentionTarget {
 /// A single Discord mention entry, attached to one or more event types.
 #[derive(Serialize, Clone, Debug)]
 pub struct DiscordMention {
-    /// Mention targets. Each entry is one of: `"here"`, `"everyone"`,
-    /// `{ role = "<id>" }`, `{ user = "<id>" }`.
+    /// Mention targets. Each entry is one of: `"here"`, `"everyone"`, or
+    /// a single-key map keyed by `role` or `user` with a string ID value.
     pub targets: Vec<MentionTarget>,
     /// Event types that trigger this mention. An empty list (or omitted
     /// field) means the mention fires on every event in the batch.
@@ -57,7 +58,7 @@ impl<'de> Deserialize<'de> for DiscordMention {
         let raw = Raw::deserialize(deserializer)?;
         if raw.targets.is_empty() {
             return Err(D::Error::custom(
-                "discord mention: `targets` must be non-empty (entries: \"here\", \"everyone\", { role = \"<id>\" }, { user = \"<id>\" })",
+                "discord mention: `targets` must be non-empty (entries: \"here\", \"everyone\", or a single-key map keyed by \"role\" or \"user\")",
             ));
         }
         Ok(DiscordMention {
@@ -123,8 +124,8 @@ pub struct DiscordWebhook {
     pub username: Option<String>,
     /// Mentions to attach to messages whose batch contains a matching event type.
     ///
-    /// Each entry lists `targets` (any mix of `"here"`, `"everyone"`,
-    /// `{ role = "<id>" }`, `{ user = "<id>" }`) and an optional `on` filter.
+    /// Each entry lists `targets` (any mix of `"here"`, `"everyone"`, or
+    /// a single-key map keyed by `role` or `user`) and an optional `on` filter.
     /// An empty or missing `on` means the mention fires on every event.
     ///
     /// Example:
