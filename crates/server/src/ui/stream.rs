@@ -19,17 +19,12 @@ use crate::ui::{auth::SessionUser, events_view};
 pub struct StreamQuery {
     pub status: Option<String>,
     pub search: Option<String>,
+    /// Switches the stream to detail mode: emits only `event-row-{id}`
+    /// frames matching this id; no list rows, no resync.
+    pub id: Option<String>,
 }
 
-/// SSE feed of state transitions. Per broadcast we emit up to two frames:
-/// - `event-row` — row HTML when the event matches the connection's filter,
-///   or an OOB `<tr hx-swap-oob="delete">` alone when it no longer matches
-///   (removes any stale row from the filtered tbody).
-/// - `event-row-{id}` — empty payload, used by the detail page as a per-id
-///   trigger. Always fires regardless of filter.
-///
-/// `Lagged` → `resync` frame so HTMX refetches rather than dropping rows.
-/// 15s keep-alive defeats Cloudflare/nginx ~100s idle disconnect.
+/// 15s keep-alive defeats the ~100s idle disconnect on Cloudflare / nginx.
 #[get("/ui/events/stream")]
 pub async fn events_stream(
     manager: Data<PulseManager>,
@@ -38,6 +33,7 @@ pub async fn events_stream(
 ) -> impl Responder {
     let rx = manager.subscribe();
     let base = manager.settings.app.base_path.clone();
+    let detail_id = q.id.clone().filter(|s| !s.is_empty());
     let status = q.status.clone().filter(|s| !s.is_empty());
     let search = q
         .search
@@ -49,14 +45,20 @@ pub async fn events_stream(
     tokio::spawn(async move {
         let mut input = BroadcastStream::new(rx);
         loop {
-            // `tx.closed()` resolves the instant the client disconnects, so
-            // the pump exits without waiting for the next broadcast.
+            // `tx.closed()` exits the pump on client disconnect without
+            // waiting for the next broadcast.
             let msg = tokio::select! {
                 msg = input.next() => msg,
                 () = tx.closed() => return,
             };
             let Some(msg) = msg else { return };
-            let frames = build_frames(&base, msg, status.as_deref(), search.as_deref());
+            let frames = build_frames(
+                &base,
+                msg,
+                status.as_deref(),
+                search.as_deref(),
+                detail_id.as_deref(),
+            );
             for frame in frames {
                 if tx.send(Ok(frame)).await.is_err() {
                     return;
@@ -73,26 +75,40 @@ fn build_frames(
     msg: Result<EventBroadcast, BroadcastStreamRecvError>,
     status: Option<&str>,
     search_lower: Option<&str>,
+    detail_id: Option<&str>,
 ) -> Vec<sse::Event> {
     match msg {
         Ok(b) => {
             let id = b.event.id.clone();
-            let matches = matches_filter(&b.event, status, search_lower);
-            let row_html = if matches {
-                let row = events_view::event_row(base, &b.event).into_string();
-                format!(r#"<tr id="evt-{id}" hx-swap-oob="delete"></tr>{row}"#)
+            if let Some(want) = detail_id {
+                if id == want {
+                    vec![sse::Event::Data(
+                        sse::Data::new("").event(format!("event-row-{id}")),
+                    )]
+                } else {
+                    vec![]
+                }
             } else {
-                format!(r#"<tr id="evt-{id}" hx-swap-oob="delete"></tr>"#)
-            };
-            vec![
-                sse::Event::Data(sse::Data::new(row_html).event("event-row")),
-                sse::Event::Data(sse::Data::new("").event(format!("event-row-{id}"))),
-            ]
+                let matches = matches_filter(&b.event, status, search_lower);
+                let row_html = if matches {
+                    let row = events_view::event_row(base, &b.event).into_string();
+                    format!(r#"<tr id="evt-{id}" hx-swap-oob="delete"></tr>{row}"#)
+                } else {
+                    format!(r#"<tr id="evt-{id}" hx-swap-oob="delete"></tr>"#)
+                };
+                vec![sse::Event::Data(
+                    sse::Data::new(row_html).event("event-row"),
+                )]
+            }
         }
         Err(BroadcastStreamRecvError::Lagged(n)) => {
-            vec![sse::Event::Data(
-                sse::Data::new(format!("<!-- lagged {n} events; resync -->")).event("resync"),
-            )]
+            if detail_id.is_some() {
+                vec![]
+            } else {
+                vec![sse::Event::Data(
+                    sse::Data::new(format!("<!-- lagged {n} events; resync -->")).event("resync"),
+                )]
+            }
         }
     }
 }

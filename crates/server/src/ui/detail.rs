@@ -65,10 +65,9 @@ pub async fn event_detail(
     };
 
     let body = html! {
-        // Subscribe to the per-id SSE event so only this row's updates trigger a reload.
         div.detail-live
             hx-ext="sse"
-            sse-connect={ (base) "/ui/events/stream" }
+            sse-connect={ (base) "/ui/events/stream?id=" (ev.id) }
             hx-trigger={ "sse:event-row-" (ev.id) " throttle:2s, retry-done" }
             hx-get={ (base) "/ui/events/" (ev.id) }
             hx-select="section.detail"
