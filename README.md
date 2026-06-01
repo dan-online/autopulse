@@ -87,7 +87,7 @@ The easiest way to get started with autopulse is to use the provided docker imag
 - `latest-sqlite` - smaller image that only supports SQLite
 - `stable` - latest versioned release
 
-- `ui` - self-hostable UI for autopulse
+> The web UI is built into all images and served at `/ui/*` from the autopulse port. There is no separate UI image.
 
 > All images are multi-arch and support `linux/amd64`, `linux/arm64`, however -amd64 and -arm64 suffixes can be used to specify the architecture
 
@@ -252,48 +252,19 @@ $ curl -u "admin:password" "http://localhost:2875/api/config-template?database=p
 
 #### UI
 
-The autopulse ui is a simple web interface that allows you to view and add scan requests. It is available hosted on Cloudflare Pages at [autopulseui.pages.dev](https://autopulseui.pages.dev/) or you can host it yourself using the provided docker image. Note that requests are made server-side so you do not need to expose your autopulse instance to the internet, only the UI when self-hosting.
+The web UI ships in the main autopulse image and is served at `/ui/*` on the same port (default `2875`). It lets you browse scan events, retry failures, view config, and submit manual scans.
 
-##### Environment Variables
-
-| Variable | Description | Example |
-| --- | --- | --- |
-| `FORCE_DEFAULT_SERVER_URL` | Forces the default server URL to be used | `true` |
-| `DEFAULT_SERVER_URL` | The default server URL to use | `http://localhost:2875` |
-| `FORCE_AUTH` | Forces the UI to use auth from env | `true` |
-| `FORCE_SERVER_URL` | Forces the server url | `true` |
-| `FORCE_USERNAME` | Forces the username | `true` |
-| `FORCE_PASSWORD` | Forces the password | `true` |
-| `ORIGIN` | Required when proxying requests | `https://mycool.domain` |
-| `PORT` | Change the port | `2885` |
-
-###### Examples
-
-Force a default server URL
-
-```env
-FORCE_DEFAULT_SERVER_URL=true
-DEFAULT_SERVER_URL=http://localhost:2875
-```
-
-Force the UI to use the provided auth
-
-```env
-FORCE_AUTH=true
-FORCE_SERVER_URL=https://localhost:2875
-FORCE_USERNAME=admin
-FORCE_PASSWORD=password
-```
+Default credentials are `admin` / `password` (the same as the API auth). Change them via the standard `auth.username` / `auth.password` config keys; sessions issued under old credentials are invalidated automatically.
 
 ##### Reverse Proxy
 
-To serve the autopulse ui behind a reverse proxy **with** a base path, you must use the `ui-dynamic` tag instead. This builds the UI on startup and ensures paths are based on a given base path. Useful for nginx/etc
+To serve the UI behind a reverse proxy with a path prefix, set `app.base_path` to that prefix and have the proxy pass it through (no strip-prefix). UI routes are mounted under the configured `base_path`, and generated links include it.
 
-###### Environment Variables
-
-| Variable | Description | Example |
+| Config key | Purpose | Example |
 | --- | --- | --- |
-| `BASE_PATH` | Set the path for requests | `/autopulse` |
+| `app.base_path` | Prefix for UI routes and generated URLs | `/autopulse` |
+| `app.secure_cookies` | Set `Secure` on the session cookie when serving over HTTPS | `true` |
+| `app.trusted_proxies` | Proxy IPs whose `X-Forwarded-For` is honored by the login throttle | `["10.0.0.1"]` |
 
 ## To-do
 
