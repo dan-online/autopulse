@@ -4,7 +4,7 @@ use crate::settings::triggers::Trigger;
 use crate::settings::webhooks::{EventType, WebhookManager};
 use crate::settings::Settings;
 
-use autopulse_database::diesel::sql_types::BigInt;
+use autopulse_database::diesel::sql_types::{BigInt, Text};
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
     can_process, created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit,
@@ -32,6 +32,14 @@ fn escape_like_pattern(input: &str) -> String {
         .replace('\\', "\\\\")
         .replace('%', "\\%")
         .replace('_', "\\_")
+}
+
+// Portable LOWER(): SQLite's LIKE is case-insensitive for ASCII but
+// Postgres' is case-sensitive. Wrapping both sides in LOWER() gives the
+// same ASCII case-insensitive search across backends — matching what the
+// SSE filter does client-side, so live rows can't drift from page rows.
+diesel::define_sql_function! {
+    fn lower(x: Text) -> Text;
 }
 
 /// Represents the service statistics.
@@ -219,8 +227,12 @@ impl PulseManager {
         }
 
         if let Some(search) = search {
-            let escaped = escape_like_pattern(&search);
-            query = query.filter(file_path.like(format!("%{escaped}%")).escape('\\'));
+            let escaped = escape_like_pattern(&search.to_lowercase());
+            query = query.filter(
+                lower(file_path)
+                    .like(format!("%{escaped}%"))
+                    .escape('\\'),
+            );
         }
 
         query
@@ -286,8 +298,12 @@ impl PulseManager {
         }
 
         if let Some(search) = search {
-            let escaped = escape_like_pattern(&search);
-            query = query.filter(file_path.like(format!("%{escaped}%")).escape('\\'));
+            let escaped = escape_like_pattern(&search.to_lowercase());
+            query = query.filter(
+                lower(file_path)
+                    .like(format!("%{escaped}%"))
+                    .escape('\\'),
+            );
         }
 
         query
