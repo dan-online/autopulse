@@ -7,7 +7,10 @@ use actix_web::{
 use autopulse_database::models::NewScanEvent;
 use autopulse_service::{
     manager::PulseManager,
-    settings::triggers::{manual::Manual, Trigger},
+    settings::{
+        triggers::{manual::Manual, Trigger},
+        webhooks::EventType,
+    },
 };
 use maud::{html, Markup};
 use serde::Deserialize;
@@ -243,6 +246,17 @@ pub async fn add_post(
     let ev = manager
         .add_event(&new_scan_event)
         .map_err(ErrorInternalServerError)?;
+
+    // Mirror /triggers/manual: legacy callers fire the New webhook after
+    // add_event, and operators rely on it to drive notifications.
+    manager
+        .webhooks
+        .add_event(
+            EventType::New,
+            Some(BUILTIN_TRIGGER.to_string()),
+            &[ev.file_path.clone()],
+        )
+        .await;
 
     let base = &manager.settings.app.base_path;
     Ok(HttpResponse::SeeOther()
