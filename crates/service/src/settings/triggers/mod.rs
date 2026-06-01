@@ -263,6 +263,9 @@ pub trait TriggerConfig {
     fn timer(&self) -> Option<&Timer>;
     fn excludes(&self) -> &Vec<String>;
     fn filter(&self) -> &PathFilter;
+    fn accepts_trailing_segment(&self) -> bool {
+        false
+    }
     fn event_timers(&self) -> Option<&EventTimers> {
         None
     }
@@ -339,7 +342,7 @@ impl Trigger {
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
             Self::Atrain(_) => Ok(ATrainRequest::from_json(body)?.paths()),
             Self::Manual(_) | Self::Notify(_) | Self::Autoscan(_) | Self::Bazarr(_) => {
-                Err(anyhow::anyhow!("Manual trigger does not have paths"))
+                Err(anyhow::anyhow!("trigger does not accept JSON bodies"))
             }
         }?;
 
@@ -352,5 +355,9 @@ impl Trigger {
 
     pub fn should_process_path(&self, path: &str) -> bool {
         self.as_config().filter().allows(path)
+    }
+
+    pub fn accepts_trailing_segment(&self) -> bool {
+        self.as_config().accepts_trailing_segment()
     }
 }

@@ -41,7 +41,7 @@ async fn trigger_post_inner(
     };
 
     match trigger_settings {
-        Trigger::Manual(_) | Trigger::Notify(_) => {
+        Trigger::Manual(_) | Trigger::Notify(_) | Trigger::Autoscan(_) | Trigger::Bazarr(_) => {
             Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
         _ => {
@@ -136,9 +136,9 @@ pub async fn trigger_post(
 /// won't let the user reshape it. This sibling route swallows the trailing
 /// `{drive_id}` segment so the same trigger handler can serve it.
 ///
-/// Returns 404 unless the resolved trigger is `Trigger::Atrain`, so a
-/// stray `POST /triggers/sonarr/anything` can't sneak past as a valid
-/// sonarr request.
+/// Returns 404 unless the resolved trigger accepts trailing segments, so a
+/// stray `POST /triggers/sonarr/anything` can't sneak past as a valid sonarr
+/// request.
 #[post("/triggers/{trigger}/{_drive_id}")]
 pub async fn trigger_post_rest(
     req: HttpRequest,
@@ -150,7 +150,9 @@ pub async fn trigger_post_rest(
     let (trigger_name, _drive_id) = path.into_inner();
 
     match manager.settings.triggers.get(&trigger_name) {
-        Some(Trigger::Atrain(_)) => trigger_post_inner(&req, &trigger_name, &manager, body).await,
+        Some(trigger_settings) if trigger_settings.accepts_trailing_segment() => {
+            trigger_post_inner(&req, &trigger_name, &manager, body).await
+        }
         _ => Ok(HttpResponse::NotFound().body("Trigger not found")),
     }
 }

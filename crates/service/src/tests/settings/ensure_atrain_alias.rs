@@ -1,6 +1,6 @@
 use crate::settings::triggers::a_train::ATrain;
 use crate::settings::triggers::Trigger;
-use crate::settings::Settings;
+use crate::settings::{ConfigDiagnostic, Settings};
 
 fn atrain() -> Trigger {
     Trigger::Atrain(ATrain::default())
@@ -15,11 +15,12 @@ fn manual() -> Trigger {
 fn noop_when_no_atrain_triggers_present() {
     let mut settings = Settings::default();
     let before = settings.triggers.clone();
-    settings
+    let diagnostics = settings
         .ensure_atrain_alias()
         .expect("noop case should succeed");
     assert_eq!(before.len(), settings.triggers.len());
     assert!(!settings.triggers.contains_key("a-train"));
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
@@ -28,7 +29,7 @@ fn noop_when_atrain_already_keyed_correctly() {
     settings.triggers.insert("a-train".to_string(), atrain());
     let len_before = settings.triggers.len();
 
-    settings
+    let diagnostics = settings
         .ensure_atrain_alias()
         .expect("noop case should succeed");
 
@@ -41,6 +42,7 @@ fn noop_when_atrain_already_keyed_correctly() {
         settings.triggers.get("a-train"),
         Some(Trigger::Atrain(_))
     ));
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
@@ -48,7 +50,7 @@ fn aliases_misnamed_atrain_under_a_train_key() {
     let mut settings = Settings::default();
     settings.triggers.insert("my_drive".to_string(), atrain());
 
-    settings
+    let diagnostics = settings
         .ensure_atrain_alias()
         .expect("single-misnamed case should succeed");
 
@@ -60,6 +62,10 @@ fn aliases_misnamed_atrain_under_a_train_key() {
         matches!(settings.triggers.get("my_drive"), Some(Trigger::Atrain(_))),
         "original key must be preserved so users can still reference it"
     );
+    assert!(diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic,
+        ConfigDiagnostic::AtrainAliased { from } if from == "my_drive"
+    )));
 }
 
 #[test]
@@ -78,7 +84,7 @@ fn does_not_overwrite_existing_a_train_key() {
     );
     settings.triggers.insert("my_drive".to_string(), atrain());
 
-    settings
+    let diagnostics = settings
         .ensure_atrain_alias()
         .expect("collision case should warn-not-error");
 
@@ -93,6 +99,11 @@ fn does_not_overwrite_existing_a_train_key() {
             other.is_some()
         ),
     }
+
+    assert!(diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic,
+        ConfigDiagnostic::AtrainAliasIgnored { from } if from == "my_drive"
+    )));
 }
 
 #[test]
@@ -123,7 +134,7 @@ fn ignores_non_atrain_a_train_keyed_trigger_but_completes() {
     settings.triggers.insert("a-train".to_string(), manual());
     settings.triggers.insert("my_drive".to_string(), atrain());
 
-    settings
+    let diagnostics = settings
         .ensure_atrain_alias()
         .expect("non-atrain `a-train` key should not be an error");
 
@@ -131,4 +142,38 @@ fn ignores_non_atrain_a_train_keyed_trigger_but_completes() {
         settings.triggers.get("a-train"),
         Some(Trigger::Manual(_))
     ));
+    assert!(diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic,
+        ConfigDiagnostic::AtrainKeyShadowed { existing_type } if existing_type == "manual"
+    )));
+    assert!(diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic,
+        ConfigDiagnostic::AtrainAliasIgnored { from } if from == "my_drive"
+    )));
+}
+
+#[test]
+fn get_settings_includes_atrain_alias_diagnostic() {
+    let dir = tempfile::tempdir().expect("temp dir should be created");
+    let config_path = dir.path().join("config.toml");
+    std::fs::write(
+        &config_path,
+        r#"
+[triggers.my_drive]
+type = "atrain"
+"#,
+    )
+    .expect("config file should be written");
+
+    let loaded = Settings::get_settings(Some(config_path.display().to_string()))
+        .expect("settings should load");
+
+    assert!(matches!(
+        loaded.settings.triggers.get("a-train"),
+        Some(Trigger::Atrain(_))
+    ));
+    assert!(loaded.diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic,
+        ConfigDiagnostic::AtrainAliased { from } if from == "my_drive"
+    )));
 }

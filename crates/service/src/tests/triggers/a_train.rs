@@ -1,7 +1,7 @@
 #![cfg(test)]
 mod tests {
-    use crate::settings::triggers::a_train::ATrainRequest;
-    use crate::settings::triggers::TriggerRequest;
+    use crate::settings::triggers::a_train::{ATrain, ATrainRequest};
+    use crate::settings::triggers::{Trigger, TriggerRequest};
 
     #[test]
     fn test_from_json_created() {
@@ -90,5 +90,15 @@ mod tests {
                 ("/Movies/Dune (2021)".to_string(), false),
             ]
         );
+    }
+
+    #[test]
+    fn only_atrain_accepts_trailing_segments() {
+        let atrain = Trigger::Atrain(ATrain::default());
+        let manual = serde_json::from_value::<Trigger>(serde_json::json!({ "type": "manual" }))
+            .expect("manual trigger JSON should deserialize");
+
+        assert!(atrain.accepts_trailing_segment());
+        assert!(!manual.accepts_trailing_segment());
     }
 }

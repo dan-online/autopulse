@@ -83,6 +83,17 @@ fn test_auth_header() -> String {
     Settings::default().auth.to_auth_encoded()
 }
 
+fn atrain_manager(label: &str) -> PulseManager {
+    manager_with(
+        "a-train",
+        Trigger::Atrain(ATrain {
+            rewrite: Some(rewrite("/mnt/gdrive", "/media")),
+            ..Default::default()
+        }),
+        label,
+    )
+}
+
 #[actix_web::test]
 async fn webhook_trigger_returns_only_queued_paths_after_filtering() {
     let manager = test_manager();
@@ -161,19 +172,36 @@ async fn autoscan_trigger_applies_rewrite_to_dir() {
 }
 
 #[actix_web::test]
+async fn autoscan_trigger_rejects_json_post_body() {
+    let manager = test_manager();
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/a_train")
+            .insert_header(("Authorization", test_auth_header()))
+            .set_json(serde_json::json!({ "dir": "/downloads/show" }))
+            .to_request(),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[actix_web::test]
 async fn atrain_trigger_accepts_post_with_trailing_drive_id() {
     // A-Train hardcodes `/triggers/a-train/{drive_id}` as the POST URL and
     // sends `{ "created": [...], "deleted": [...] }` as the body. Verify
     // the trailing-segment route reaches the atrain trigger and that the
     // configured rewrite is applied to each path.
-    let manager = manager_with(
-        "a-train",
-        Trigger::Atrain(ATrain {
-            rewrite: Some(rewrite("/mnt/gdrive", "/media")),
-            ..Default::default()
-        }),
-        "atrain-post",
-    );
+    let manager = atrain_manager("atrain-post");
 
     let app = test::init_service(
         App::new()
@@ -218,6 +246,107 @@ async fn atrain_trigger_accepts_post_with_trailing_drive_id() {
         paths.contains(&"/media/Movies/Mortal Kombat (2021)"),
         "rewrite must be applied to deleted path; got {paths:?}"
     );
+}
+
+#[actix_web::test]
+async fn atrain_trailing_route_requires_auth() {
+    let manager = atrain_manager("atrain-auth");
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post_rest)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/a-train/0A1xxxxxxxxxUk9PVA")
+            .set_json(serde_json::json!({
+                "created": ["/mnt/gdrive/Movies/Interstellar (2014)"],
+                "deleted": [],
+            }))
+            .to_request(),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[actix_web::test]
+async fn atrain_trailing_route_rejects_malformed_json() {
+    let manager = atrain_manager("atrain-malformed-json");
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post_rest)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/a-train/0A1xxxxxxxxxUk9PVA")
+            .insert_header(("Authorization", test_auth_header()))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(r#"{ "created": ["/mnt/gdrive/Movies"], "deleted": "#)
+            .to_request(),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[actix_web::test]
+async fn atrain_literal_payload_queues_events() {
+    let manager = atrain_manager("atrain-literal");
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post_rest)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+    let payload = r#"{
+  "created": [
+    "/mnt/gdrive/Movies/Interstellar (2014)",
+    "/mnt/gdrive/TV/Legion/Season 1"
+  ],
+  "deleted": [
+    "/mnt/gdrive/Movies/Mortal Kombat (2021)"
+  ]
+}"#;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/a-train/0A1xxxxxxxxxUk9PVA")
+            .insert_header(("Authorization", test_auth_header()))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(payload)
+            .to_request(),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    let events = body.as_array().expect("response should be a JSON array");
+    assert_eq!(
+        events.len(),
+        3,
+        "payload has two created and one deleted path"
+    );
+
+    let paths: Vec<&str> = events
+        .iter()
+        .map(|ev| ev["file_path"].as_str().expect("file_path in response"))
+        .collect();
+    assert!(paths.contains(&"/media/Movies/Interstellar (2014)"));
+    assert!(paths.contains(&"/media/TV/Legion/Season 1"));
+    assert!(paths.contains(&"/media/Movies/Mortal Kombat (2021)"));
 }
 
 #[actix_web::test]

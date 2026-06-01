@@ -34,6 +34,10 @@ impl TriggerConfig for ATrain {
     fn filter(&self) -> &PathFilter {
         &self.filter
     }
+
+    fn accepts_trailing_segment(&self) -> bool {
+        true
+    }
 }
 
 /// Payload sent by A-Train on every change set.
