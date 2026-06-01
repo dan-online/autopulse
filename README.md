@@ -180,6 +180,9 @@ triggers:
     rewrite:
       from: "/downloads"
       to: "/tvshows"
+    filter:
+      exclude:
+        - "^/tvshows/extras/"
 
   my_radarr:
     type: "radarr"
@@ -243,6 +246,16 @@ targets:
     type: "jellyfin"
     url: "http://jellyfin:8096"
     token: "<your_token>"
+
+  my_audiobookshelf:
+    type: "audiobookshelf"
+    url: "http://audiobookshelf:13378"
+    token: "<your_token>"
+    filter:
+      include:
+        - "^/audiobooks/"
+      exclude:
+        - "/samples/"
 
   my_command:
     type: "command"

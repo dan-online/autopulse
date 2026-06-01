@@ -47,6 +47,9 @@ pub mod auth;
 /// ```
 pub mod opts;
 
+/// Path-level include/exclude filters for triggers and targets.
+pub mod path_filter;
+
 /// Rewrite structure for triggers
 ///
 /// Example:
@@ -98,6 +101,7 @@ pub fn default_triggers() -> HashMap<String, Trigger> {
             rewrite: None,
             timer: None,
             excludes: vec![],
+            filter: Default::default(),
         }),
     );
 
@@ -202,6 +206,7 @@ impl Settings {
                     rewrite: None,
                     timer: None,
                     excludes: vec![],
+                    filter: Default::default(),
                 }),
             );
         }

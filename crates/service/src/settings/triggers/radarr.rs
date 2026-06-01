@@ -1,3 +1,4 @@
+use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::{EventTimers, Timer};
 use crate::settings::triggers::{TriggerConfig, TriggerRequest};
@@ -13,6 +14,9 @@ pub struct Radarr {
     /// Targets to ignore
     #[serde(default)]
     pub excludes: Vec<String>,
+    /// Path filter matched against the rewritten file path.
+    #[serde(default)]
+    pub filter: PathFilter,
     /// Event-specific timers
     pub event_timers: Option<EventTimers>,
 }
@@ -28,6 +32,10 @@ impl TriggerConfig for Radarr {
 
     fn excludes(&self) -> &Vec<String> {
         &self.excludes
+    }
+
+    fn filter(&self) -> &PathFilter {
+        &self.filter
     }
 
     fn event_timers(&self) -> Option<&EventTimers> {

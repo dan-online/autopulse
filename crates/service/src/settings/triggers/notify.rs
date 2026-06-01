@@ -1,3 +1,4 @@
+use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::timer::Timer;
 use crate::settings::triggers::TriggerConfig;
@@ -62,6 +63,9 @@ pub struct Notify {
     /// Targets to exclude
     #[serde(default)]
     pub excludes: Vec<String>,
+    /// Path filter matched against the rewritten file path.
+    #[serde(default)]
+    pub filter: PathFilter,
     /// Timer
     pub timer: Option<Timer>,
     /// Debounce timeout in seconds (default: 2)
@@ -79,6 +83,10 @@ impl TriggerConfig for Notify {
 
     fn excludes(&self) -> &Vec<String> {
         &self.excludes
+    }
+
+    fn filter(&self) -> &PathFilter {
+        &self.filter
     }
 }
 
@@ -112,6 +120,11 @@ impl Notify {
 
         if let Some(rewrite) = &self.rewrite {
             path = rewrite.rewrite_path(path);
+        }
+
+        if !self.filter.allows(&path) {
+            trace!("notify trigger filtered path '{path}'");
+            return Ok(());
         }
 
         tx.send((path, reason)).map_err(|e| anyhow::anyhow!(e))

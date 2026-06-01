@@ -204,6 +204,7 @@ pub mod readarr;
 /// See [`Sonarr`] for all options
 pub mod sonarr;
 
+use crate::settings::path_filter::PathFilter;
 use crate::settings::timer::EventTimers;
 use crate::settings::timer::Timer;
 use crate::settings::{rewrite::Rewrite, triggers::autoscan::Autoscan};
@@ -230,6 +231,7 @@ pub trait TriggerConfig {
     fn rewrite(&self) -> Option<&Rewrite>;
     fn timer(&self) -> Option<&Timer>;
     fn excludes(&self) -> &Vec<String>;
+    fn filter(&self) -> &PathFilter;
     fn event_timers(&self) -> Option<&EventTimers> {
         None
     }
@@ -311,5 +313,9 @@ impl Trigger {
 
     pub fn excludes(&self) -> &Vec<String> {
         self.as_config().excludes()
+    }
+
+    pub fn should_process_path(&self, path: &str) -> bool {
+        self.as_config().filter().allows(path)
     }
 }

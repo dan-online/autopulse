@@ -1,4 +1,5 @@
 use super::{Request, RequestBuilderPerform};
+use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
@@ -26,6 +27,9 @@ pub struct Plex {
     pub analyze: bool,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
+    /// Path filter matched against the target-rewritten path.
+    #[serde(default)]
+    pub filter: PathFilter,
     /// HTTP request options
     #[serde(default)]
     pub request: Request,
@@ -530,6 +534,7 @@ mod tests {
             refresh: false,
             analyze: false,
             rewrite: None,
+            filter: PathFilter::default(),
             request: Request::default(),
         };
 
@@ -566,6 +571,7 @@ mod tests {
             refresh: false,
             analyze: false,
             rewrite: None,
+            filter: PathFilter::default(),
             request: Request::default(),
         };
 

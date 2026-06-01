@@ -185,6 +185,7 @@ pub mod sonarr;
 /// See [`Tdarr`] for all options
 pub mod tdarr;
 
+use crate::settings::{path_filter::PathFilter, rewrite::Rewrite};
 use audiobookshelf::Audiobookshelf;
 use autopulse_database::models::ScanEvent;
 use reqwest::{header, RequestBuilder, Response};
@@ -288,6 +289,41 @@ pub enum Target {
     FileFlows(FileFlows),
     Autopulse(Autopulse),
     Audiobookshelf(Audiobookshelf),
+}
+
+impl Target {
+    fn rewrite(&self) -> &Option<Rewrite> {
+        match self {
+            Self::Plex(t) => &t.rewrite,
+            Self::Jellyfin(t) | Self::Emby(t) => &t.rewrite,
+            Self::Tdarr(t) => &t.rewrite,
+            Self::Sonarr(t) => &t.rewrite,
+            Self::Radarr(t) => &t.rewrite,
+            Self::Command(t) => &t.rewrite,
+            Self::FileFlows(t) => &t.rewrite,
+            Self::Autopulse(t) => &t.rewrite,
+            Self::Audiobookshelf(t) => &t.rewrite,
+        }
+    }
+
+    fn filter(&self) -> &PathFilter {
+        match self {
+            Self::Plex(t) => &t.filter,
+            Self::Jellyfin(t) | Self::Emby(t) => &t.filter,
+            Self::Tdarr(t) => &t.filter,
+            Self::Sonarr(t) => &t.filter,
+            Self::Radarr(t) => &t.filter,
+            Self::Command(t) => &t.filter,
+            Self::FileFlows(t) => &t.filter,
+            Self::Autopulse(t) => &t.filter,
+            Self::Audiobookshelf(t) => &t.filter,
+        }
+    }
+
+    pub fn should_process_event(&self, ev: &ScanEvent) -> bool {
+        let path = ev.get_path(self.rewrite());
+        self.filter().allows(&path)
+    }
 }
 
 pub trait TargetProcess {
