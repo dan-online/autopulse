@@ -2,41 +2,6 @@ use autopulse_utils::Rotation;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[doc(hidden)]
-const fn default_check_path() -> bool {
-    false
-}
-
-#[doc(hidden)]
-const fn default_max_retries() -> i32 {
-    5
-}
-
-#[doc(hidden)]
-const fn default_default_timer_wait() -> u64 {
-    60
-}
-
-#[doc(hidden)]
-const fn default_cleanup_days() -> u64 {
-    10
-}
-
-#[doc(hidden)]
-const fn default_webhook_retries() -> u8 {
-    3
-}
-
-#[doc(hidden)]
-const fn default_webhook_timeout() -> u64 {
-    10
-}
-
-#[doc(hidden)]
-const fn default_webhook_interval() -> u64 {
-    10
-}
-
 #[derive(Serialize, Clone, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LogRotation {
@@ -104,15 +69,15 @@ pub struct Opts {
 impl Default for Opts {
     fn default() -> Self {
         Self {
-            check_path: default_check_path(),
-            max_retries: default_max_retries(),
-            default_timer_wait: default_default_timer_wait(),
-            cleanup_days: default_cleanup_days(),
+            check_path: false,
+            max_retries: 5,
+            default_timer_wait: 60,
+            cleanup_days: 10,
             log_file: None,
             log_file_rollover: LogRotation::default(),
-            webhook_retries: default_webhook_retries(),
-            webhook_timeout: default_webhook_timeout(),
-            webhook_interval: default_webhook_interval(),
+            webhook_retries: 3,
+            webhook_timeout: 10,
+            webhook_interval: 10,
         }
     }
 }

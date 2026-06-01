@@ -1,21 +1,6 @@
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[doc(hidden)]
-fn default_username() -> String {
-    "admin".to_string()
-}
-
-#[doc(hidden)]
-fn default_password() -> String {
-    "password".to_string()
-}
-
-#[doc(hidden)]
-const fn default_enabled() -> bool {
-    true
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct Auth {
@@ -31,9 +16,9 @@ pub struct Auth {
 impl Default for Auth {
     fn default() -> Self {
         Self {
-            enabled: default_enabled(),
-            username: default_username(),
-            password: default_password(),
+            enabled: true,
+            username: "admin".to_string(),
+            password: "password".to_string(),
         }
     }
 }

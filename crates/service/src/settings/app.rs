@@ -2,26 +2,6 @@ use autopulse_utils::LogLevel;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-#[doc(hidden)]
-fn default_hostname() -> String {
-    "0.0.0.0".to_string()
-}
-
-#[doc(hidden)]
-const fn default_port() -> u16 {
-    2875
-}
-
-#[doc(hidden)]
-fn default_database_url() -> String {
-    autopulse_database::conn::DatabaseType::default().default_url()
-}
-
-#[doc(hidden)]
-fn default_log_level() -> LogLevel {
-    LogLevel::default()
-}
-
 /// Normalize `base_path` so `format!("{base}/ui/...")` is always well-formed:
 /// either `""` or `/<prefix>`, no trailing slash. Tests cover the corner cases.
 fn normalize_base_path<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -71,10 +51,10 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            hostname: default_hostname(),
-            port: default_port(),
-            database_url: default_database_url(),
-            log_level: default_log_level(),
+            hostname: "0.0.0.0".to_string(),
+            port: 2875,
+            database_url: autopulse_database::conn::DatabaseType::default().default_url(),
+            log_level: LogLevel::default(),
             api_logging: false,
             base_path: String::new(),
             secure_cookies: false,
