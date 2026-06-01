@@ -41,36 +41,30 @@ where
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct App {
     /// Hostname to bind to, (default: 0.0.0.0)
-    #[serde(default = "default_hostname")]
     pub hostname: String,
     /// Port to bind to (default: 2875)
-    #[serde(default = "default_port")]
     pub port: u16,
     /// Database URL (see [`AnyConnection`](autopulse_database::conn::AnyConnection))
-    #[serde(default = "default_database_url")]
     pub database_url: String,
     /// Log level (default: info) (trace, debug, info, warn, error)
-    #[serde(default = "default_log_level")]
     pub log_level: LogLevel,
     /// Whether to include api logging (default: false)
-    #[serde(default)]
     pub api_logging: bool,
     /// Reverse-proxy base path (default: ""). UI routes are mounted under
     /// this prefix server-side and generated links include it, so the
     /// proxy should pass the prefix through verbatim (no strip-prefix).
     /// Input is normalized: leading slash added if missing, trailing
     /// slash stripped, `"/"` collapses to `""`.
-    #[serde(default, deserialize_with = "normalize_base_path")]
+    #[serde(deserialize_with = "normalize_base_path")]
     pub base_path: String,
     /// Whether to set the `Secure` flag on the UI session cookie
     /// (default: false). Enable when serving over HTTPS/TLS.
-    #[serde(default)]
     pub secure_cookies: bool,
     /// Proxy IPs whose `X-Forwarded-For` we honor for the login throttle's
     /// client identification. Empty (default) = trust nothing, use `peer_addr`.
-    #[serde(default)]
     pub trusted_proxies: Vec<IpAddr>,
 }
 

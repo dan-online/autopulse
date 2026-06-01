@@ -5,9 +5,8 @@ use autopulse_service::manager::PulseManager;
 use autopulse_service::settings::app::App;
 use autopulse_service::settings::targets::{Target, TargetType};
 use autopulse_service::settings::triggers::{Trigger, TriggerType};
-use autopulse_service::settings::{default_triggers, Settings};
+use autopulse_service::settings::Settings;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 fn default_database_type() -> DatabaseType {
     DatabaseType::default()
@@ -113,7 +112,10 @@ fn generate_config_template(
         ..Default::default()
     };
 
-    let mut triggers = default_triggers();
+    let mut settings = Settings {
+        app,
+        ..Default::default()
+    };
 
     for trigger in input_triggers {
         let name = serde_json::to_string(trigger)?.replace('"', "");
@@ -121,13 +123,13 @@ fn generate_config_template(
         let mut count = 0;
         let mut key = name.clone();
 
-        while triggers.contains_key(&key) {
+        while settings.triggers.contains_key(&key) {
             count += 1;
 
             key = format!("{}_{}", name, count);
         }
 
-        triggers.insert(
+        settings.triggers.insert(
             key,
             match trigger {
                 TriggerType::Manual => Trigger::Manual(serde_json::from_str(r#"{}"#)?),
@@ -144,20 +146,18 @@ fn generate_config_template(
         );
     }
 
-    let mut targets = HashMap::new();
-
     for target in input_targets {
         let name = serde_json::to_string(target)?.replace('"', "");
         let mut count = 0;
         let mut key = name.clone();
 
-        while targets.contains_key(&key) {
+        while settings.targets.contains_key(&key) {
             count += 1;
 
             key = format!("{}_{}", name, count);
         }
 
-        targets.insert(
+        settings.targets.insert(
             key,
             match target {
                 TargetType::Plex => Target::Plex(serde_json::from_str(
@@ -179,7 +179,7 @@ fn generate_config_template(
                     r#"{"url": "{url}", "token": "{token}"}"#,
                 )?),
                 TargetType::Command => Target::Command(serde_json::from_str(
-                    r#"{"command": "echo 'Processing {path}'"}"#,
+                    r#"{"raw": "echo 'Processing $FILE_PATH'"}"#,
                 )?),
                 TargetType::FileFlows => {
                     Target::FileFlows(serde_json::from_str(r#"{"url": "{url}"}"#)?)
@@ -193,13 +193,6 @@ fn generate_config_template(
             },
         );
     }
-
-    let settings = Settings {
-        app,
-        triggers,
-        targets,
-        ..Default::default()
-    };
 
     let app_config = match output_type {
         OutputType::Json => serde_json::to_string_pretty(&settings)?,
@@ -324,5 +317,57 @@ mod tests {
         assert!(config_str.contains("manual_1"));
         assert!(config_str.contains("plex"));
         assert!(config_str.contains("plex_1"));
+    }
+
+    #[test]
+    fn generated_json_command_template_round_trips_with_a_runnable_command() {
+        let triggers = vec![];
+        let targets = vec![TargetType::Command];
+        let result = generate_config_template(
+            &DatabaseType::default(),
+            &triggers,
+            &targets,
+            &OutputType::Json,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        let config_str = response["config"].as_str().unwrap();
+        let settings: Settings = serde_json::from_str(config_str).unwrap();
+
+        let Some(Target::Command(command)) = settings.targets.get("command") else {
+            panic!("expected generated command target");
+        };
+
+        assert!(
+            command.raw.is_some() || command.path.is_some(),
+            "generated command target must be runnable"
+        );
+    }
+
+    #[test]
+    fn generated_toml_command_template_round_trips_with_a_runnable_command() {
+        let triggers = vec![];
+        let targets = vec![TargetType::Command];
+        let result = generate_config_template(
+            &DatabaseType::default(),
+            &triggers,
+            &targets,
+            &OutputType::Toml,
+        )
+        .unwrap();
+
+        let response = serde_json::to_value(&result).unwrap();
+        let config_str = response["config"].as_str().unwrap();
+        let settings: Settings = toml::from_str(config_str).unwrap();
+
+        let Some(Target::Command(command)) = settings.targets.get("command") else {
+            panic!("expected generated command target");
+        };
+
+        assert!(
+            command.raw.is_some() || command.path.is_some(),
+            "generated command target must be runnable"
+        );
     }
 }

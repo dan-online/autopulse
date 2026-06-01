@@ -17,16 +17,14 @@ const fn default_enabled() -> bool {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct Auth {
     /// Whether authentication is enabled (default: true)
-    #[serde(default = "default_enabled")]
     #[serde(skip_serializing)]
     pub enabled: bool,
     /// Username for basic auth (default: admin)
-    #[serde(default = "default_username")]
     pub username: String,
     /// Password for basic auth (default: password)
-    #[serde(default = "default_password")]
     pub password: String,
 }
 

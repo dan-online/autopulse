@@ -71,40 +71,33 @@ impl From<&LogRotation> for Rotation {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Opts {
     /// Check if the path exists before processing (default: false)
-    #[serde(default = "default_check_path")]
     pub check_path: bool,
 
     /// Maximum retries before giving up (default: 5)
-    #[serde(default = "default_max_retries")]
     pub max_retries: i32,
 
     /// Default timer wait time (default: 60)
-    #[serde(default = "default_default_timer_wait")]
     pub default_timer_wait: u64,
 
     /// Cleanup not_found events older than x days (default: 10)
-    #[serde(default = "default_cleanup_days")]
     pub cleanup_days: u64,
 
     /// Log file path
     pub log_file: Option<PathBuf>,
 
     /// Whether to rollover the log file (default: never)
-    #[serde(default)]
     pub log_file_rollover: LogRotation,
 
     /// Number of retries for webhook HTTP requests (default: 3)
-    #[serde(default = "default_webhook_retries")]
     pub webhook_retries: u8,
 
     /// HTTP timeout in seconds for webhook requests (default: 10)
-    #[serde(default = "default_webhook_timeout")]
     pub webhook_timeout: u64,
 
     /// Interval in seconds between webhook batch sends (default: 10)
-    #[serde(default = "default_webhook_interval")]
     pub webhook_interval: u64,
 }
 
