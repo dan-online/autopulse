@@ -35,9 +35,8 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
     // Empty strings come from the hidden status carrier; treat as "no filter".
     let status = q.status.as_deref().filter(|s| !s.is_empty());
     let search = q.search.as_deref().filter(|s| !s.is_empty());
-    // Normalize once here so the rows fragment and the load-more URL agree
-    // on which page rendered (without it, ?page=0 emitted page-1 rows and a
-    // load-more for page 1, duplicating the first page).
+    // Normalize once so the rows fragment and the load-more URL agree on
+    // which page rendered (otherwise ?page=0 duplicates the first page).
     let page = q.page.max(1);
 
     let events = manager

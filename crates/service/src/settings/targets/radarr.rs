@@ -80,9 +80,8 @@ impl Radarr {
             }
         }
 
-        // TODO: revisit per-movie commands so partial failures don't fail the
-        // whole batch; this branch reverted to bulk after the per-movie loop
-        // caused multi-roundtrip latency on large imports.
+        // TODO: per-movie commands would let us isolate partial failures,
+        // but the serial-POST cost on large imports outweighs that today.
         Ok(to_be_refreshed.into_keys().collect())
     }
 

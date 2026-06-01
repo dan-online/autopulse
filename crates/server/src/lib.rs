@@ -51,9 +51,8 @@ pub fn get_server(hostname: &str, port: &u16, manager: PulseManager) -> anyhow::
             .app_data(login_limiter.clone())
             .app_data(Data::new(manager.clone()));
 
-        // UI routes live under `{base_path}/ui/*` so a pass-through reverse
-        // proxy (location /prefix/ → autopulse) just works without rewrites.
-        // Empty base_path keeps `/ui/*` as the canonical mount.
+        // Mount UI under base_path so a pass-through reverse proxy (no
+        // strip-prefix) works without rewrites.
         if base_path.is_empty() {
             app.configure(ui::configure)
         } else {

@@ -70,11 +70,8 @@ pub struct App {
     /// (default: false). Enable when serving over HTTPS/TLS.
     #[serde(default)]
     pub secure_cookies: bool,
-    /// Reverse-proxy IPs whose `X-Forwarded-For` / `Forwarded` headers
-    /// we trust to identify the real client. When `peer_addr` is on this
-    /// list the rightmost untrusted XFF entry is used for the login
-    /// throttle; otherwise `peer_addr` is used directly. Default: empty
-    /// (trust nothing — `peer_addr` is the client).
+    /// Proxy IPs whose `X-Forwarded-For` we honor for the login throttle's
+    /// client identification. Empty (default) = trust nothing, use `peer_addr`.
     #[serde(default)]
     pub trusted_proxies: Vec<IpAddr>,
 }

@@ -39,15 +39,12 @@ const LOGIN_MAX_ATTEMPTS: u32 = 5;
 /// How long an IP stays locked out after exceeding the attempt limit,
 /// and the idle window after which a stale counter is forgotten.
 const LOGIN_LOCKOUT: Duration = Duration::from_secs(60);
-/// Hard cap so a flood of distinct source IPs can't grow the throttle map
-/// without bound. At cap we drop the oldest entry; well above the realistic
-/// concurrent-failure load and small enough that the per-failure O(n) scan
-/// for the oldest stays cheap.
+/// Hard cap so a flood of distinct IPs can't grow the throttle map without
+/// bound; LRU eviction once full. O(n) scan per failure stays cheap at 10k.
 const LOGIN_TRACKED_IPS_CAP: usize = 10_000;
 
-/// In-memory per-IP failed-login throttle. Wrapped in `Data::new` outside
-/// the `HttpServer` factory so the Arc is shared across workers; a restart
-/// clears all counters (acceptable for a speed bump, not a security boundary).
+/// Per-IP failed-login throttle. Wrap in `Data::new` outside the
+/// `HttpServer` factory so the Arc is shared across workers.
 #[derive(Default)]
 pub struct LoginLimiter {
     inner: Mutex<HashMap<IpAddr, Attempts>>,
@@ -59,9 +56,7 @@ struct Attempts {
 }
 
 impl LoginLimiter {
-    /// `unwrap_or_else(into_inner)` so a panic inside one of the short
-    /// critical sections below doesn't poison the mutex and 500 every
-    /// login attempt for the lifetime of the process.
+    /// Recover from poisoning instead of 500ing every subsequent login.
     fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<IpAddr, Attempts>> {
         self.inner.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -80,12 +75,7 @@ impl LoginLimiter {
 
     fn record_failure(&self, ip: IpAddr) {
         let mut map = self.lock();
-        // Drop counters past their lockout window first; new failures get a
-        // clean slot and well-behaved clients don't pay forever for one bad
-        // attempt months ago.
         map.retain(|_, a| a.last.elapsed() < LOGIN_LOCKOUT);
-        // If still at cap (sustained distinct-IP flood), evict the LRU entry
-        // so legitimate new failures still get tracked.
         if !map.contains_key(&ip) && map.len() >= LOGIN_TRACKED_IPS_CAP {
             if let Some(oldest) = map.iter().min_by_key(|(_, a)| a.last).map(|(k, _)| *k) {
                 map.remove(&oldest);
@@ -104,10 +94,8 @@ impl LoginLimiter {
     }
 }
 
-/// Real client IP for the login throttle. If `peer_addr` is on the configured
-/// trusted-proxy list, walk `X-Forwarded-For` right-to-left and return the
-/// rightmost address not on the list; otherwise return `peer_addr`. Empty
-/// `trusted_proxies` (the default) means the throttle keys by `peer_addr`.
+/// `peer_addr` unless it's a trusted proxy, in which case the rightmost
+/// untrusted XFF entry. Empty trust list = `peer_addr` always.
 fn client_ip(req: &HttpRequest, trusted: &[IpAddr]) -> Option<IpAddr> {
     let peer = req.peer_addr().map(|a| a.ip())?;
     if trusted.is_empty() || !trusted.contains(&peer) {
@@ -160,7 +148,6 @@ impl FromRequest for SessionUser {
         if has_user && fp_ok {
             ready(Ok(Self))
         } else {
-            // Drop the stale cookie so the browser stops re-presenting it.
             session.purge();
             let base = manager.settings.app.base_path.clone();
             ready(Err(InternalError::from_response(
