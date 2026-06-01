@@ -36,6 +36,20 @@ pub struct Emby {
     /// HTTP request options
     #[serde(default)]
     pub request: Request,
+    /// How library locations are compared to incoming paths. Default `case_sensitive`.
+    #[serde(default)]
+    pub path_match: PathMatch,
+}
+
+/// How library locations are compared to incoming paths.
+#[derive(Serialize, Clone, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum PathMatch {
+    /// Exact byte-for-byte prefix match (default; safe on Linux).
+    #[default]
+    CaseSensitive,
+    /// Lowercase both sides before comparing. Useful on Windows / UNC paths.
+    CaseInsensitive,
 }
 
 /// Metadata refresh mode for Jellyfin/Emby
@@ -128,20 +142,32 @@ impl Emby {
     }
 
     fn get_libraries(&self, libraries: &[Library], path: &str) -> Vec<Library> {
-        let ev_path = Path::new(path);
         let mut matched: Vec<Library> = vec![];
 
         for library in libraries {
             for location in &library.locations {
-                let path = Path::new(location);
-
-                if ev_path.starts_with(path) {
+                if self.path_prefix_matches(location, path) {
                     matched.push(library.clone());
+                    break; // one location is enough to match this library
                 }
             }
         }
 
         matched
+    }
+
+    fn path_prefix_matches(&self, location: &str, ev_path: &str) -> bool {
+        // Trailing `/` or `\` on library locations shouldn't break the prefix check.
+        let trimmed = location.trim_end_matches(['/', '\\']);
+
+        match self.path_match {
+            PathMatch::CaseSensitive => Path::new(ev_path).starts_with(trimmed),
+            PathMatch::CaseInsensitive => {
+                let lhs = ev_path.to_ascii_lowercase();
+                let rhs = trimmed.to_ascii_lowercase();
+                Path::new(&lhs).starts_with(&rhs)
+            }
+        }
     }
 
     async fn _get_item(&self, library: &Library, path: &str) -> anyhow::Result<Option<Item>> {
@@ -364,7 +390,13 @@ impl TargetProcess for Emby {
                 let matched_libraries = self.get_libraries(&libraries, &ev_path);
 
                 if matched_libraries.is_empty() {
-                    error!("failed to find library for file: {}", ev_path);
+                    let known: Vec<&str> = libraries
+                        .iter()
+                        .flat_map(|l| l.locations.iter().map(String::as_str))
+                        .collect();
+                    error!(
+                        "failed to find library for file '{ev_path}'. Known locations: {known:?}"
+                    );
                     continue;
                 }
 
@@ -427,5 +459,76 @@ impl TargetProcess for Emby {
             .iter()
             .filter_map(|(k, v)| if *v { Some(k.clone()) } else { None })
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lib(name: &str, paths: &[&str]) -> Library {
+        Library {
+            name: name.to_string(),
+            locations: paths.iter().map(|s| (*s).to_string()).collect(),
+            item_id: format!("id-{name}"),
+            collection_type: None,
+        }
+    }
+
+    fn target() -> Emby {
+        Emby {
+            url: "http://x".to_string(),
+            token: "t".to_string(),
+            metadata_refresh_mode: EmbyMetadataRefreshMode::default(),
+            refresh_metadata: true,
+            rewrite: None,
+            request: Request::default(),
+            path_match: PathMatch::default(),
+        }
+    }
+
+    #[test]
+    fn matches_when_library_location_is_exact_prefix() {
+        let libs = vec![lib("TV", &["/media/TV"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show/S01E01.mkv");
+        assert_eq!(m.len(), 1);
+    }
+
+    #[test]
+    fn matches_when_library_location_has_trailing_slash() {
+        let libs = vec![lib("TV", &["/media/TV/"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show/S01E01.mkv");
+        assert_eq!(
+            m.len(),
+            1,
+            "trailing slash on library location must not break match"
+        );
+    }
+
+    #[test]
+    fn no_match_when_path_outside_library() {
+        let libs = vec![lib("TV", &["/data/TV"])];
+        let m = target().get_libraries(&libs, "/media/TV/Show.mkv");
+        assert_eq!(m.len(), 0);
+    }
+
+    #[test]
+    fn case_insensitive_matching_when_opted_in() {
+        let mut t = target();
+        t.path_match = PathMatch::CaseInsensitive;
+        let libs = vec![lib("TV", &["/Media/TV"])];
+        let m = t.get_libraries(&libs, "/media/tv/Show.mkv");
+        assert_eq!(
+            m.len(),
+            1,
+            "case-insensitive must match across case differences"
+        );
+    }
+
+    #[test]
+    fn case_sensitive_matching_by_default() {
+        let libs = vec![lib("TV", &["/Media/TV"])];
+        let m = target().get_libraries(&libs, "/media/tv/Show.mkv");
+        assert_eq!(m.len(), 0);
     }
 }
