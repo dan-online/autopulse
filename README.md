@@ -87,8 +87,6 @@ The easiest way to get started with autopulse is to use the provided docker imag
 - `latest-sqlite` - smaller image that only supports SQLite
 - `stable` - latest versioned release
 
-> The web UI is built into all images and served at `/ui/*` from the autopulse port. There is no separate UI image.
-
 > All images are multi-arch and support `linux/amd64`, `linux/arm64`, however -amd64 and -arm64 suffixes can be used to specify the architecture
 
 #### Compose
