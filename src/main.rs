@@ -128,18 +128,20 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
 fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
     let args = Args::parse();
 
-    let settings = Settings::get_settings(args.config).context("failed to load settings");
+    let loaded = Settings::get_settings(args.config).context("failed to load settings");
 
-    match settings {
-        Ok(settings) => {
+    match loaded {
+        Ok(loaded) => {
+            let log_file_rollover = Rotation::from(&loaded.settings.opts.log_file_rollover);
             let guard = setup_logs(
-                &settings.app.log_level,
-                &settings.opts.log_file,
-                &(&settings.opts.log_file_rollover).into(),
-                settings.app.api_logging,
+                &loaded.settings.app.log_level,
+                &loaded.settings.opts.log_file,
+                &log_file_rollover,
+                loaded.settings.app.api_logging,
             )?;
+            loaded.log_diagnostics();
 
-            Ok((settings, guard))
+            Ok((loaded.settings, guard))
         }
         Err(e) => {
             setup_logs(
@@ -159,6 +161,7 @@ pub fn main() -> anyhow::Result<()> {
     match setup() {
         Ok((settings, guard)) => {
             info!("💫 autopulse v{} starting up...", env!("CARGO_PKG_VERSION"),);
+            settings.log_summary();
 
             if let Err(e) = run(settings, guard) {
                 error!("{:?}", e);

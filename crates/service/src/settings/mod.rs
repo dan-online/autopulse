@@ -1,9 +1,14 @@
+use anyhow::Context;
 use app::App;
 use auth::Auth;
-use config::Config;
+use figment::{
+    providers::{Env, Format, Json, Serialized, Toml, Yaml},
+    Figment,
+};
 use opts::Opts;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
 use targets::Target;
 use triggers::manual::Manual;
@@ -142,6 +147,59 @@ pub struct Settings {
     pub anchors: Vec<PathBuf>,
 }
 
+pub struct LoadedSettings {
+    pub settings: Settings,
+    pub diagnostics: Vec<ConfigDiagnostic>,
+}
+
+impl LoadedSettings {
+    pub fn log_diagnostics(&self) {
+        for diagnostic in &self.diagnostics {
+            diagnostic.log();
+        }
+    }
+}
+
+pub enum ConfigDiagnostic {
+    LoadedFile(PathBuf),
+    LoadedFileEnv {
+        count: usize,
+    },
+    MissingConfig {
+        cwd: PathBuf,
+        searched: Vec<PathBuf>,
+    },
+}
+
+impl ConfigDiagnostic {
+    fn log(&self) {
+        match self {
+            Self::LoadedFile(path) => {
+                tracing::info!(target: "autopulse", "loaded config from {}", path.display());
+            }
+            Self::LoadedFileEnv { count } => {
+                tracing::info!(
+                    target: "autopulse",
+                    "loaded {count} config override(s) from AUTOPULSE__...__FILE"
+                );
+            }
+            Self::MissingConfig { cwd, searched } => {
+                tracing::warn!(
+                    target: "autopulse",
+                    "no config file found in {}. Searched: {:?}. \
+                     Using defaults + environment overrides only. \
+                     Pass --config /path/to/config.toml or place one of the candidate files in the cwd.",
+                    cwd.display(),
+                    searched
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -157,45 +215,132 @@ impl Default for Settings {
 }
 
 impl Settings {
-    fn resolve_env() -> HashMap<String, String> {
-        let mut out = HashMap::new();
+    /// Candidate filenames probed when no explicit `--config` is given.
+    /// Order is significant — the first match wins. The set is what
+    /// figment's bundled providers handle natively; json5/ron/ini are
+    /// not supported (dropped from the prior `config` crate setup).
+    pub const CONFIG_CANDIDATES: &'static [&'static str] =
+        &["config.toml", "config.yaml", "config.yml", "config.json"];
 
-        for (key, value) in env::vars() {
-            if let Some(base) = key.strip_suffix("__FILE") {
-                if let Ok(file_value) = std::fs::read_to_string(&value) {
-                    out.insert(base.to_string(), file_value.trim().to_string());
-                    continue;
-                }
-            }
-
-            out.entry(key).or_insert(value);
-        }
-
-        out
+    pub fn resolved_config_path(cwd: &Path) -> Option<PathBuf> {
+        Self::CONFIG_CANDIDATES
+            .iter()
+            .map(|name| cwd.join(name))
+            .find(|p| p.is_file())
     }
 
-    pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<Self> {
-        let mut settings = Config::builder()
-            .add_source(config::File::with_name("config").required(false))
-            .add_source(
-                config::Environment::with_prefix("AUTOPULSE")
-                    .separator("__")
-                    .source(Some(Self::resolve_env())),
-            );
+    pub fn searched_paths(cwd: &Path) -> Vec<PathBuf> {
+        Self::CONFIG_CANDIDATES
+            .iter()
+            .map(|n| cwd.join(n))
+            .collect()
+    }
 
-        if let Some(file_loc) = optional_config_file {
-            settings = settings.add_source(config::File::with_name(&file_loc));
+    fn file_env_overrides_from(
+        vars: impl IntoIterator<Item = (String, String)>,
+    ) -> anyhow::Result<Vec<(String, String)>> {
+        const PREFIX: &str = "AUTOPULSE__";
+        const SUFFIX: &str = "__FILE";
+
+        vars.into_iter()
+            .filter_map(|(key, path)| {
+                let key_path = key
+                    .strip_prefix(PREFIX)?
+                    .strip_suffix(SUFFIX)?
+                    .replace("__", ".")
+                    .to_ascii_lowercase();
+                Some((key, key_path, path))
+            })
+            .map(|(key, key_path, path)| {
+                let contents = std::fs::read_to_string(&path)
+                    .with_context(|| format!("failed to read file referenced by {key}: {path}"))?;
+
+                Ok((key_path, contents.trim().to_string()))
+            })
+            .collect()
+    }
+
+    fn file_env_overrides() -> anyhow::Result<Vec<(String, String)>> {
+        Self::file_env_overrides_from(env::vars())
+    }
+
+    pub fn get_settings(optional_config_file: Option<String>) -> anyhow::Result<LoadedSettings> {
+        let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+        let explicit = optional_config_file.is_some();
+        let chosen = optional_config_file
+            .map(PathBuf::from)
+            .or_else(|| Self::resolved_config_path(&cwd));
+
+        // Explicit --config path must exist. Silent fall-through to defaults
+        // when the user told us exactly where the file is would be the same
+        // bug class as #435.
+        if explicit {
+            if let Some(p) = &chosen {
+                if !p.is_file() {
+                    anyhow::bail!("--config {} does not exist", p.display());
+                }
+            }
         }
 
-        let settings = settings.build()?;
+        let mut diagnostics = vec![];
+        let mut fig = Figment::new();
+        if let Some(p) = chosen.as_deref() {
+            fig = match p.extension().and_then(|s| s.to_str()) {
+                Some("toml") => fig.merge(Toml::file(p)),
+                Some("yaml") | Some("yml") => fig.merge(Yaml::file(p)),
+                Some("json") => fig.merge(Json::file(p)),
+                other => anyhow::bail!(
+                    "unsupported config format {:?} for {} (supported: toml, yaml, yml, json)",
+                    other.unwrap_or(""),
+                    p.display()
+                ),
+            };
+            diagnostics.push(ConfigDiagnostic::LoadedFile(p.to_path_buf()));
+        } else if !explicit {
+            diagnostics.push(ConfigDiagnostic::MissingConfig {
+                cwd: cwd.clone(),
+                searched: Self::searched_paths(&cwd),
+            });
+        }
+        // Env overrides file (last-write-wins).
+        fig = fig.merge(
+            Env::prefixed("AUTOPULSE__")
+                .filter(|key| !key.as_str().ends_with("__FILE"))
+                .split("__"),
+        );
+        // File-secret env vars override direct env vars, matching the old
+        // config source behavior without mutating the process environment.
+        let file_overrides = Self::file_env_overrides()?;
+        if !file_overrides.is_empty() {
+            diagnostics.push(ConfigDiagnostic::LoadedFileEnv {
+                count: file_overrides.len(),
+            });
+        }
+        for (key, value) in file_overrides {
+            fig = fig.merge(Serialized::default(&key, value));
+        }
 
-        let mut settings = settings
-            .try_deserialize::<Self>()
-            .map_err(|e| anyhow::anyhow!(e))?;
-
+        let mut settings: Self = fig.extract().map_err(|e| anyhow::anyhow!(e))?;
         settings.add_default_manual_trigger()?;
 
-        Ok(settings)
+        Ok(LoadedSettings {
+            settings,
+            diagnostics,
+        })
+    }
+
+    /// Emits an INFO-level summary of the effective config shape at startup.
+    /// Just counts — keeps the line short and confirms the parse worked.
+    pub fn log_summary(&self) {
+        tracing::info!(
+            target: "autopulse",
+            "effective config: triggers={} targets={} webhooks={} anchors={}",
+            self.triggers.len(),
+            self.targets.len(),
+            self.webhooks.len(),
+            self.anchors.len(),
+        );
     }
 
     pub fn add_default_manual_trigger(&mut self) -> anyhow::Result<()> {
@@ -212,5 +357,98 @@ impl Settings {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn resolved_config_path_picks_toml_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.toml");
+        std::fs::File::create(&p).unwrap().write_all(b"").unwrap();
+        assert_eq!(Settings::resolved_config_path(dir.path()), Some(p));
+    }
+
+    #[test]
+    fn resolved_config_path_returns_none_when_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(Settings::resolved_config_path(dir.path()).is_none());
+    }
+
+    #[test]
+    fn resolved_config_path_prefers_toml_over_yaml() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::File::create(dir.path().join("config.yaml")).unwrap();
+        std::fs::File::create(dir.path().join("config.toml")).unwrap();
+        assert_eq!(
+            Settings::resolved_config_path(dir.path())
+                .unwrap()
+                .file_name()
+                .unwrap(),
+            "config.toml"
+        );
+    }
+
+    #[test]
+    fn file_env_overrides_read_autopulse_secret_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("password");
+        std::fs::write(&secret, "secret\n").unwrap();
+
+        let vars = vec![
+            (
+                "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+                secret.display().to_string(),
+            ),
+            ("OTHER__PASSWORD__FILE".to_string(), "ignored".to_string()),
+        ];
+
+        let overrides = Settings::file_env_overrides_from(vars).unwrap();
+
+        assert_eq!(
+            overrides,
+            vec![("auth.password".to_string(), "secret".to_string())]
+        );
+    }
+
+    #[test]
+    fn file_env_overrides_key_paths_deserialize_into_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("password");
+        std::fs::write(&secret, "secret\n").unwrap();
+
+        let overrides = Settings::file_env_overrides_from(vec![(
+            "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+            secret.display().to_string(),
+        )])
+        .unwrap();
+        let mut fig = Figment::new();
+        for (key, value) in overrides {
+            fig = fig.merge(Serialized::default(&key, value));
+        }
+
+        let settings = fig.extract::<Settings>().unwrap();
+
+        assert_eq!(settings.auth.password, "secret");
+    }
+
+    #[test]
+    fn file_env_overrides_error_when_secret_file_cannot_be_read() {
+        let vars = vec![(
+            "AUTOPULSE__AUTH__PASSWORD__FILE".to_string(),
+            "/tmp/missing-autopulse-secret".to_string(),
+        )];
+
+        let err = Settings::file_env_overrides_from(vars).unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("failed to read file referenced by AUTOPULSE__AUTH__PASSWORD__FILE"),
+            "{err:?}"
+        );
     }
 }

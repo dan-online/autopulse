@@ -148,13 +148,13 @@ Here's some quick links:
 
 #### Configuration
 
-autopulse requires a configuration file to run. By default, it looks for `config.toml` in the current working directory. You can override the default values using a config file or by [setting environment variables](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``. 
+autopulse requires a configuration file to run. By default, it searches the current working directory for `config.toml`, `config.yaml`, `config.yml`, or `config.json` in that order. You can pass `--config /path/to/config.toml` to load an explicit file, and override values by [setting environment variables](https://github.com/dan-online/autopulse/blob/main/example/docker-compose.yml) in the format of: ``AUTOPULSE__{SECTION}__{KEY}``.
 
 For example: `AUTOPULSE__APP__DATABASE_URL`
 
 An example has been provided in the [example](https://github.com/dan-online/autopulse/blob/main/example) directory
 
-> Note: You can provide the config with `json`, `toml`, `yaml`, `json5`, `ron`, or `ini` format
+> Note: You can provide the config as `config.toml`, `config.yaml`, `config.yml`, or `config.json`
 
 > Note: You can also provide the path to a variable by appending `__FILE`
 > For example: `AUTOPULSE__AUTH__PASSWORD__FILE=/run/secrets/autopulse_password`
