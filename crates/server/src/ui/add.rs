@@ -7,10 +7,7 @@ use actix_web::{
 use autopulse_database::models::NewScanEvent;
 use autopulse_service::{
     manager::PulseManager,
-    settings::{
-        triggers::{manual::Manual, Trigger},
-        webhooks::EventType,
-    },
+    settings::{rewrite::Rewrite, webhooks::EventType},
 };
 use maud::{html, Markup};
 use serde::Deserialize;
@@ -26,19 +23,54 @@ pub struct AddQuery {
     pub error: Option<String>,
     pub path: Option<String>,
     pub hash: Option<String>,
+    pub trigger: Option<String>,
 }
 
 const BUILTIN_TRIGGER: &str = "manual";
 
-fn manual_trigger(manager: &PulseManager) -> Manual {
-    match manager.settings.triggers.get(BUILTIN_TRIGGER) {
-        Some(Trigger::Manual(m) | Trigger::Bazarr(m)) => m.clone(),
-        _ => Manual {
+struct Resolved {
+    name: String,
+    rewrite: Option<Rewrite>,
+    wait: u64,
+}
+
+/// Resolves the picked trigger's rewrite + timer, falling back to the
+/// built-in `manual` (with no rewrite) when no trigger is configured.
+fn resolve_trigger(manager: &PulseManager, name: Option<&str>) -> Resolved {
+    let default_wait = manager.settings.opts.default_timer_wait;
+    let pick = name
+        .filter(|s| !s.is_empty())
+        .and_then(|n| manager.settings.triggers.get(n).map(|t| (n.to_string(), t)))
+        .or_else(|| {
+            manager
+                .settings
+                .triggers
+                .get(BUILTIN_TRIGGER)
+                .map(|t| (BUILTIN_TRIGGER.to_string(), t))
+        });
+
+    match pick {
+        Some((name, trigger)) => Resolved {
+            name,
+            rewrite: trigger.get_rewrite().cloned(),
+            wait: trigger.get_timer(None).wait.unwrap_or(default_wait),
+        },
+        None => Resolved {
+            name: BUILTIN_TRIGGER.to_string(),
             rewrite: None,
-            timer: None,
-            excludes: vec![],
+            wait: default_wait,
         },
     }
+}
+
+/// All trigger names in config plus a synthetic `manual` when none is set.
+fn trigger_names(manager: &PulseManager) -> Vec<String> {
+    let mut names: Vec<String> = manager.settings.triggers.keys().cloned().collect();
+    if !names.iter().any(|n| n == BUILTIN_TRIGGER) {
+        names.push(BUILTIN_TRIGGER.to_string());
+    }
+    names.sort();
+    names
 }
 
 fn render_form(
@@ -51,12 +83,14 @@ fn render_form(
     let base = ctx_.base;
     let path = q.path.as_deref().unwrap_or("");
     let preview_url = format!("{base}/ui/add/preview");
+    let triggers = trigger_names(manager);
+    let selected = resolve_trigger(manager, q.trigger.as_deref()).name;
 
     let body = html! {
         section.add {
             header.page-head {
                 h1.page-title { "Add scan event" }
-                span.page-meta { "manual trigger" }
+                span.page-meta { (selected) }
             }
             @if let Some(err) = &q.error {
                 p.login__error { (err) }
@@ -65,6 +99,21 @@ fn render_form(
             .add-grid {
                 form.form method="post" action={ (base) "/ui/add" } {
                     input type="hidden" name="csrf" value=(csrf);
+
+                    label.form__field {
+                        span.form__label { "Trigger" }
+                        select name="trigger"
+                            hx-get=(preview_url)
+                            hx-trigger="change"
+                            hx-target="#rewrite-preview"
+                            hx-include="closest form"
+                        {
+                            @for name in &triggers {
+                                option value=(name) selected[name == &selected] { (name) }
+                            }
+                        }
+                        span.form__hint { "Event source for this scan; its rewrite/timer applies." }
+                    }
 
                     label.form__field {
                         span.form__label { "File path" }
@@ -108,18 +157,17 @@ fn render_form(
     Ok(layout::page(&ctx_, "add scan", "add", body))
 }
 
-fn preview_path(manager: &PulseManager, path: &str) -> (String, bool) {
-    let m = manual_trigger(manager);
-    if let Some(rw) = &m.rewrite {
+fn preview_path(resolved: &Resolved, path: &str) -> (String, bool) {
+    if let Some(rw) = &resolved.rewrite {
         return (rw.rewrite_path(path.to_string()), true);
     }
     (path.to_string(), false)
 }
 
-fn preview_fragment(manager: &PulseManager, path: &str, exists: bool) -> Markup {
+fn preview_fragment(resolved: &Resolved, path: &str, exists: bool) -> Markup {
     let path = path.trim();
 
-    let (rewritten, had_rewrite) = preview_path(manager, path);
+    let (rewritten, had_rewrite) = preview_path(resolved, path);
     let changed = rewritten != path;
 
     html! {
@@ -152,8 +200,8 @@ fn preview_fragment(manager: &PulseManager, path: &str, exists: bool) -> Markup 
 
 /// Probes filesystem on the blocking pool; `Path::exists()` would stall
 /// an actix worker on slow mounts.
-async fn preview(manager: &PulseManager, path: &str) -> Markup {
-    let trimmed = path.trim();
+async fn preview(manager: &PulseManager, q: &AddQuery) -> Markup {
+    let trimmed = q.path.as_deref().unwrap_or("").trim();
     if trimmed.is_empty() {
         return html! {
             p.preview__hint {
@@ -162,12 +210,13 @@ async fn preview(manager: &PulseManager, path: &str) -> Markup {
         };
     }
 
-    let (rewritten, _) = preview_path(manager, trimmed);
+    let resolved = resolve_trigger(manager, q.trigger.as_deref());
+    let (rewritten, _) = preview_path(&resolved, trimmed);
     let exists = actix_web::web::block(move || std::path::Path::new(&rewritten).exists())
         .await
         .unwrap_or(false);
 
-    preview_fragment(manager, path, exists)
+    preview_fragment(&resolved, trimmed, exists)
 }
 
 #[get("/ui/add/preview")]
@@ -176,8 +225,7 @@ pub async fn add_preview(
     q: Query<AddQuery>,
     _user: SessionUser,
 ) -> Markup {
-    let path = q.path.as_deref().unwrap_or("");
-    preview(&manager, path).await
+    preview(&manager, &q).await
 }
 
 #[get("/ui/add")]
@@ -187,9 +235,7 @@ pub async fn add_page(
     _user: SessionUser,
     csrf: CsrfToken,
 ) -> Result<Markup> {
-    let path = q.path.as_deref().unwrap_or("");
-    let preview = preview(&manager, path).await;
-
+    let preview = preview(&manager, &q).await;
     render_form(&manager, &csrf.0, &q, preview)
 }
 
@@ -198,6 +244,7 @@ pub struct AddForm {
     pub csrf: String,
     pub path: String,
     pub hash: Option<String>,
+    pub trigger: Option<String>,
 }
 
 #[post("/ui/add")]
@@ -211,13 +258,13 @@ pub async fn add_post(
         return Err(ErrorBadRequest("CSRF token mismatch"));
     }
 
-    let inner = manual_trigger(&manager);
+    let resolved = resolve_trigger(&manager, form.trigger.as_deref());
 
     let mut file_path = form.path.trim().to_string();
     if file_path.is_empty() {
         return Err(ErrorBadRequest("path is required"));
     }
-    if let Some(rewrite) = &inner.rewrite {
+    if let Some(rewrite) = &resolved.rewrite {
         file_path = rewrite.rewrite_path(file_path);
     }
 
@@ -227,18 +274,12 @@ pub async fn add_post(
         .map(|h| h.trim().to_string())
         .filter(|h| !h.is_empty());
 
-    let wait = inner
-        .timer
-        .clone()
-        .unwrap_or_default()
-        .wait
-        .unwrap_or(manager.settings.opts.default_timer_wait) as i64;
-
     let new_scan_event = NewScanEvent {
-        event_source: BUILTIN_TRIGGER.to_string(),
+        event_source: resolved.name.clone(),
         file_path,
         file_hash: hash,
-        can_process: chrono::Utc::now().naive_utc() + chrono::Duration::seconds(wait),
+        can_process: chrono::Utc::now().naive_utc()
+            + chrono::Duration::seconds(resolved.wait as i64),
         ..Default::default()
     };
 
@@ -252,7 +293,7 @@ pub async fn add_post(
         .webhooks
         .add_event(
             EventType::New,
-            Some(BUILTIN_TRIGGER.to_string()),
+            Some(resolved.name.clone()),
             std::slice::from_ref(&ev.file_path),
         )
         .await;
