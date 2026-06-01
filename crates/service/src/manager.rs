@@ -61,8 +61,7 @@ pub struct Stats {
     pub pending: i64,
 }
 
-/// In-process broadcast envelope, one per state transition. `ScanEvent` is
-/// `Clone` and small enough that channel cloning is cheap.
+/// One state transition for the in-process broadcast bus.
 #[derive(Clone, Debug)]
 pub struct EventBroadcast {
     pub kind: EventType,
@@ -75,8 +74,7 @@ pub struct PulseManager {
     pub settings: Arc<Settings>,
     pub pool: Arc<DbPool>,
     pub webhooks: Arc<WebhookManager>,
-    /// In-process broadcast bus for state transitions; cloned `PulseManager`s
-    /// share this channel.
+    /// In-process broadcast bus; cloned `PulseManager`s share it.
     pub bus: broadcast::Sender<EventBroadcast>,
 }
 
@@ -100,13 +98,11 @@ impl PulseManager {
         }
     }
 
-    /// Subscribe to the broadcast bus; one receiver per consumer.
     pub fn subscribe(&self) -> broadcast::Receiver<EventBroadcast> {
         self.bus.subscribe()
     }
 
-    /// Publish a state transition. Additive alongside the webhook bus; the
-    /// `send` error (no subscribers) is intentionally swallowed.
+    /// `send` error (no subscribers) is swallowed.
     pub fn publish(&self, kind: EventType, event: &ScanEvent) {
         let _ = self.bus.send(EventBroadcast {
             kind,

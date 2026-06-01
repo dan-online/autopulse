@@ -207,7 +207,6 @@ pub async fn add_post(
     csrf: CsrfToken,
     form: Form<AddForm>,
 ) -> Result<HttpResponse> {
-    // Plain HTML form: CSRF is in the hidden input from `render_form`.
     if manager.settings.auth.enabled && !csrf::validate_eq(&form.csrf, &csrf.0) {
         return Err(ErrorBadRequest("CSRF token mismatch"));
     }

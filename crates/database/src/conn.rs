@@ -231,9 +231,7 @@ pub fn close_pool(pool: &Pool<ConnectionManager<AnyConnection>>) {
 
 #[doc(hidden)]
 pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
-    // First pool runs one-time setup (VACUUM, WAL mode) via AcquireHook { setup: true }.
-    // It is immediately dropped so the setup hook only fires once; the real pool below
-    // uses the default hook for normal operation.
+    // First pool fires `AcquireHook { setup: true }` once (VACUUM/WAL), then dropped.
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 
     let setup_pool = Pool::builder()

@@ -34,7 +34,6 @@ fn cred_fingerprint(auth: &Auth) -> String {
     base16ct::lower::encode_string(&h.finalize())
 }
 
-/// Failed logins allowed from one IP before the lockout window kicks in.
 const LOGIN_MAX_ATTEMPTS: u32 = 5;
 /// How long an IP stays locked out after exceeding the attempt limit,
 /// and the idle window after which a stale counter is forgotten.
@@ -285,7 +284,6 @@ pub async fn logout_post(
 ) -> Result<HttpResponse> {
     let base = manager.settings.app.base_path.clone();
 
-    // Plain HTML form — CSRF arrives as a form field, not a header.
     if manager.settings.auth.enabled {
         let stored = session
             .get::<String>(csrf::SESSION_KEY)

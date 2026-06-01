@@ -97,12 +97,10 @@ fn redact(v: &mut Value, in_webhooks: bool) {
     }
 }
 
-/// SQLite paths have no creds and pass through unchanged.
+/// SQLite URLs have no credentials and pass through unchanged.
 fn mask_db_url(s: &str) -> String {
-    // split scheme://rest
     if let Some((scheme, rest)) = s.split_once("://") {
         if let Some((userinfo, hostpart)) = rest.split_once('@') {
-            // userinfo may be user or user:pass — mask whatever it is
             let user = userinfo.split_once(':').map(|(u, _)| u).unwrap_or(userinfo);
             return format!("{scheme}://{user}:{MASK}@{hostpart}");
         }
@@ -148,7 +146,6 @@ fn doc_link(path: &[&str]) -> Markup {
     }
 }
 
-/// Top two levels open by default.
 fn render_value(v: &Value, depth: usize, path: &[&str]) -> Markup {
     match v {
         Value::Null => html! { span.cfg-null { "null" } },

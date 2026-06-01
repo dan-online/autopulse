@@ -22,10 +22,8 @@ fn default_log_level() -> LogLevel {
     LogLevel::default()
 }
 
-/// Normalize `base_path` so downstream `format!("{base}/ui/...")` is
-/// always well-formed. Accepts any of `""`, `"/"`, `"autopulse"`,
-/// `"/autopulse"`, `"/autopulse/"`, `"  /autopulse/  "` and yields
-/// either `""` or `"/autopulse"`.
+/// Normalize `base_path` so `format!("{base}/ui/...")` is always well-formed:
+/// either `""` or `/<prefix>`, no trailing slash. Tests cover the corner cases.
 fn normalize_base_path<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,

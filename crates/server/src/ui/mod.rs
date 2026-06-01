@@ -19,8 +19,7 @@ use actix_web::{
 };
 use autopulse_service::manager::PulseManager;
 
-/// Bare `/ui` (and `/ui/`) → the events view. No auth gate here; the
-/// target route redirects to `/ui/login` itself if needed.
+/// `/ui` and `/ui/` → events. Auth gate lives on the target route.
 #[get("/ui")]
 async fn ui_root(manager: Data<PulseManager>) -> impl Responder {
     redirect_to_events(&manager)

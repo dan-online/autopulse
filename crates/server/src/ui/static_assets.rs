@@ -37,8 +37,7 @@ pub async fn serve_static(path: Path<String>, req: HttpRequest) -> HttpResponse 
     HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, content_type_for(&path)))
         .insert_header((ETAG, etag))
-        // Etag is content-hashed at build time, so revalidation is a no-op cache hit
-        // until the binary changes.
+        // ETag is build-time content-hashed, so `no-cache` revalidates cheaply.
         .insert_header((CACHE_CONTROL, "no-cache"))
         .body(file.data.into_owned())
 }

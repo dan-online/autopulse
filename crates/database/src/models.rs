@@ -170,8 +170,7 @@ impl Default for NewScanEvent {
     }
 }
 
-/// Single-row key/value store backing the UI session-signing key and
-/// any future "must survive restarts without user intervention" config.
+/// Key/value store; currently holds only the UI session-signing key.
 #[derive(Queryable, Selectable, Insertable, Clone, Debug)]
 #[diesel(table_name = crate::schema::app_state)]
 pub struct AppState {

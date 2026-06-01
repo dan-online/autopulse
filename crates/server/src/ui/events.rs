@@ -27,12 +27,9 @@ fn default_page() -> u64 {
     1
 }
 
-/// Swap unit for filter switches and search results. Stat-card clicks and
-/// the search input both target this section via `outerHTML`. The search
-/// input uses `hx-preserve` so HTMX keeps the focused DOM element across
-/// swaps instead of destroying and recreating it.
+/// `outerHTML` swap target for filter and search. Search input is
+/// `hx-preserve`d so focus survives swaps.
 fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
-    // Empty strings come from the hidden status carrier; treat as "no filter".
     let status = q.status.as_deref().filter(|s| !s.is_empty());
     let search = q.search.as_deref().filter(|s| !s.is_empty());
     // Normalize once so the rows fragment and the load-more URL agree on
@@ -64,8 +61,7 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
             hx-ext="sse"
             sse-connect={ (base) "/ui/events/stream" (filter_qs) }
         {
-            // Carries the active status filter for the search input's
-            // hx-include so search requests always compose both filters.
+            // Status carrier for search's `hx-include` (composes status + search).
             input #events-status type="hidden" name="status"
                 value=(status.unwrap_or(""));
 
@@ -193,9 +189,7 @@ fn stats_cards(
     html! {
         .stats
             hx-trigger="sse:event-row throttle:5s"
-            // Carry the active filter so the periodic refresh keeps the
-            // selected card's `.is-active` highlight (counts themselves
-            // are global; the filter just drives the highlight state).
+            // Carry the filter so the refresh preserves `.is-active` (counts are global).
             hx-get={ (base) "/ui/events/stats" (filter_query(status, search)) }
             hx-swap="outerHTML"
         {
