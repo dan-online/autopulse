@@ -182,6 +182,17 @@ webhooks:
     type: "discord"
     url: "https://discord.com/api/webhooks/1234567890/abcdefg"
 
+  my_discord_with_mentions:
+    type: "discord"
+    url: "https://discord.com/api/webhooks/1234567890/abcdefg"
+    mentions:
+      - targets:
+          - here
+          - role: "1234567890"
+          - user: "9876543210"
+        on: [failed, hash_mismatch]
+      - targets: [everyone]
+
   my_hookshot:
     type: "hookshot"
     url: "https://matrix.example.com/_matrix/hookshot/webhook/abcdefg"
