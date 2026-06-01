@@ -47,4 +47,9 @@ impl Auth {
             BASE64_STANDARD.encode(format!("{}:{}", self.username, self.password))
         )
     }
+
+    pub fn is_default_credentials(&self) -> bool {
+        let defaults = Self::default();
+        self.enabled && self.username == defaults.username && self.password == defaults.password
+    }
 }

@@ -8,7 +8,7 @@ pub type WebhookBatch = Vec<(EventType, Option<String>, Vec<String>)>;
 type WebhookQueue = HashMap<(EventType, Option<String>), Vec<String>>;
 
 /// Event type
-#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum EventType {
     /// New event
     New = 0,

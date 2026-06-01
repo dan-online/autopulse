@@ -8,7 +8,7 @@ use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use serde::Deserialize;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 
 #[doc(hidden)]
 #[cfg(feature = "postgres")]
@@ -145,7 +145,9 @@ impl AnyConnection {
             #[cfg(feature = "sqlite")]
             Self::Sqlite(conn) => conn.run_pending_migrations(SQLITE_MIGRATIONS),
         }
-        .expect("Could not run migrations");
+        // Preserve `e.source()` chain via anyhow::Error::from_boxed; the
+        // previous `anyhow!("...{e}")` flattened it to Display only.
+        .map_err(|e| anyhow::Error::from_boxed(e).context("failed to run migrations"))?;
 
         if !migrations_applied.is_empty() {
             info!(
@@ -215,22 +217,30 @@ pub fn get_conn(
 }
 
 pub fn close_pool(pool: &Pool<ConnectionManager<AnyConnection>>) {
-    if let Ok(mut conn) = pool.get() {
-        let _ = conn.close();
+    match pool.get() {
+        Ok(mut conn) => {
+            if let Err(e) = conn.close() {
+                warn!("failed to close database connection cleanly: {e}");
+            }
+        }
+        Err(e) => {
+            warn!("failed to get connection for pool shutdown: {e}");
+        }
     }
 }
 
 #[doc(hidden)]
 pub fn get_pool(database_url: &String) -> anyhow::Result<Pool<ConnectionManager<AnyConnection>>> {
+    // First pool fires `AcquireHook { setup: true }` once (VACUUM/WAL), then dropped.
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 
-    let pool = Pool::builder()
+    let setup_pool = Pool::builder()
         .max_size(1)
         .connection_customizer(Box::new(AcquireHook { setup: true }))
         .build(manager)
-        .context("failed to create pool");
+        .context("failed to create setup pool")?;
 
-    drop(pool);
+    drop(setup_pool);
 
     let manager = ConnectionManager::<AnyConnection>::new(database_url);
 

@@ -80,8 +80,8 @@ impl Radarr {
             }
         }
 
-        // In future instead of batching the refresh command, just send individual refresh commands
-        // per movie and then only partially fail events that failed to refresh
+        // TODO: per-movie commands would let us isolate partial failures,
+        // but the serial-POST cost on large imports outweighs that today.
         Ok(to_be_refreshed.into_keys().collect())
     }
 
@@ -105,7 +105,7 @@ impl TargetProcess for Radarr {
                 succeeded.extend(evs.iter().map(|ev| ev.id.clone()));
             }
             Err(e) => {
-                error!("failed to refresh series: {}", e);
+                error!("failed to refresh movies: {e}");
             }
         }
 

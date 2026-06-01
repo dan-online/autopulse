@@ -19,3 +19,11 @@ diesel::table! {
         can_process -> Timestamp,
     }
 }
+
+diesel::table! {
+    app_state (key) {
+        key -> Text,
+        value -> Binary,
+        updated_at -> Timestamp,
+    }
+}
