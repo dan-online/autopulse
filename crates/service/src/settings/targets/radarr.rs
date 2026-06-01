@@ -54,7 +54,7 @@ impl Radarr {
             .map_err(Into::into)
     }
 
-    async fn get_movies(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<(i64, Vec<String>)>> {
+    async fn get_movies(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<i64>> {
         let client = self.get_client()?;
 
         let url = get_url(&self.url)?.join("api/v3/movie")?;
@@ -80,15 +80,16 @@ impl Radarr {
             }
         }
 
-        Ok(to_be_refreshed.into_iter().collect())
+        // TODO: revisit per-movie commands so partial failures don't fail the
+        // whole batch; this branch reverted to bulk after the per-movie loop
+        // caused multi-roundtrip latency on large imports.
+        Ok(to_be_refreshed.into_keys().collect())
     }
 
-    async fn refresh_movie(&self, movie_id: i64) -> anyhow::Result<()> {
+    async fn refresh_movies(&self, movie_ids: Vec<i64>) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join("api/v3/command")?;
-        let payload = Command::RefreshMovie(RefreshMovie {
-            movie_ids: vec![movie_id],
-        });
+        let payload = Command::RefreshMovie(RefreshMovie { movie_ids });
 
         client.post(url).json(&payload).perform().await.map(|_| ())
     }
@@ -100,14 +101,12 @@ impl TargetProcess for Radarr {
 
         let movies = self.get_movies(evs).await?;
 
-        for (movie_id, ev_ids) in movies {
-            match self.refresh_movie(movie_id).await {
-                Ok(()) => {
-                    succeeded.extend(ev_ids);
-                }
-                Err(e) => {
-                    error!("failed to refresh movie: {}", e);
-                }
+        match self.refresh_movies(movies).await {
+            Ok(()) => {
+                succeeded.extend(evs.iter().map(|ev| ev.id.clone()));
+            }
+            Err(e) => {
+                error!("failed to refresh movies: {e}");
             }
         }
 
