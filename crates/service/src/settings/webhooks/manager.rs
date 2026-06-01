@@ -1,5 +1,6 @@
 use crate::settings::Settings;
 use futures::future::join_all;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 use tokio::sync::RwLock;
 use tracing::error;
@@ -8,7 +9,8 @@ pub type WebhookBatch = Vec<(EventType, Option<String>, Vec<String>)>;
 type WebhookQueue = HashMap<(EventType, Option<String>), Vec<String>>;
 
 /// Event type
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
 pub enum EventType {
     /// New event
     New = 0,
