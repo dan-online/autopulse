@@ -5,6 +5,8 @@ edition = "2021"
 version.workspace = true
 
 [features]
+sqlite = ["autopulse-database/sqlite"]
+postgres = ["autopulse-database/postgres"]
 vendored = []
 
 [dependencies]

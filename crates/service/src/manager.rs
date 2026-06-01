@@ -7,8 +7,7 @@ use crate::settings::Settings;
 use autopulse_database::diesel::sql_types::{BigInt, Text};
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
-    can_process, created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit,
-    updated_at,
+    created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit, updated_at,
 };
 use autopulse_database::{
     conn::{get_conn, DbPool},
@@ -17,7 +16,7 @@ use autopulse_database::{
         TextExpressionMethods,
     },
     models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
-    schema::scan_events::{dsl::scan_events, found_status, process_status},
+    schema::scan_events::{dsl::scan_events, process_status},
 };
 use notify_debouncer_full::notify;
 use serde::Serialize;
@@ -176,26 +175,8 @@ impl PulseManager {
     }
 
     pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        let mut check = scan_events
-            .filter(file_path.eq(&ev.file_path))
-            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .filter(event_source.eq(&ev.event_source))
-            .into_boxed();
-
-        if ev.found_status == FoundStatus::Found.to_string() {
-            check = check.filter(found_status.eq(&ev.found_status));
-        }
-
-        let result = if let Ok(existing) = check.first::<ScanEvent>(&mut get_conn(&self.pool)?) {
-            diesel::update(&existing)
-                .set((
-                    updated_at.eq(chrono::Utc::now().naive_utc()),
-                    can_process.eq(ev.can_process),
-                ))
-                .get_result::<ScanEvent>(&mut get_conn(&self.pool)?)?
-        } else {
-            get_conn(&self.pool)?.insert_and_return(ev)?
-        };
+        let now = chrono::Utc::now().naive_utc();
+        let result = get_conn(&self.pool)?.upsert_pending(ev, now)?;
 
         self.publish(EventType::New, &result);
 
