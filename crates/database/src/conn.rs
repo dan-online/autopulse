@@ -7,7 +7,9 @@ use diesel::{Connection, RunQueryDsl};
 use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use serde::Deserialize;
+use std::fs::OpenOptions;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{info, warn};
 
 #[doc(hidden)]
@@ -133,6 +135,31 @@ impl AnyConnection {
                     format!("failed to create database directory: {}", parent.display())
                 })?;
             }
+
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_nanos())
+                .unwrap_or_default();
+            let probe = parent.join(format!(
+                ".autopulse-db-write-test-{}-{timestamp}",
+                std::process::id()
+            ));
+
+            let file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&probe)
+                .with_context(|| {
+                    format!("database directory is not writable: {}", parent.display())
+                })?;
+            drop(file);
+
+            std::fs::remove_file(&probe).with_context(|| {
+                format!(
+                    "failed to remove database directory write test file: {}",
+                    probe.display()
+                )
+            })?;
         }
 
         Ok(())
@@ -290,6 +317,28 @@ mod tests {
 
         let result = AnyConnection::pre_init(&url);
         assert!(result.is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_pre_init_existing_unwritable_directory_fails_with_context() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let subdir = tmp.path().join("readonly");
+        fs::create_dir(&subdir).unwrap();
+        fs::set_permissions(&subdir, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let db_path = subdir.join("test.db");
+        let url = format!("sqlite://{}", db_path.display());
+
+        let result = AnyConnection::pre_init(&url);
+
+        fs::set_permissions(&subdir, fs::Permissions::from_mode(0o755)).unwrap();
+        let err = result.expect_err("unwritable database directory should fail pre-init");
+        let err = err.to_string();
+        assert!(err.contains("database directory is not writable"));
+        assert!(err.contains(&subdir.display().to_string()));
     }
 
     #[test]

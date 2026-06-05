@@ -72,10 +72,22 @@ After install, point Sonarr/Radarr/etc. webhooks at http://&lt;UNRAID_IP&gt;:287
       <Name>AUTOPULSE__APP__LOG_LEVEL</Name>
       <Mode/>
     </Variable>
+    <Variable>
+      <Value>99</Value>
+      <Name>PUID</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>100</Value>
+      <Name>PGID</Name>
+      <Mode/>
+    </Variable>
   </Environment>
   <Config Name="WebUI port" Target="2875" Default="2875" Mode="tcp" Description="HTTP port for the autopulse API and UI" Type="Port" Display="always" Required="true" Mask="false">2875</Config>
   <Config Name="App data" Target="/data" Default="/mnt/user/appdata/autopulse" Mode="rw" Description="Holds autopulse.db (SQLite) and the session key" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/autopulse</Config>
   <Config Name="Media share" Target="/media" Default="/mnt/user/media" Mode="ro" Description="Read-only mount of your media library. autopulse only reads file paths, so :ro is intentional. Mirror the paths your Sonarr/Radarr triggers will report." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media</Config>
+  <Config Name="User ID" Target="PUID" Default="99" Mode="" Description="Container user id. Unraid appdata is usually owned by nobody (99)." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="Group ID" Target="PGID" Default="100" Mode="" Description="Container group id. Unraid appdata is usually owned by users (100)." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
   <Config Name="Database URL" Target="AUTOPULSE__APP__DATABASE_URL" Default="sqlite:///data/autopulse.db" Mode="" Description="Connection string. For Postgres use postgres://user:pass@host/db" Type="Variable" Display="advanced" Required="true" Mask="false">sqlite:///data/autopulse.db</Config>
   <Config Name="Basic-auth username" Target="AUTOPULSE__AUTH__USERNAME" Default="admin" Mode="" Description="Basic-auth username. Change from the default before exposing." Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
   <Config Name="Basic-auth password" Target="AUTOPULSE__AUTH__PASSWORD" Default="change-me" Mode="" Description="Basic-auth password. Change from the default before exposing." Type="Variable" Display="always" Required="true" Mask="true">change-me</Config>
