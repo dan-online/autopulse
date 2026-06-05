@@ -87,6 +87,24 @@ The easiest way to get started with autopulse is to use the provided docker imag
 
 > All images are multi-arch and support `linux/amd64`, `linux/arm64`, however -amd64 and -arm64 suffixes can be used to specify the architecture
 
+#### Unraid
+
+An Unraid Community Apps template lives in [`unraid/autopulse.xml`](unraid/autopulse.xml).
+
+Once autopulse is listed in Community Apps, open the **Apps** tab in Unraid, search for `autopulse`, and click **Install**. Until then, install it as a private Community App:
+
+1. Make sure Community Applications is installed (it ships with Unraid via the Apps tab).
+2. SSH to your Unraid server and run:
+
+   ```bash
+   mkdir -p /boot/config/plugins/community.applications/private/autopulse
+   wget -O /boot/config/plugins/community.applications/private/autopulse/autopulse.xml \
+     https://raw.githubusercontent.com/dan-online/autopulse/main/unraid/autopulse.xml
+   ```
+
+3. In the WebUI, open **Apps** and select **Private apps** from the left sidebar, then click **Install** on autopulse.
+4. Adjust the **Media share** path and change **AUTOPULSE__AUTH__PASSWORD** from the default `change-me` before clicking Apply.
+
 #### Compose
 
 Docker Compose files for both SQLite and Postgres are provided in the [example](https://github.com/dan-online/autopulse/blob/main/example)

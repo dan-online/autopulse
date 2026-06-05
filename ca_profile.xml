@@ -1,0 +1,11 @@
+<CommunityApplications>
+  <Profile>
+    autopulse is an automated service that bridges media organizers like Sonarr,
+    Radarr, Lidarr, and Readarr with media servers like Plex, Jellyfin, and Emby.
+    This repository contains the autopulse Community Apps template and project
+    source. Use the GitHub issue tracker for support.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/dan-online/autopulse/main/assets/logo.webp</Icon>
+  <WebPage>https://github.com/dan-online/autopulse</WebPage>
+  <Forum>https://github.com/dan-online/autopulse/issues</Forum>
+</CommunityApplications>

@@ -11,8 +11,8 @@ RUN apk add --no-cache \
 
 RUN addgroup -g 1000 autopulse && \
     adduser -D -u 1000 -G autopulse -h /config autopulse && \
-    mkdir -p /app && \
-    chown autopulse:autopulse /app /config
+    mkdir -p /app /data && \
+    chown autopulse:autopulse /app /config /data
 
 WORKDIR /app
 
