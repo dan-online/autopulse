@@ -9,6 +9,7 @@ pub mod settings;
 #[cfg(test)]
 mod tests {
     mod manager_add_event;
+    mod settings;
     mod targets;
     mod triggers;
     #[cfg(feature = "sqlite")]

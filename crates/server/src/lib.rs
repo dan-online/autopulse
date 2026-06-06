@@ -13,6 +13,8 @@ use routes::{
     triggers::trigger_get, triggers::trigger_post,
 };
 
+use crate::routes::{health::health, triggers::trigger_post_rest};
+
 pub mod routes;
 pub mod ui;
 
@@ -40,8 +42,10 @@ pub fn get_server(hostname: &str, port: &u16, manager: PulseManager) -> anyhow::
                     .build(),
             )
             .service(hello)
+            .service(health)
             .service(trigger_get)
             .service(trigger_post)
+            .service(trigger_post_rest)
             .service(status)
             .service(stats)
             .service(login)
