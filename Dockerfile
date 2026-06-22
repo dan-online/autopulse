@@ -1,4 +1,4 @@
-ARG IMAGE_TAG=3.23
+ARG IMAGE_TAG=3.24
 FROM alpine:${IMAGE_TAG} AS runtime
 
 RUN apk add --no-cache \
