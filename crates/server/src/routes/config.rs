@@ -190,6 +190,9 @@ fn generate_config_template(
                 TargetType::Audiobookshelf => Target::Audiobookshelf(serde_json::from_str(
                     r#"{"url": "{url}", "token": "{token}"}"#,
                 )?),
+                TargetType::Silo => Target::Silo(serde_json::from_str(
+                    r#"{"url": "{url}", "token": "{token}"}"#,
+                )?),
             },
         );
     }
