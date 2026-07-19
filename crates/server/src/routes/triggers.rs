@@ -21,31 +21,27 @@ enum TriggerQueryParams {
     Autoscan(AutoscanQueryParams),
 }
 
-#[post("/triggers/{trigger}")]
-pub async fn trigger_post(
-    req: HttpRequest,
-    trigger: Path<String>,
-    manager: Data<PulseManager>,
-    _auth: AuthenticatedUser,
+async fn trigger_post_inner(
+    req: &HttpRequest,
+    trigger_name: &str,
+    manager: &Data<PulseManager>,
     body: Bytes,
 ) -> Result<HttpResponse> {
-    let trigger_name = trigger.into_inner();
-
     if body.is_empty() {
         let query = Query::<TriggerQueryParams>::from_query(req.query_string())
             .map_err(actix_web::error::ErrorBadRequest)?;
-        return trigger_get_inner(query.into_inner(), &trigger_name, &manager).await;
+        return trigger_get_inner(query.into_inner(), trigger_name, manager).await;
     }
 
     let body: serde_json::Value =
         serde_json::from_slice(&body).map_err(actix_web::error::ErrorBadRequest)?;
 
-    let Some(trigger_settings) = manager.settings.triggers.get(&trigger_name) else {
+    let Some(trigger_settings) = manager.settings.triggers.get(trigger_name) else {
         return Ok(HttpResponse::NotFound().body("Trigger not found"));
     };
 
     match trigger_settings {
-        Trigger::Manual(_) | Trigger::Notify(_) => {
+        Trigger::Manual(_) | Trigger::Notify(_) | Trigger::Autoscan(_) | Trigger::Bazarr(_) => {
             Ok(HttpResponse::BadRequest().body("Invalid request"))
         }
         _ => {
@@ -78,7 +74,7 @@ pub async fn trigger_post(
                 }
 
                 let new_scan_event = NewScanEvent {
-                    event_source: trigger_name.clone(),
+                    event_source: trigger_name.to_owned(),
                     file_path: path.clone(),
                     found_status: if !search {
                         FoundStatus::Found.into()
@@ -111,16 +107,53 @@ pub async fn trigger_post(
             if !queued_paths.is_empty() {
                 manager
                     .webhooks
-                    .add_event(EventType::New, Some(trigger_name.clone()), &queued_paths)
+                    .add_event(EventType::New, Some(trigger_name.to_owned()), &queued_paths)
                     .await;
             }
 
-            debug_span!("", trigger = &*trigger_name).in_scope(|| {
+            debug_span!("", trigger = trigger_name).in_scope(|| {
                 info!("added {} file{}", scan_events.len(), sify(&scan_events));
             });
 
             Ok(HttpResponse::Ok().json(scan_events))
         }
+    }
+}
+
+#[post("/triggers/{trigger}")]
+pub async fn trigger_post(
+    req: HttpRequest,
+    trigger: Path<String>,
+    manager: Data<PulseManager>,
+    _auth: AuthenticatedUser,
+    body: Bytes,
+) -> Result<HttpResponse> {
+    let trigger_name = trigger.into_inner();
+    trigger_post_inner(&req, &trigger_name, &manager, body).await
+}
+
+/// A-Train hardcodes its outbound URL to `/triggers/a-train/{drive_id}` and
+/// won't let the user reshape it. This sibling route swallows the trailing
+/// `{drive_id}` segment so the same trigger handler can serve it.
+///
+/// Returns 404 unless the resolved trigger accepts trailing segments, so a
+/// stray `POST /triggers/sonarr/anything` can't sneak past as a valid sonarr
+/// request.
+#[post("/triggers/{trigger}/{_drive_id}")]
+pub async fn trigger_post_rest(
+    req: HttpRequest,
+    path: Path<(String, String)>,
+    manager: Data<PulseManager>,
+    _auth: AuthenticatedUser,
+    body: Bytes,
+) -> Result<HttpResponse> {
+    let (trigger_name, _drive_id) = path.into_inner();
+
+    match manager.settings.triggers.get(&trigger_name) {
+        Some(trigger_settings) if trigger_settings.accepts_trailing_segment() => {
+            trigger_post_inner(&req, &trigger_name, &manager, body).await
+        }
+        _ => Ok(HttpResponse::NotFound().body("Trigger not found")),
     }
 }
 
