@@ -34,7 +34,7 @@ reqwest = { version = "0.13.0", default-features = false, features = [
 ] }
 
 # Credential encoding
-base64 = "0.22.1"
+base64 = "0.23.0"
 
 # Config
 figment = { version = "0.10", features = ["toml", "yaml", "json", "env"] }
