@@ -118,7 +118,12 @@ fn generate_config_template(
     };
 
     for trigger in input_triggers {
-        let name = serde_json::to_string(trigger)?.replace('"', "");
+        // A-Train hardcodes its outbound URL to `/triggers/a-train/{drive_id}`, so the
+        // generated trigger key must be exactly `a-train` for the route to match.
+        let name = match trigger {
+            TriggerType::Atrain => "a-train".to_string(),
+            _ => serde_json::to_string(trigger)?.replace('"', ""),
+        };
 
         let mut count = 0;
         let mut key = name.clone();
@@ -135,6 +140,7 @@ fn generate_config_template(
                 TriggerType::Manual => Trigger::Manual(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Bazarr => Trigger::Bazarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Autoscan => Trigger::Autoscan(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Atrain => Trigger::Atrain(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Radarr => Trigger::Radarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Sonarr => Trigger::Sonarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Lidarr => Trigger::Lidarr(serde_json::from_str(r#"{}"#)?),
