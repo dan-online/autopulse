@@ -145,7 +145,7 @@ async fn autoscan_trigger_applies_rewrite_to_dir() {
 }
 
 #[actix_web::test]
-async fn sportarr_trigger_parses_sonarr_shaped_webhooks() {
+async fn sportarr_trigger_parses_download_webhook() {
     let manager = test_manager();
     let app = test::init_service(
         App::new()
@@ -185,4 +185,101 @@ async fn sportarr_trigger_parses_sonarr_shaped_webhooks() {
         .as_str()
         .expect("file_path in response");
     assert_eq!(path, "/media/sports/NFL/Season 2026/NFL.2026.08.04.mkv");
+}
+
+// Real payload shape captured from a live Sportarr instance (dev branch,
+// 2026-08-07) after a POST /api/leagues/{id}/rename call. Sportarr's Rename
+// event carries the covering directory of the whole batch (series.path) and
+// a renamedCount, not Sonarr's per-file previousPath/relativePath list -
+// this is what made the Sonarr-aliased parser 500 on a real Rename webhook.
+#[actix_web::test]
+async fn sportarr_trigger_parses_real_rename_webhook() {
+    let manager = test_manager();
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/sportarr")
+            .insert_header(("Authorization", test_auth_header()))
+            .set_json(serde_json::json!({
+                "eventType": "Rename",
+                "title": "Renamed 1 file(s)",
+                "message": "Scope: NFL",
+                "applicationUrl": "",
+                "instanceName": "Sportarr",
+                "series": { "title": "", "path": "/Sports/NFL" },
+                "renamedCount": 1
+            }))
+            .to_request(),
+    )
+    .await;
+
+    assert!(
+        response.status().is_success(),
+        "status={}",
+        response.status()
+    );
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    let events = body.as_array().expect("response should be an array");
+    assert_eq!(events.len(), 1);
+
+    let path = events[0]["file_path"]
+        .as_str()
+        .expect("file_path in response");
+    assert_eq!(path, "/media/sports/NFL");
+}
+
+// Real payload shape captured from a live Sportarr instance (dev branch,
+// 2026-08-07) after a DELETE /api/events/{id} call. SeriesDelete only
+// removes the database record - Sportarr never deletes files as part of
+// it (that's a separate EpisodeFileDelete event) - so the payload's
+// `series` object carries no `path` at all, only id/title. Sonarr's Series
+// struct treats `path` as required, which is what made this 500. There's
+// nothing on disk to act on, so this should succeed with zero queued
+// scan events rather than erroring.
+#[actix_web::test]
+async fn sportarr_trigger_parses_real_series_delete_webhook() {
+    let manager = test_manager();
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/sportarr")
+            .insert_header(("Authorization", test_auth_header()))
+            .set_json(serde_json::json!({
+                "eventType": "SeriesDelete",
+                "title": "Event deleted: NFL 2026-08-05 Team C vs Team D",
+                "message": "The event was removed from the library.",
+                "applicationUrl": "",
+                "instanceName": "Sportarr",
+                "series": { "id": 2, "title": "NFL 2026-08-05 Team C vs Team D" }
+            }))
+            .to_request(),
+    )
+    .await;
+
+    assert!(
+        response.status().is_success(),
+        "status={}",
+        response.status()
+    );
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    let events = body.as_array().expect("response should be an array");
+    assert_eq!(events.len(), 0);
 }

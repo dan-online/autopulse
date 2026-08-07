@@ -177,7 +177,8 @@ triggers:
       exclude:
         - "^/tvshows/extras/"
 
-  # Sportarr speaks the same webhook shape as Sonarr
+  # Sportarr - Download/Grab/Upgrade match Sonarr's webhook shape; Rename and
+  # SeriesDelete have their own shape (see crates/service/src/settings/triggers/sportarr.rs)
   my_sportarr:
     type: "sportarr"
     rewrite:
