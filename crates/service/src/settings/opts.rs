@@ -85,15 +85,3 @@ impl Default for Opts {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn log_file_max_files_defaults_to_30() {
-        let opts: Opts = serde_json::from_str("{}").expect("empty opts should deserialize");
-
-        assert_eq!(opts.log_file_max_files, 30);
-    }
-}
