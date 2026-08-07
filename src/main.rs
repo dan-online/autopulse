@@ -15,7 +15,7 @@ use anyhow::Context;
 use autopulse_database::conn::{close_pool, get_conn, get_pool, AnyConnection};
 use autopulse_server::get_server;
 use autopulse_service::manager::PulseManager;
-use autopulse_service::settings::Settings;
+use autopulse_service::settings::{opts::Opts, Settings};
 use autopulse_utils::tracing_appender::non_blocking::WorkerGuard;
 use autopulse_utils::{setup_logs, Rotation};
 use clap::Parser;
@@ -149,7 +149,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
                 &autopulse_utils::LogLevel::Info,
                 &None,
                 &Rotation::NEVER,
-                30,
+                Opts::default().log_file_max_files,
                 false,
             )?;
 

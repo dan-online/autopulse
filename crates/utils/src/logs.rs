@@ -113,8 +113,8 @@ fn rolling_file_appender(
         .ok_or_else(|| anyhow::anyhow!("failed to get parent directory of log file"))?;
     let filename = log_file
         .file_name()
-        .and_then(|name| name.to_str())
         .ok_or_else(|| anyhow::anyhow!("failed to get file name of log file"))?;
+    let filename = filename.to_string_lossy();
 
     RollingFileAppender::builder()
         .rotation(rotation.clone())
@@ -160,5 +160,20 @@ mod tests {
             .count();
 
         assert_eq!(retained_logs, 30);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rolling_appender_accepts_non_utf8_log_filenames() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let directory = tempfile::tempdir().expect("temp directory should be created");
+        let filename = OsString::from_vec(b"autopulse-\xff.log".to_vec());
+        let log_file = directory.path().join(filename);
+
+        let appender = rolling_file_appender(&log_file, &Rotation::NEVER, 30)
+            .expect("appender should accept a non-UTF-8 filename");
+        drop(appender);
     }
 }
