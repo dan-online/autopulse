@@ -245,6 +245,7 @@ pub enum TriggerType {
     Radarr,
     Bazarr,
     Sonarr,
+    Sportarr,
     Lidarr,
     Readarr,
     Notify,
@@ -258,6 +259,7 @@ pub enum Trigger {
     Bazarr(Manual),
     Radarr(Radarr),
     Sonarr(Sonarr),
+    Sportarr(Sonarr),
     Lidarr(Lidarr),
     Readarr(Readarr),
     Notify(Notify),
@@ -269,7 +271,7 @@ impl Trigger {
             Self::Manual(trigger) | Self::Bazarr(trigger) => trigger,
             Self::Autoscan(trigger) => trigger,
             Self::Radarr(trigger) => trigger,
-            Self::Sonarr(trigger) => trigger,
+            Self::Sonarr(trigger) | Self::Sportarr(trigger) => trigger,
             Self::Lidarr(trigger) => trigger,
             Self::Readarr(trigger) => trigger,
             Self::Notify(trigger) => trigger,
@@ -299,7 +301,7 @@ impl Trigger {
         let event_name = body["eventType"].as_str().unwrap_or("unknown").to_string();
 
         let paths = match &self {
-            Self::Sonarr(_) => Ok(SonarrRequest::from_json(body)?.paths()),
+            Self::Sonarr(_) | Self::Sportarr(_) => Ok(SonarrRequest::from_json(body)?.paths()),
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),

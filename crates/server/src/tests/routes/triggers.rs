@@ -45,6 +45,14 @@ fn test_manager() -> PulseManager {
         }))
         .expect("sonarr trigger JSON should deserialize"),
     );
+    settings.triggers.insert(
+        "sportarr".to_string(),
+        serde_json::from_value(serde_json::json!({
+            "type": "sportarr",
+            "rewrite": { "from": "/Sports", "to": "/media/sports" }
+        }))
+        .expect("sportarr trigger JSON should deserialize"),
+    );
 
     let pool = get_pool(&database_url).expect("test database pool should initialize");
     get_conn(&pool)
@@ -134,4 +142,47 @@ async fn autoscan_trigger_applies_rewrite_to_dir() {
     let body: serde_json::Value = test::read_body_json(response).await;
     let path = body["file_path"].as_str().expect("file_path in response");
     assert_eq!(path, "/media/show/episode.mkv", "rewrite must be applied");
+}
+
+#[actix_web::test]
+async fn sportarr_trigger_parses_sonarr_shaped_webhooks() {
+    let manager = test_manager();
+    let app = test::init_service(
+        App::new()
+            .service(trigger_post)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(
+        &app,
+        TestRequest::post()
+            .uri("/triggers/sportarr")
+            .insert_header(("Authorization", test_auth_header()))
+            .set_json(serde_json::json!({
+                "eventType": "Download",
+                "episodeFile": { "relativePath": "Season 2026/NFL.2026.08.04.mkv" },
+                "series": {
+                    "path": "/Sports/NFL"
+                }
+            }))
+            .to_request(),
+    )
+    .await;
+
+    assert!(
+        response.status().is_success(),
+        "status={}",
+        response.status()
+    );
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    let events = body.as_array().expect("response should be an array");
+    assert_eq!(events.len(), 1);
+
+    let path = events[0]["file_path"]
+        .as_str()
+        .expect("file_path in response");
+    assert_eq!(path, "/media/sports/NFL/Season 2026/NFL.2026.08.04.mkv");
 }
