@@ -56,6 +56,9 @@ pub struct Opts {
     /// Whether to rollover the log file (default: never)
     pub log_file_rollover: LogRotation,
 
+    /// Maximum number of log files to retain (default: 30)
+    pub log_file_max_files: usize,
+
     /// Number of retries for webhook HTTP requests (default: 3)
     pub webhook_retries: u8,
 
@@ -75,9 +78,22 @@ impl Default for Opts {
             cleanup_days: 10,
             log_file: None,
             log_file_rollover: LogRotation::default(),
+            log_file_max_files: 30,
             webhook_retries: 3,
             webhook_timeout: 10,
             webhook_interval: 10,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn log_file_max_files_defaults_to_30() {
+        let opts: Opts = serde_json::from_str("{}").expect("empty opts should deserialize");
+
+        assert_eq!(opts.log_file_max_files, 30);
     }
 }

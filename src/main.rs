@@ -137,6 +137,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
                 &loaded.settings.app.log_level,
                 &loaded.settings.opts.log_file,
                 &log_file_rollover,
+                loaded.settings.opts.log_file_max_files,
                 loaded.settings.app.api_logging,
             )?;
             loaded.log_diagnostics();
@@ -148,6 +149,7 @@ fn setup() -> anyhow::Result<(Settings, Option<WorkerGuard>)> {
                 &autopulse_utils::LogLevel::Info,
                 &None,
                 &Rotation::NEVER,
+                30,
                 false,
             )?;
 
