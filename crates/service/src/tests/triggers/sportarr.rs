@@ -48,14 +48,7 @@ mod tests {
         }
     }
 
-    // Real payload captured from a live Sportarr instance (dev branch,
-    // 2026-08-10; note the series.tsdbId cross-reference) after a POST /api/leagues/{id}/rename call
-    // that renamed one file. Unlike Sonarr's Rename event (a per-file
-    // previousPath/relativePath list), Sportarr sends the covering
-    // directory of the whole renamed batch as series.path plus a
-    // renamedCount - there's no single file to point at for a rename
-    // batch. This is the exact shape dan-online reported 500ing when
-    // Sportarr triggers were routed through the Sonarr parser.
+    // Live Sportarr Rename payload: the batch directory is `series.path`.
     #[test]
     fn test_from_json_real_rename_payload() {
         let json = serde_json::json!({
@@ -89,13 +82,7 @@ mod tests {
         }
     }
 
-    // Real payload captured from a live Sportarr instance (dev branch,
-    // 2026-08-10; note the series.tsdbId cross-reference) after a DELETE /api/events/{id} call.
-    // SeriesDelete in Sportarr only removes the database record - it never
-    // deletes files (that's a separate EpisodeFileDelete event) - so the
-    // `series` object carries no `path` field at all, only id/title.
-    // Sonarr's Series struct treats `path` as required, which is exactly
-    // what made this 500 when routed through the Sonarr parser.
+    // Live Sportarr SeriesDelete payload: `series.path` is absent.
     #[test]
     fn test_from_json_real_series_delete_payload() {
         let json = serde_json::json!({
@@ -124,14 +111,7 @@ mod tests {
         }
     }
 
-    // Real payload captured from a live Sportarr instance (dev branch,
-    // 2026-08-10; note the series.tsdbId cross-reference) after a DELETE /api/events/{id}/files call
-    // that removed two files. Unlike Sonarr (a single `episodeFile`),
-    // Sportarr always reports file deletions - manual, retention-driven,
-    // or an upgrade's replaced file - through the plural `deletedFiles`
-    // list, same as `Download` uses for an upgrade's replaced file. There
-    // is no `episodeFile` field on this event at all, which would have
-    // 500'd the same way Rename and SeriesDelete did.
+    // Live Sportarr EpisodeFileDelete payload: deleted files use `deletedFiles`.
     #[test]
     fn test_from_json_real_episode_file_delete_payload() {
         let json = serde_json::json!({

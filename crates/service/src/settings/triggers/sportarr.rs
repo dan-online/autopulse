@@ -50,13 +50,8 @@ pub struct EpisodeFile {
     pub relative_path: String,
 }
 
-/// Sportarr's `series` object always carries `title`, but `path` is only
-/// present when the event has a directory to point at - notably absent on
-/// `SeriesDelete`, which is a metadata-only removal (Sportarr never deletes
-/// files as part of it; that's a separate `EpisodeFileDelete` event). Sonarr's
-/// equivalent struct treats `path` as required, which is exactly what made
-/// `SeriesDelete` 500 when Sportarr triggers were routed through the Sonarr
-/// parser.
+/// `SeriesDelete` omits `path` because it removes metadata only.
+/// Unlike Sonarr, Sportarr paths must be optional.
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[doc(hidden)]
@@ -71,31 +66,21 @@ pub enum SportarrRequest {
     #[serde(rename = "Download")]
     #[serde(rename_all = "camelCase")]
     Download {
-        /// Single file import
         episode_file: Option<EpisodeFile>,
-        /// Batch import
         #[serde(default)]
         episode_files: Vec<EpisodeFile>,
         #[serde(default)]
         deleted_files: Vec<EpisodeFile>,
         series: Series,
     },
-    /// A rename batch has no single file to point at - Sportarr sends the
-    /// covering directory of everything that was renamed (`series.path`)
-    /// plus a `renamedCount`, not a per-file previous/new path list like
-    /// Sonarr. Treated the same way autopulse's Radarr trigger treats a
-    /// movie rename: one entry for the directory, marked for a rescan.
+    /// Rename webhooks identify the batch by `series.path`; rescan that directory.
     #[serde(rename = "Rename")]
     #[serde(rename_all = "camelCase")]
     Rename { series: Series },
     #[serde(rename = "SeriesDelete")]
     #[serde(rename_all = "camelCase")]
     SeriesDelete { series: Series },
-    /// Unlike Sonarr (which sends a single `episodeFile`), Sportarr always
-    /// reports file deletions - manual, retention-driven, or an upgrade's
-    /// replaced file - through the plural `deletedFiles` list, the same
-    /// field `Download` uses for an upgrade's replaced file. There is no
-    /// `episodeFile` field on this event at all.
+    /// Sportarr uses plural `deletedFiles`, unlike Sonarr's `episodeFile`.
     #[serde(rename = "EpisodeFileDelete")]
     #[serde(rename_all = "camelCase")]
     EpisodeFileDelete {
@@ -134,10 +119,6 @@ impl TriggerRequest for SportarrRequest {
                 .clone()
                 .map(|path| vec![(path, true)])
                 .unwrap_or_default(),
-            // No path means there's nothing on disk to act on - Sportarr's
-            // SeriesDelete never carries one (see the Series doc comment
-            // above), so this is the normal shape for a real payload, not
-            // an error.
             Self::SeriesDelete { series } => series
                 .path
                 .clone()

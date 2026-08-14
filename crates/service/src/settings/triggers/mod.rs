@@ -206,10 +206,6 @@ pub mod sonarr;
 /// Sportarr - Sportarr trigger
 ///
 /// This trigger is used to process a file from Sportarr
-/// (https://github.com/Sportarr/Sportarr), a sports event manager. Its
-/// Download webhook shape matches Sonarr's single-file import case, but
-/// Rename, SeriesDelete, and EpisodeFileDelete each differ from Sonarr's
-/// equivalent events - see [`sportarr`] for the details.
 ///
 /// # Example
 ///

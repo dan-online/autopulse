@@ -187,11 +187,7 @@ async fn sportarr_trigger_parses_download_webhook() {
     assert_eq!(path, "/media/sports/NFL/Season 2026/NFL.2026.08.04.mkv");
 }
 
-// Real payload shape captured from a live Sportarr instance (dev branch,
-// 2026-08-07) after a POST /api/leagues/{id}/rename call. Sportarr's Rename
-// event carries the covering directory of the whole batch (series.path) and
-// a renamedCount, not Sonarr's per-file previousPath/relativePath list -
-// this is what made the Sonarr-aliased parser 500 on a real Rename webhook.
+// Live Sportarr Rename payload: the batch directory is `series.path`.
 #[actix_web::test]
 async fn sportarr_trigger_parses_real_rename_webhook() {
     let manager = test_manager();
@@ -237,14 +233,7 @@ async fn sportarr_trigger_parses_real_rename_webhook() {
     assert_eq!(path, "/media/sports/NFL");
 }
 
-// Real payload shape captured from a live Sportarr instance (dev branch,
-// 2026-08-07) after a DELETE /api/events/{id} call. SeriesDelete only
-// removes the database record - Sportarr never deletes files as part of
-// it (that's a separate EpisodeFileDelete event) - so the payload's
-// `series` object carries no `path` at all, only id/title. Sonarr's Series
-// struct treats `path` as required, which is what made this 500. There's
-// nothing on disk to act on, so this should succeed with zero queued
-// scan events rather than erroring.
+// Live Sportarr SeriesDelete payload: `series.path` is absent.
 #[actix_web::test]
 async fn sportarr_trigger_parses_real_series_delete_webhook() {
     let manager = test_manager();
