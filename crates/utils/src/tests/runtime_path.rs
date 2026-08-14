@@ -43,6 +43,13 @@ mod tests {
     }
 
     #[test]
+    fn parent_of_a_bare_file_basename_is_empty_not_the_basename_itself() {
+        let bare_file = RuntimePath::new("file.mkv");
+
+        assert_eq!(bare_file.parent_or_self().as_str(), "");
+    }
+
+    #[test]
     fn temporary_runtime_path_preserves_input_lifetime_for_its_parent() {
         fn parent(path: &str) -> &str {
             RuntimePath::new(path).parent_or_self().as_str()
