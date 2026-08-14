@@ -178,7 +178,7 @@ impl Plex {
             }
         }
 
-        // Sort matches most-specific-first, i.e. by descending component count
+        // Most-specific (highest component count) match first
         matches.sort_by(|(components_a, _), (components_b, _)| components_b.cmp(components_a));
 
         matches
@@ -213,10 +213,8 @@ impl Plex {
             .find(|component| !component.contains("Season") && !component.is_empty())
             .map(ToString::to_string)
             .unwrap_or_else(|| {
-                // Every component looked like "Season N": fall back to the
-                // normalized components themselves rather than the raw
-                // source text, so drive letters, UNC prefixes, and
-                // backslash separators never leak into the query.
+                // All components were "Season N": use normalized components,
+                // not raw source, to keep drive letters/UNC/backslashes out
                 components.join(" ")
             });
 

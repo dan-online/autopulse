@@ -51,11 +51,8 @@ impl<'a> RuntimePath<'a> {
         self.starts_with_mode(base, CaseSensitivity::AsciiInsensitive)
     }
 
-    /// Named rather than implemented via `PartialEq` because path equality
-    /// here is a policy decision, not a plain value comparison: it silently
-    /// applies a flavor-dependent case-folding rule (ASCII-insensitive on
-    /// Windows, sensitive on Unix). Callers should opt into that policy
-    /// explicitly by name rather than pick it up implicitly through `==`.
+    /// Not `PartialEq`: applies flavor-dependent case folding (ASCII-insensitive
+    /// on Windows), so callers opt in by name instead of via `==`.
     pub fn equals(&self, other: RuntimePath<'_>) -> bool {
         if self.flavor() != other.flavor() {
             return false;
@@ -94,10 +91,8 @@ impl<'a> RuntimePath<'a> {
         self.inner.file_name()
     }
 
-    /// Classifies by the presence of a file extension. This is a syntactic
-    /// check on the path string, not a filesystem stat: it never touches
-    /// disk and cannot detect an extant directory named e.g. `Season.1` or
-    /// a genuinely extension-less file.
+    /// Syntactic check on the path string, not a filesystem stat; can't
+    /// distinguish an extension-less file from a dir like `Season.1`.
     pub fn is_file(&self) -> bool {
         self.inner.extension().is_some()
     }
@@ -106,10 +101,8 @@ impl<'a> RuntimePath<'a> {
         !self.is_file()
     }
 
-    /// Reconstructs the parent from a prefix of the original `source`
-    /// string, rather than returning `Utf8TypedPath::parent()` directly, so
-    /// the result keeps borrowing the caller's `'a` input and preserves the
-    /// source's exact original rendering instead of a re-serialized one.
+    /// Slices `source` instead of using `Utf8TypedPath::parent()` directly,
+    /// to keep the `'a` borrow and the original (non-re-serialized) rendering.
     pub fn parent_or_self(&self) -> RuntimePath<'a> {
         let source = if self.is_file() {
             let length = self
@@ -138,9 +131,8 @@ impl<'a> RuntimePath<'a> {
 }
 
 impl RuntimePathFlavor {
-    /// The default case-sensitivity policy for this flavor: Unix paths
-    /// compare byte-for-byte; Windows paths fold ASCII case, mirroring
-    /// each platform's native filesystem semantics.
+    /// Unix compares byte-for-byte; Windows folds ASCII case, matching
+    /// each platform's filesystem semantics.
     fn default_sensitivity(self) -> CaseSensitivity {
         match self {
             RuntimePathFlavor::Unix => CaseSensitivity::Sensitive,
