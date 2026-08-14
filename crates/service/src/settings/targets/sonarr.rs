@@ -2,10 +2,10 @@ use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, RuntimePath};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 use tracing::error;
 
 use super::{Request, RequestBuilderPerform};
@@ -45,6 +45,14 @@ enum Command {
     RefreshSeries(RefreshSeries),
 }
 
+fn matching_series_id(path: &str, series: &[SonarrSeries]) -> Option<i64> {
+    let event = RuntimePath::new(path);
+    series
+        .iter()
+        .find(|candidate| event.starts_with(RuntimePath::new(&candidate.path)))
+        .map(|candidate| candidate.id)
+}
+
 impl Sonarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
@@ -69,14 +77,12 @@ impl Sonarr {
 
         for ev in evs {
             let ev_path = ev.get_path(&self.rewrite);
-            let ev_path = Path::new(&ev_path);
 
-            for s in &series {
-                let series_path = Path::new(&s.path);
-                if ev_path.starts_with(series_path) {
-                    to_be_refreshed.entry(s.id).or_default().push(ev.id.clone());
-                    break;
-                }
+            if let Some(series_id) = matching_series_id(&ev_path, &series) {
+                to_be_refreshed
+                    .entry(series_id)
+                    .or_default()
+                    .push(ev.id.clone());
             }
         }
 
@@ -110,5 +116,41 @@ impl TargetProcess for Sonarr {
         }
 
         Ok(succeeded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matches_windows_series_case_insensitively_by_components() {
+        let series = vec![SonarrSeries {
+            id: 42,
+            path: r"D:\TV\Breaking Bad".to_string(),
+        }];
+
+        assert_eq!(
+            matching_series_id(r"d:\tv\breaking bad\Season 1\S01E01.mkv", &series),
+            Some(42)
+        );
+    }
+
+    #[test]
+    fn rejects_series_text_prefix_and_mixed_flavor() {
+        let windows = vec![SonarrSeries {
+            id: 42,
+            path: r"D:\TV\Show".to_string(),
+        }];
+        let unix = vec![SonarrSeries {
+            id: 7,
+            path: "/tv/Show".to_string(),
+        }];
+
+        assert_eq!(
+            matching_series_id(r"D:\TV\Showcase\Episode.mkv", &windows),
+            None
+        );
+        assert_eq!(matching_series_id(r"D:\tv\Show\Episode.mkv", &unix), None);
     }
 }
