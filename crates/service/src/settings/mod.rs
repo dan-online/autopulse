@@ -154,6 +154,7 @@ impl LoadedSettings {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigDiagnostic {
     LoadedFile(PathBuf),
     LoadedFileEnv {
@@ -162,6 +163,15 @@ pub enum ConfigDiagnostic {
     MissingConfig {
         cwd: PathBuf,
         searched: Vec<PathBuf>,
+    },
+    AtrainAliased {
+        from: String,
+    },
+    AtrainAliasIgnored {
+        from: String,
+    },
+    AtrainKeyShadowed {
+        existing_type: String,
     },
 }
 
@@ -178,19 +188,52 @@ impl ConfigDiagnostic {
                 );
             }
             Self::MissingConfig { cwd, searched } => {
+                let searched = searched
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>();
                 tracing::warn!(
                     target: "autopulse",
                     "no config file found in {}. Searched: {:?}. \
                      Using defaults + environment overrides only. \
                      Pass --config /path/to/config.toml or place one of the candidate files in the cwd.",
                     cwd.display(),
-                    searched
-                        .iter()
-                        .map(|p| p.display().to_string())
-                        .collect::<Vec<_>>(),
+                    searched,
+                );
+            }
+            Self::AtrainAliased { from } => {
+                tracing::warn!(
+                    target: "autopulse",
+                    "trigger `{from}` is type=atrain but A-Train hardcodes /triggers/a-train; aliasing `a-train` -> same config (events will show `event_source: a-train`)"
+                );
+            }
+            Self::AtrainAliasIgnored { from } => {
+                tracing::warn!(
+                    target: "autopulse",
+                    "trigger `{from}` is type=atrain but A-Train hardcodes /triggers/a-train; an `a-train` trigger already exists, so requests will route to that one instead"
+                );
+            }
+            Self::AtrainKeyShadowed { existing_type } => {
+                tracing::warn!(
+                    target: "autopulse",
+                    "trigger key `a-train` is reserved for A-Train but resolves to a `{existing_type}` trigger; A-Train requests will be misrouted"
                 );
             }
         }
+    }
+}
+
+fn trigger_type_name(trigger: &Trigger) -> &'static str {
+    match trigger {
+        Trigger::Manual(_) => "manual",
+        Trigger::Autoscan(_) => "autoscan",
+        Trigger::Atrain(_) => "atrain",
+        Trigger::Bazarr(_) => "bazarr",
+        Trigger::Radarr(_) => "radarr",
+        Trigger::Sonarr(_) => "sonarr",
+        Trigger::Lidarr(_) => "lidarr",
+        Trigger::Readarr(_) => "readarr",
+        Trigger::Notify(_) => "notify",
     }
 }
 
@@ -316,7 +359,7 @@ impl Settings {
         }
 
         let mut settings: Self = fig.extract().map_err(|e| anyhow::anyhow!(e))?;
-        settings.normalize()?;
+        diagnostics.extend(settings.normalize()?);
 
         Ok(LoadedSettings {
             settings,
@@ -337,10 +380,13 @@ impl Settings {
         );
     }
 
-    pub fn normalize(&mut self) -> anyhow::Result<()> {
-        self.add_default_manual_trigger()?;
+    pub fn normalize(&mut self) -> anyhow::Result<Vec<ConfigDiagnostic>> {
+        let mut diagnostics = vec![];
 
-        Ok(())
+        self.add_default_manual_trigger()?;
+        diagnostics.extend(self.ensure_atrain_alias()?);
+
+        Ok(diagnostics)
     }
 
     pub fn add_default_manual_trigger(&mut self) -> anyhow::Result<()> {
@@ -357,6 +403,57 @@ impl Settings {
         }
 
         Ok(())
+    }
+
+    /// A-Train hardcodes its outbound URL to `/triggers/a-train/{drive_id}`,
+    /// so an `atrain` trigger only receives events when it lives under the
+    /// `a-train` HashMap key. If the user picked a different key, mirror the
+    /// trigger under `a-train` so requests still find a home (and warn so
+    /// they understand why the key in their config differs from what shows
+    /// up as `event_source` on dispatched events).
+    pub fn ensure_atrain_alias(&mut self) -> anyhow::Result<Vec<ConfigDiagnostic>> {
+        let misnamed: Vec<(String, Trigger)> = self
+            .triggers
+            .iter()
+            .filter(|(name, t)| name.as_str() != "a-train" && matches!(t, Trigger::Atrain(_)))
+            .map(|(name, t)| (name.clone(), t.clone()))
+            .collect();
+
+        if misnamed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        if let Some(existing) = self.triggers.get("a-train") {
+            let mut diagnostics = vec![];
+
+            // A real `a-train` key already exists. If it's another atrain trigger
+            // we route there; if it's something else we warn loudly, because
+            // A-Train's POSTs will be parsed as that other trigger type.
+            if !matches!(existing, Trigger::Atrain(_)) {
+                diagnostics.push(ConfigDiagnostic::AtrainKeyShadowed {
+                    existing_type: trigger_type_name(existing).to_string(),
+                });
+            }
+            for (name, _) in &misnamed {
+                diagnostics.push(ConfigDiagnostic::AtrainAliasIgnored { from: name.clone() });
+            }
+            return Ok(diagnostics);
+        }
+
+        if misnamed.len() > 1 {
+            let names: Vec<&str> = misnamed.iter().map(|(n, _)| n.as_str()).collect();
+            return Err(anyhow::anyhow!(
+                "multiple `atrain` triggers ({}) are registered under non-`a-train` keys; rename one to `a-train` so A-Train requests have an unambiguous home",
+                names.join(", ")
+            ));
+        }
+
+        let (original_name, trigger) = misnamed.into_iter().next().expect("len == 1 checked above");
+        self.triggers.insert("a-train".to_string(), trigger);
+
+        Ok(vec![ConfigDiagnostic::AtrainAliased {
+            from: original_name,
+        }])
     }
 }
 

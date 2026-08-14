@@ -1,4 +1,4 @@
-use crate::routes::{index::hello, stats::stats, status::status};
+use crate::routes::{health::health, index::hello, stats::stats, status::status};
 use actix_web::{
     http::StatusCode,
     test::{self, TestRequest},
@@ -55,6 +55,27 @@ async fn root_endpoint_is_public() {
     let response = test::call_service(&app, TestRequest::get().uri("/").to_request()).await;
 
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
+async fn health_endpoint_is_public_and_returns_ok_true() {
+    // A-Train preflights with GET /health and refuses to start unless it gets
+    // a 2xx. The body shape `{ "ok": true }` is what autopulse advertises.
+    let manager = test_manager();
+    let app = test::init_service(
+        App::new()
+            .service(health)
+            .app_data(basic::Config::default().realm("Restricted area"))
+            .app_data(Data::new(manager)),
+    )
+    .await;
+
+    let response = test::call_service(&app, TestRequest::get().uri("/health").to_request()).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    assert_eq!(body, serde_json::json!({ "ok": true }));
 }
 
 #[actix_web::test]
