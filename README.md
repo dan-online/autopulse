@@ -36,6 +36,7 @@ We use the following terminology:
   - [Manual](#manual) (default: /triggers/manual)
     - Fileflows ([sub-flow](https://github.com/dan-online/autopulse/issues/5#issuecomment-2333917695))
   - Sonarr
+  - Sportarr
   - Radarr
   - Lidarr
   - Readarr
@@ -175,6 +176,12 @@ triggers:
     filter:
       exclude:
         - "^/tvshows/extras/"
+
+  my_sportarr:
+    type: "sportarr"
+    rewrite:
+      from: "/downloads"
+      to: "/sports"
 
   my_radarr:
     type: "radarr"

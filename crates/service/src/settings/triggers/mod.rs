@@ -203,6 +203,34 @@ pub mod readarr;
 ///
 /// See [`Sonarr`] for all options
 pub mod sonarr;
+/// Sportarr - Sportarr trigger
+///
+/// This trigger is used to process a file from Sportarr
+///
+/// # Example
+///
+/// ```yml
+/// triggers:
+///   my_sportarr:
+///     type: sportarr
+/// ```
+///
+/// or
+///
+/// ```yml
+/// triggers:
+///   my_sportarr:
+///     type: sportarr
+///     rewrite:
+///       from: "/downloads"
+///       to: "/sports"
+///     timer:
+///       wait: 30
+///     excludes: [ "ignored_target" ]
+/// ```
+///
+/// See [`Sportarr`] for all options
+pub mod sportarr;
 
 use crate::settings::path_filter::PathFilter;
 use crate::settings::timer::EventTimers;
@@ -216,6 +244,7 @@ use {
     radarr::{Radarr, RadarrRequest},
     readarr::{Readarr, ReadarrRequest},
     sonarr::{Sonarr, SonarrRequest},
+    sportarr::{Sportarr, SportarrRequest},
 };
 
 pub trait TriggerRequest {
@@ -245,6 +274,7 @@ pub enum TriggerType {
     Radarr,
     Bazarr,
     Sonarr,
+    Sportarr,
     Lidarr,
     Readarr,
     Notify,
@@ -258,6 +288,7 @@ pub enum Trigger {
     Bazarr(Manual),
     Radarr(Radarr),
     Sonarr(Sonarr),
+    Sportarr(Sportarr),
     Lidarr(Lidarr),
     Readarr(Readarr),
     Notify(Notify),
@@ -270,6 +301,7 @@ impl Trigger {
             Self::Autoscan(trigger) => trigger,
             Self::Radarr(trigger) => trigger,
             Self::Sonarr(trigger) => trigger,
+            Self::Sportarr(trigger) => trigger,
             Self::Lidarr(trigger) => trigger,
             Self::Readarr(trigger) => trigger,
             Self::Notify(trigger) => trigger,
@@ -300,6 +332,7 @@ impl Trigger {
 
         let paths = match &self {
             Self::Sonarr(_) => Ok(SonarrRequest::from_json(body)?.paths()),
+            Self::Sportarr(_) => Ok(SportarrRequest::from_json(body)?.paths()),
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
