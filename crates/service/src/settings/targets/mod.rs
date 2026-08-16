@@ -152,6 +152,22 @@ pub mod plex;
 ///
 /// See [`Radarr`] for all options
 pub mod radarr;
+/// Silo - Silo Server target
+///
+/// This target is used to scan a file in Silo Server (Jellyfin-compatible)
+///
+/// # Example
+///
+/// ```yml
+/// targets:
+///   silo:
+///     type: silo
+///     url: http://localhost:8090
+///     token: "sa_<API_KEY>"
+/// ```
+///
+/// See [`Silo`] for all options
+pub mod silo;
 /// Sonarr - Sonarr target
 ///
 /// This target is used to refresh/rescan a series in Sonarr
@@ -193,7 +209,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use {
     autopulse::Autopulse, command::Command, emby::Emby, fileflows::FileFlows, plex::Plex,
-    radarr::Radarr, sonarr::Sonarr, tdarr::Tdarr,
+    radarr::Radarr, silo::Silo, sonarr::Sonarr, tdarr::Tdarr,
 };
 
 /// HTTP request configuration options for targets
@@ -274,6 +290,7 @@ pub enum TargetType {
     FileFlows,
     Autopulse,
     Audiobookshelf,
+    Silo,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -289,6 +306,7 @@ pub enum Target {
     FileFlows(FileFlows),
     Autopulse(Autopulse),
     Audiobookshelf(Audiobookshelf),
+    Silo(Silo),
 }
 
 impl Target {
@@ -303,6 +321,7 @@ impl Target {
             Self::FileFlows(t) => &t.rewrite,
             Self::Autopulse(t) => &t.rewrite,
             Self::Audiobookshelf(t) => &t.rewrite,
+            Self::Silo(t) => &t.rewrite,
         }
     }
 
@@ -317,6 +336,7 @@ impl Target {
             Self::FileFlows(t) => &t.filter,
             Self::Autopulse(t) => &t.filter,
             Self::Audiobookshelf(t) => &t.filter,
+            Self::Silo(t) => &t.filter,
         }
     }
 
@@ -345,6 +365,7 @@ impl TargetProcess for Target {
             Self::FileFlows(t) => t.process(evs).await,
             Self::Autopulse(t) => t.process(evs).await,
             Self::Audiobookshelf(t) => t.process(evs).await,
+            Self::Silo(t) => t.process(evs).await,
         }
     }
 }
