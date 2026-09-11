@@ -135,13 +135,6 @@ pub mod fileflows;
 ///     empty_trash: true
 /// ```
 ///
-/// `empty_trash` defaults to `false`. When enabled, waits up to five minutes for
-/// each scanned library to finish scanning, then empties its trash once per batch.
-/// This removes all unavailable items in that library, including items outside
-/// the scanned paths. Only enable it when the library's storage is available.
-/// Failed scans skip cleanup for that library. Scan-status and cleanup failures
-/// leave affected events eligible for the configured retries.
-///
 /// See [`Plex`] for all options
 pub mod plex;
 /// Radarr - Radarr target
