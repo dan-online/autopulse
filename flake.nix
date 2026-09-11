@@ -75,6 +75,7 @@
           ];
 
           RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
+          SCCACHE_CLIENT_SIDE = "1";
           RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust/library";
         };
       }
