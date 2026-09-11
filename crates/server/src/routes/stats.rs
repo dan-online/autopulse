@@ -23,7 +23,7 @@ pub struct StatsResponse {
 pub async fn stats(manager: Data<PulseManager>) -> Result<impl Responder> {
     let start = Instant::now();
 
-    match manager.get_stats() {
+    match manager.get_stats().await {
         Ok(stats) => {
             let elapsed = start.elapsed().as_micros() as f64 / 1000.0;
             Ok(HttpResponse::Ok().json(StatsResponse {

@@ -74,10 +74,10 @@ impl FromStr for ProcessStatus {
 /// Represents a scan event.
 ///
 /// A scan event is created when a file is added by [Triggers](crate::service::triggers).
-#[derive(
-    Queryable, Selectable, Serialize, Clone, Debug, AsChangeset, Identifiable, Hash, Eq, PartialEq,
-)]
+#[derive(Queryable, Selectable, Serialize, Clone, Debug, Identifiable, Hash, Eq, PartialEq)]
 #[diesel(table_name = crate::schema::scan_events)]
+#[cfg_attr(feature = "postgres", diesel(check_for_backend(diesel::pg::Pg)))]
+#[cfg_attr(feature = "sqlite", diesel(check_for_backend(diesel::sqlite::Sqlite)))]
 pub struct ScanEvent {
     /// The [uuid](crate::utils::generate_uuid::generate_uuid) of the scan event.
     pub id: String,
@@ -143,7 +143,7 @@ impl ScanEvent {
     }
 }
 
-#[derive(Insertable)]
+#[derive(Clone, Insertable)]
 #[diesel(table_name = crate::schema::scan_events)]
 #[doc(hidden)]
 pub struct NewScanEvent {
@@ -172,6 +172,8 @@ impl Default for NewScanEvent {
 
 /// Key/value store; currently holds only the UI session-signing key.
 #[derive(Queryable, Selectable, Insertable, Clone, Debug)]
+#[cfg_attr(feature = "postgres", diesel(check_for_backend(diesel::pg::Pg)))]
+#[cfg_attr(feature = "sqlite", diesel(check_for_backend(diesel::sqlite::Sqlite)))]
 #[diesel(table_name = crate::schema::app_state)]
 pub struct AppState {
     pub key: String,

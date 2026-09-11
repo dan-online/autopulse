@@ -13,7 +13,7 @@ tempfile = "3"
 anyhow = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "rt", "sync"] }
 serde = { workspace = true }
 typed-path = { workspace = true }
 

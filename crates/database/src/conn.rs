@@ -3,8 +3,8 @@ use anyhow::Context;
 use autopulse_utils::sify;
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::SelectableHelper;
 use diesel::{Connection, RunQueryDsl};
-use diesel::{SaveChangesDsl, SelectableHelper};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use serde::Deserialize;
 use std::fs::OpenOptions;
@@ -100,15 +100,10 @@ impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for A
 
                     if self.setup {
                         conn.batch_execute("PRAGMA journal_mode = WAL;")?;
-                        conn.batch_execute("VACUUM")?;
                     }
                 }
                 #[cfg(feature = "postgres")]
-                AnyConnection::Postgresql(ref mut conn) => {
-                    if self.setup {
-                        conn.batch_execute("VACUUM ANALYZE")?;
-                    }
-                }
+                AnyConnection::Postgresql(_) => {}
             }
             Ok(())
         })()
@@ -202,17 +197,81 @@ impl AnyConnection {
         Ok(())
     }
 
-    pub fn save_changes(&mut self, ev: &mut ScanEvent) -> anyhow::Result<ScanEvent> {
-        let ev = match self {
-            #[cfg(feature = "postgres")]
-            Self::Postgresql(conn) => ev.save_changes::<ScanEvent>(conn),
-            // #[cfg(feature = "mysql")]
-            // AnyConnection::Mysql(conn) => ev.save_changes::<ScanEvent>(conn),
-            #[cfg(feature = "sqlite")]
-            Self::Sqlite(conn) => ev.save_changes::<ScanEvent>(conn),
-        }?;
+    pub fn update_found(
+        &mut self,
+        previous: &ScanEvent,
+        status: &str,
+        at: chrono::NaiveDateTime,
+    ) -> anyhow::Result<Option<ScanEvent>> {
+        use crate::schema::scan_events::dsl::*;
+        use diesel::prelude::*;
+        use diesel::sql_types::Bool;
 
-        Ok(ev)
+        let query = diesel::update(
+            scan_events
+                .find(&previous.id)
+                .filter(process_status.eq("pending"))
+                .filter(found_status.eq(&previous.found_status))
+                .filter(
+                    file_hash.eq(&previous.file_hash).or(file_hash
+                        .is_null()
+                        .and(previous.file_hash.is_none().into_sql::<Bool>())),
+                ),
+        )
+        .set((
+            found_status.eq(status),
+            found_at.eq(Some(at)),
+            updated_at.eq(at),
+        ));
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgresql(conn) => query.returning(ScanEvent::as_returning()).get_result(conn),
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite(conn) => query.returning(ScanEvent::as_returning()).get_result(conn),
+        }
+        .optional()
+        .map_err(Into::into)
+    }
+
+    pub fn update_process(
+        &mut self,
+        previous: &ScanEvent,
+        updated: &ScanEvent,
+    ) -> anyhow::Result<Option<ScanEvent>> {
+        use crate::schema::scan_events::dsl::*;
+        use diesel::prelude::*;
+        use diesel::sql_types::Bool;
+
+        // Dedupe and file checks own other columns and must survive target awaits.
+        let query = diesel::update(
+            scan_events
+                .find(&previous.id)
+                .filter(process_status.eq(&previous.process_status))
+                .filter(process_status.eq_any(["pending", "retry"]))
+                .filter(failed_times.eq(previous.failed_times))
+                .filter(targets_hit.eq(&previous.targets_hit))
+                .filter(
+                    next_retry_at.eq(previous.next_retry_at).or(next_retry_at
+                        .is_null()
+                        .and(previous.next_retry_at.is_none().into_sql::<Bool>())),
+                ),
+        )
+        .set((
+            process_status.eq(&updated.process_status),
+            failed_times.eq(updated.failed_times),
+            next_retry_at.eq(updated.next_retry_at),
+            targets_hit.eq(&updated.targets_hit),
+            processed_at.eq(updated.processed_at),
+            updated_at.eq(updated.updated_at),
+        ));
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgresql(conn) => query.returning(ScanEvent::as_returning()).get_result(conn),
+            #[cfg(feature = "sqlite")]
+            Self::Sqlite(conn) => query.returning(ScanEvent::as_returning()).get_result(conn),
+        }
+        .optional()
+        .map_err(Into::into)
     }
 
     pub fn insert_and_return(&mut self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
@@ -297,35 +356,37 @@ fn upsert_pending_sqlite(
     use diesel::{ExpressionMethods, QueryDsl};
     use diesel::{OptionalExtension, SelectableHelper};
 
-    // Diesel cannot target SQLite partial indexes here. The SQLite pool has one
-    // connection, so this select-and-write sequence is serialized.
-    let pending: String = ProcessStatus::Pending.into();
-    let retry: String = ProcessStatus::Retry.into();
+    // Acquire the write lock before reading, including across independent pools.
+    conn.immediate_transaction(|conn| {
+        let pending: String = ProcessStatus::Pending.into();
+        let retry: String = ProcessStatus::Retry.into();
 
-    let existing: Option<ScanEvent> = scan_events
-        .filter(file_path.eq(&ev.file_path))
-        .filter(process_status.eq_any([pending, retry]))
-        .first::<ScanEvent>(conn)
-        .optional()?;
+        let existing: Option<ScanEvent> = scan_events
+            .filter(file_path.eq(&ev.file_path))
+            .filter(process_status.eq_any([pending, retry]))
+            .select(ScanEvent::as_select())
+            .first::<ScanEvent>(conn)
+            .optional()?;
 
-    if let Some(existing) = existing {
-        let later_can_process = std::cmp::max(existing.can_process, ev.can_process);
-        let file_hash_value = existing.file_hash.clone().or_else(|| ev.file_hash.clone());
-        diesel::update(&existing)
-            .set((
-                updated_at.eq(now),
-                can_process.eq(later_can_process),
-                file_hash.eq(file_hash_value),
-            ))
-            .get_result::<ScanEvent>(conn)
-            .map_err(Into::into)
-    } else {
-        diesel::insert_into(crate::schema::scan_events::table)
-            .values(ev)
-            .returning(ScanEvent::as_returning())
-            .get_result::<ScanEvent>(conn)
-            .map_err(Into::into)
-    }
+        if let Some(existing) = existing {
+            let later_can_process = std::cmp::max(existing.can_process, ev.can_process);
+            let file_hash_value = existing.file_hash.clone().or_else(|| ev.file_hash.clone());
+            diesel::update(&existing)
+                .set((
+                    updated_at.eq(now),
+                    can_process.eq(later_can_process),
+                    file_hash.eq(file_hash_value),
+                ))
+                .get_result::<ScanEvent>(conn)
+                .map_err(Into::into)
+        } else {
+            diesel::insert_into(crate::schema::scan_events::table)
+                .values(ev)
+                .returning(ScanEvent::as_returning())
+                .get_result::<ScanEvent>(conn)
+                .map_err(Into::into)
+        }
+    })
 }
 
 #[doc(hidden)]
@@ -383,6 +444,104 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::tempdir;
+
+    #[test]
+    #[cfg(feature = "sqlite")]
+    fn independent_sqlite_pools_coalesce_concurrent_arrivals() {
+        use diesel::QueryDsl;
+        use std::sync::{Arc, Barrier};
+        let dir = tempdir().unwrap();
+        let url = format!("sqlite://{}", dir.path().join("concurrent.db").display());
+        let first = get_pool(&url).unwrap();
+        get_conn(&first).unwrap().migrate().unwrap();
+        let pools = (0..8).map(|_| get_pool(&url).unwrap()).collect::<Vec<_>>();
+        let barrier = Arc::new(Barrier::new(pools.len()));
+        let start = chrono::Utc::now().naive_utc();
+        let handles = pools
+            .into_iter()
+            .enumerate()
+            .map(|(index, pool)| {
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    get_conn(&pool)
+                        .unwrap()
+                        .upsert_pending(
+                            &NewScanEvent {
+                                can_process: start + chrono::Duration::seconds(index as i64),
+                                file_hash: (index == 3).then(|| "hash".into()),
+                                ..Default::default()
+                            },
+                            start,
+                        )
+                        .unwrap()
+                        .id
+                })
+            })
+            .collect::<Vec<_>>();
+        let mut ids = handles
+            .into_iter()
+            .map(|handle| handle.join().unwrap())
+            .collect::<Vec<_>>();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), 1);
+        let saved = crate::schema::scan_events::table
+            .find(&ids[0])
+            .first::<ScanEvent>(&mut get_conn(&first).unwrap())
+            .unwrap();
+        assert_eq!(saved.can_process, start + chrono::Duration::seconds(7));
+        assert_eq!(saved.file_hash.as_deref(), Some("hash"));
+    }
+
+    #[test]
+    #[cfg(feature = "sqlite")]
+    fn found_update_preserves_dedupe_timer() {
+        let mut conn = AnyConnection::establish(":memory:").unwrap();
+        conn.migrate().unwrap();
+        let event = NewScanEvent::default();
+        let snapshot = conn.insert_and_return(&event).unwrap();
+        let later = NewScanEvent {
+            can_process: event.can_process + chrono::Duration::seconds(60),
+            ..event
+        };
+        conn.upsert_pending(&later, chrono::Utc::now().naive_utc())
+            .unwrap();
+        let saved = conn
+            .update_found(&snapshot, "found", chrono::Utc::now().naive_utc())
+            .unwrap()
+            .unwrap();
+        assert_eq!(saved.can_process, later.can_process);
+        assert_eq!(saved.found_status, "found");
+    }
+
+    #[test]
+    #[cfg(feature = "sqlite")]
+    fn terminal_update_clears_retry_timestamp() {
+        use crate::schema::scan_events::dsl::*;
+        use diesel::{ExpressionMethods, QueryDsl};
+
+        let mut conn = AnyConnection::establish(":memory:").unwrap();
+        conn.migrate().unwrap();
+        let event = conn.insert_and_return(&NewScanEvent::default()).unwrap();
+        diesel::update(scan_events.find(&event.id))
+            .set((
+                process_status.eq("retry"),
+                next_retry_at.eq(Some(event.created_at)),
+            ))
+            .execute(&mut conn)
+            .unwrap();
+        let mut snapshot = scan_events
+            .find(&event.id)
+            .first::<ScanEvent>(&mut conn)
+            .unwrap();
+        let previous = snapshot.clone();
+        snapshot.process_status = "failed".into();
+        snapshot.next_retry_at = None;
+        let saved = conn.update_process(&previous, &snapshot).unwrap().unwrap();
+        assert_eq!(saved.process_status, "failed");
+        assert_eq!(saved.next_retry_at, None);
+    }
 
     #[test]
     fn test_pre_init_memory_db_skipped() {

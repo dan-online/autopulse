@@ -39,9 +39,10 @@ fn test_auth_header() -> String {
     Settings::default().auth.to_auth_encoded()
 }
 
-fn insert_test_event(manager: &PulseManager) -> String {
+async fn insert_test_event(manager: &PulseManager) -> String {
     manager
         .add_event(&NewScanEvent::default())
+        .await
         .expect("test scan event should insert")
         .id
 }
@@ -98,7 +99,7 @@ async fn status_endpoint_still_requires_auth() {
 #[actix_web::test]
 async fn status_endpoint_accepts_valid_basic_auth() {
     let manager = test_manager();
-    let event_id = insert_test_event(&manager);
+    let event_id = insert_test_event(&manager).await;
     let app = test::init_service(
         App::new()
             .service(status)

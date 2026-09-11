@@ -6,7 +6,7 @@ use autopulse_database::{
     diesel::{
         self,
         result::{DatabaseErrorKind, Error as DieselError},
-        ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
+        ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
     },
     models::AppState,
     schema::app_state::{self, dsl::app_state as app_state_tbl},
@@ -33,6 +33,7 @@ fn key_from_row(row: &AppState) -> anyhow::Result<Key> {
 pub fn load_or_create(pool: &DbPool) -> anyhow::Result<Key> {
     if let Some(row) = app_state_tbl
         .find(KEY_NAME)
+        .select(AppState::as_select())
         .first::<AppState>(&mut get_conn(pool)?)
         .optional()
         .context("load existing session key")?
@@ -55,6 +56,7 @@ pub fn load_or_create(pool: &DbPool) -> anyhow::Result<Key> {
         Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
             let row = app_state_tbl
                 .find(KEY_NAME)
+                .select(AppState::as_select())
                 .first::<AppState>(&mut get_conn(pool)?)
                 .context("reload session key after concurrent insert")?;
             key_from_row(&row)

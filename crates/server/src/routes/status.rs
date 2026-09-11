@@ -13,7 +13,7 @@ pub async fn status(
     manager: Data<PulseManager>,
     _auth: AuthenticatedUser,
 ) -> Result<impl Responder> {
-    match manager.get_event(&id) {
+    match manager.get_event(&id).await {
         Ok(Some(event)) => Ok(HttpResponse::Ok().json(event)),
         Ok(None) => Ok(HttpResponse::NotFound().body("Event not found")),
         Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),

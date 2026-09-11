@@ -79,13 +79,15 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let port = settings.app.port;
     let database_url = settings.app.database_url.clone();
 
-    AnyConnection::pre_init(&database_url)?;
-
-    let pool = get_pool(&database_url)?;
-
-    get_conn(&pool)?
-        .migrate()
-        .context("failed to run migrations")?;
+    let pool = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        AnyConnection::pre_init(&database_url)?;
+        let pool = get_pool(&database_url)?;
+        get_conn(&pool)?
+            .migrate()
+            .context("failed to run migrations")?;
+        Ok(pool)
+    })
+    .await??;
 
     let manager = PulseManager::new(settings, pool);
 
@@ -97,7 +99,7 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
     let handle_webhooks_task = manager.start_webhooks();
     let handle_notify_task = manager.start_notify();
 
-    let server = get_server(&hostname, &port, manager.clone())?;
+    let server = get_server(&hostname, &port, manager.clone()).await?;
 
     info!("🚀 listening on {}:{}", hostname, port);
 
@@ -119,7 +121,8 @@ async fn run(settings: Settings, _guard: Option<WorkerGuard>) -> anyhow::Result<
         }
     }
 
-    close_pool(&manager.pool);
+    let pool = manager.pool.clone();
+    tokio::task::spawn_blocking(move || close_pool(&pool)).await?;
 
     Ok(())
 }

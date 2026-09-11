@@ -38,13 +38,15 @@ pub async fn list(
     _auth: AuthenticatedUser,
     query: web::Query<ListQuery>,
 ) -> Result<impl Responder> {
-    let scan_evs = manager.get_events(
-        query.limit,
-        query.page,
-        query.sort.clone(),
-        query.status.clone(),
-        query.search.clone(),
-    );
+    let scan_evs = manager
+        .get_events(
+            query.limit,
+            query.page,
+            query.sort.clone(),
+            query.status.clone(),
+            query.search.clone(),
+        )
+        .await;
 
     match scan_evs {
         Ok(events) => Ok(HttpResponse::Ok().json(events)),

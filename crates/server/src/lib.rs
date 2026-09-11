@@ -20,8 +20,13 @@ mod middleware {
     pub mod auth;
 }
 
-pub fn get_server(hostname: &str, port: &u16, manager: PulseManager) -> anyhow::Result<Server> {
-    let session_key: Key = ui::session_key::load_or_create(&manager.pool)?;
+pub async fn get_server(
+    hostname: &str,
+    port: &u16,
+    manager: PulseManager,
+) -> anyhow::Result<Server> {
+    let pool = manager.pool.clone();
+    let session_key: Key = web::block(move || ui::session_key::load_or_create(&pool)).await??;
     let secure_cookies = manager.settings.app.secure_cookies;
     let base_path = manager.settings.app.base_path.clone();
 

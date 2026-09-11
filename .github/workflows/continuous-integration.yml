@@ -14,6 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
+      AUTOPULSE_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/autopulse_test
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autopulse_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout Project
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -46,3 +61,11 @@ jobs:
 
       - name: Test
         run: cargo nextest run --release --workspace
+
+      - name: PostgreSQL Integration Tests
+        run: cargo test --locked --release -p autopulse-service --features sqlite,postgres --lib postgres_ -- --ignored --test-threads=1
+
+      - name: Backend Feature Checks
+        run: |
+          cargo check --locked -p autopulse-database --no-default-features --features sqlite
+          cargo check --locked -p autopulse-database --no-default-features --features postgres
