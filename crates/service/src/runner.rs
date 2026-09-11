@@ -2,8 +2,9 @@ use crate::manager::PulseManager;
 use crate::settings::targets::TargetProcess;
 use crate::settings::webhooks::EventType;
 use autopulse_database::{
-    conn::get_conn,
-    diesel::{self, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl},
+    diesel::{
+        self, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+    },
     models::{FoundStatus, ProcessStatus, ScanEvent},
     schema::scan_events::{
         can_process, created_at, dsl::scan_events, found_status, next_retry_at, process_status,
@@ -42,24 +43,29 @@ impl<'a> PulseRunner<'a> {
         let mut found_files: Vec<(String, String)> = vec![];
         let mut mismatched_files: Vec<(String, String)> = vec![];
 
-        let mut evs = scan_events
-            .filter(found_status.ne::<String>(FoundStatus::Found.into()))
-            .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
-            .load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?;
+        let evs = self
+            .manager
+            .database(|conn| {
+                Ok(scan_events
+                    .filter(found_status.ne::<String>(FoundStatus::Found.into()))
+                    .filter(process_status.eq::<String>(ProcessStatus::Pending.into()))
+                    .select(ScanEvent::as_select())
+                    .load(conn)?)
+            })
+            .await?;
 
-        for ev in &mut evs {
+        for ev in evs {
             let file_path = PathBuf::from(&ev.file_path);
 
             let expected_hash = ev.file_hash.clone();
-            let path_clone = file_path.clone();
             let result: FileCheckResult =
                 tokio::task::spawn_blocking(move || -> anyhow::Result<FileCheckResult> {
-                    if !path_clone.exists() {
+                    if !file_path.exists() {
                         return Ok(FileCheckResult::NotFound);
                     }
                     match expected_hash {
                         Some(hash) => {
-                            let file_hash = sha256checksum(&path_clone)?;
+                            let file_hash = sha256checksum(&file_path)?;
                             if hash == file_hash {
                                 Ok(FileCheckResult::HashMatch)
                             } else {
@@ -72,7 +78,7 @@ impl<'a> PulseRunner<'a> {
                 .await
                 .map_err(|e| anyhow::anyhow!("file check task failed: {e}"))??;
 
-            let bus_kind: EventType = match result {
+            let (status, bus_kind) = match result {
                 FileCheckResult::NotFound => {
                     // Nothing transitioned; skip the write so we don't
                     // churn `updated_at` (and UI ordering) every poll.
@@ -81,10 +87,7 @@ impl<'a> PulseRunner<'a> {
                 FileCheckResult::Found | FileCheckResult::HashMatch => {
                     // The outer query filters out rows already in Found,
                     // so reaching this arm is always a real transition.
-                    ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    ev.found_status = FoundStatus::Found.into();
-                    found_files.push((ev.file_path.clone(), ev.event_source.clone()));
-                    EventType::Found
+                    (FoundStatus::Found, EventType::Found)
                 }
                 FileCheckResult::HashMismatch => {
                     // Only persist on the *first* time we see a mismatch.
@@ -93,17 +96,29 @@ impl<'a> PulseRunner<'a> {
                     if ev.found_status == FoundStatus::HashMismatch.to_string() {
                         continue;
                     }
-                    ev.found_status = FoundStatus::HashMismatch.into();
-                    ev.found_at = Some(chrono::Utc::now().naive_utc());
-                    mismatched_files.push((ev.file_path.clone(), ev.event_source.clone()));
-                    EventType::HashMismatch
+                    (FoundStatus::HashMismatch, EventType::HashMismatch)
                 }
             };
 
-            ev.updated_at = chrono::Utc::now().naive_utc();
-            get_conn(&self.manager.pool)?.save_changes(ev)?;
-
-            self.manager.publish(bus_kind, ev);
+            let status = status.to_string();
+            let at = chrono::Utc::now().naive_utc();
+            let Some(saved) = self
+                .manager
+                .database(move |conn| conn.update_found(&ev, &status, at))
+                .await?
+            else {
+                continue;
+            };
+            match bus_kind {
+                EventType::Found => {
+                    found_files.push((saved.file_path.clone(), saved.event_source.clone()))
+                }
+                EventType::HashMismatch => {
+                    mismatched_files.push((saved.file_path.clone(), saved.event_source.clone()))
+                }
+                _ => unreachable!(),
+            }
+            self.manager.publish(bus_kind, &saved);
         }
 
         if !found_files.is_empty() {
@@ -144,27 +159,35 @@ impl<'a> PulseRunner<'a> {
     }
 
     pub async fn update_process_status(&self) -> anyhow::Result<()> {
-        let base_query = scan_events
-            .limit(100)
-            .filter(process_status.eq_any([
-                String::from(ProcessStatus::Pending),
-                String::from(ProcessStatus::Retry),
-            ]))
-            .filter(
-                next_retry_at
-                    .is_null()
-                    .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
-            )
-            // filter by processable events
-            .filter(can_process.lt(chrono::Utc::now().naive_utc()));
+        let check_path = self.manager.settings.opts.check_path;
+        let mut evs = self
+            .manager
+            .database(move |conn| {
+                let base_query = scan_events
+                    .limit(100)
+                    .filter(process_status.eq_any([
+                        String::from(ProcessStatus::Pending),
+                        String::from(ProcessStatus::Retry),
+                    ]))
+                    .filter(
+                        next_retry_at
+                            .is_null()
+                            .or(next_retry_at.lt(chrono::Utc::now().naive_utc())),
+                    )
+                    // filter by processable events
+                    .filter(can_process.lt(chrono::Utc::now().naive_utc()));
 
-        let mut evs = if self.manager.settings.opts.check_path {
-            base_query
-                .filter(found_status.eq::<String>(FoundStatus::Found.into()))
-                .load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?
-        } else {
-            base_query.load::<ScanEvent>(&mut get_conn(&self.manager.pool)?)?
-        };
+                let evs = if check_path {
+                    base_query
+                        .filter(found_status.eq::<String>(FoundStatus::Found.into()))
+                        .select(ScanEvent::as_select())
+                        .load(conn)?
+                } else {
+                    base_query.select(ScanEvent::as_select()).load(conn)?
+                };
+                Ok(evs)
+            })
+            .await?;
 
         if evs.is_empty() {
             return Ok(());
@@ -247,6 +270,7 @@ impl<'a> PulseRunner<'a> {
         &self,
         evs: &mut [ScanEvent],
     ) -> anyhow::Result<(Vec<ScanEvent>, Vec<ScanEvent>, Vec<ScanEvent>)> {
+        let previous = evs.to_vec();
         let mut failed_ids = vec![];
 
         let trigger_settings = &self.manager.settings.triggers;
@@ -300,7 +324,7 @@ impl<'a> PulseRunner<'a> {
         let mut retrying = vec![];
         let mut failed = vec![];
 
-        for ev in evs.iter_mut() {
+        for (ev, previous) in evs.iter_mut().zip(previous) {
             ev.updated_at = chrono::Utc::now().naive_utc();
 
             if failed_ids.contains(&ev.id) {
@@ -309,44 +333,59 @@ impl<'a> PulseRunner<'a> {
                 if ev.failed_times >= self.manager.settings.opts.max_retries {
                     ev.process_status = ProcessStatus::Failed.into();
                     ev.next_retry_at = None;
-                    failed.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
                 } else {
                     let next_retry = chrono::Utc::now().naive_utc()
                         + chrono::Duration::seconds(2_i64.pow(ev.failed_times as u32 + 1));
 
                     ev.process_status = ProcessStatus::Retry.into();
                     ev.next_retry_at = Some(next_retry);
-
-                    retrying.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
                 }
             } else {
                 ev.process_status = ProcessStatus::Complete.into();
+                ev.next_retry_at = None;
                 ev.processed_at = Some(chrono::Utc::now().naive_utc());
-                succeeded.push(get_conn(&self.manager.pool)?.save_changes(ev)?);
+            }
+            let updated = ev.clone();
+            let Some(saved) = self
+                .manager
+                .database(move |conn| conn.update_process(&previous, &updated))
+                .await?
+            else {
+                continue;
+            };
+            match saved.process_status.as_str() {
+                "complete" => succeeded.push(saved),
+                "retry" => retrying.push(saved),
+                "failed" => failed.push(saved),
+                _ => unreachable!(),
             }
         }
 
         Ok((succeeded, retrying, failed))
     }
 
-    fn cleanup(&self) -> anyhow::Result<()> {
+    async fn cleanup(&self) -> anyhow::Result<()> {
         let time_before_cleanup = chrono::Utc::now().naive_utc()
             - chrono::Duration::days(self.manager.settings.opts.cleanup_days as i64);
 
-        let delete_old_events = diesel::delete(
-            scan_events
-                .filter(
-                    (found_status.eq::<String>(FoundStatus::NotFound.into()))
-                        .or(process_status.eq::<String>(ProcessStatus::Failed.into())),
-                )
-                .filter(created_at.lt(time_before_cleanup)),
-        );
+        self.manager
+            .database(move |conn| {
+                let delete_old_events = diesel::delete(
+                    scan_events
+                        .filter(
+                            (found_status.eq::<String>(FoundStatus::NotFound.into()))
+                                .or(process_status.eq::<String>(ProcessStatus::Failed.into())),
+                        )
+                        .filter(created_at.lt(time_before_cleanup)),
+                );
 
-        if let Err(e) = delete_old_events.execute(&mut get_conn(&self.manager.pool)?) {
-            error!("failed to delete old events: {:?}", e);
-        }
+                if let Err(e) = delete_old_events.execute(conn) {
+                    error!("failed to delete old events: {:?}", e);
+                }
 
-        Ok(())
+                Ok(())
+            })
+            .await
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
@@ -372,7 +411,7 @@ impl<'a> PulseRunner<'a> {
 
         self.update_found_status().await?;
         self.update_process_status().await?;
-        self.cleanup()?;
+        self.cleanup().await?;
 
         Ok(())
     }

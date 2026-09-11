@@ -4,25 +4,27 @@ use crate::settings::triggers::Trigger;
 use crate::settings::webhooks::{EventType, WebhookManager};
 use crate::settings::Settings;
 
-use autopulse_database::diesel::sql_types::{BigInt, Text};
+use autopulse_database::diesel::sql_types::{BigInt, Nullable, Text, Timestamp};
 use autopulse_database::diesel::QueryableByName;
 use autopulse_database::schema::scan_events::{
     created_at, event_source, file_path, id, next_retry_at, processed_at, targets_hit, updated_at,
 };
 use autopulse_database::{
-    conn::{get_conn, DbPool},
+    conn::{get_conn, AnyConnection, DbPool},
     diesel::{
-        self, EscapeExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
-        TextExpressionMethods,
+        self, BoolExpressionMethods, EscapeExpressionMethods, ExpressionMethods, OptionalExtension,
+        QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
     },
-    models::{FoundStatus, NewScanEvent, ProcessStatus, ScanEvent},
+    models::{FoundStatus, NewScanEvent, ScanEvent},
     schema::scan_events::{dsl::scan_events, process_status},
 };
 use notify_debouncer_full::notify;
 use serde::Serialize;
-use std::str::FromStr;
 use std::sync::Arc;
-use tokio::{select, sync::broadcast};
+use tokio::{
+    select,
+    sync::{broadcast, Semaphore},
+};
 use tracing::{debug, error, info, warn};
 
 /// Escape LIKE metacharacters so user input is matched literally.
@@ -75,12 +77,14 @@ pub struct PulseManager {
     pub webhooks: Arc<WebhookManager>,
     /// In-process broadcast bus; cloned `PulseManager`s share it.
     pub bus: broadcast::Sender<EventBroadcast>,
+    database_slots: Arc<Semaphore>,
 }
 
 impl PulseManager {
     pub fn new(settings: Settings, pool: DbPool) -> Self {
         let settings = Arc::new(settings);
         let pool = Arc::new(pool);
+        let database_slots = Arc::new(Semaphore::new(pool.max_size() as usize));
         let webhooks = Arc::new(WebhookManager::new(settings.clone()));
 
         // Capacity 1024: absorbs a Sonarr season-import burst (~50
@@ -94,11 +98,28 @@ impl PulseManager {
             pool,
             webhooks,
             bus,
+            database_slots,
         }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<EventBroadcast> {
         self.bus.subscribe()
+    }
+
+    pub async fn database<T, F>(&self, operation: F) -> anyhow::Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut AnyConnection) -> anyhow::Result<T> + Send + 'static,
+    {
+        let permit = self.database_slots.clone().acquire_owned().await?;
+        let pool = self.pool.clone();
+        tokio::task::spawn_blocking(move || {
+            // Keep the slot until the work ends, even if its caller is cancelled.
+            let _permit = permit;
+            let mut conn = get_conn(&pool)?;
+            operation(&mut conn)
+        })
+        .await?
     }
 
     /// `send` error (no subscribers) is swallowed.
@@ -110,9 +131,8 @@ impl PulseManager {
         });
     }
 
-    /// Manual retry. Pending is excluded so we never clobber an event the
-    /// runner is mid-pipeline (would dispatch duplicate target scans — the
-    /// thing this service exists to prevent).
+    /// Manual retry. Pending is excluded. Already-due retries keep their
+    /// deadline so a manual request cannot invalidate an in-flight result.
     ///
     /// Complete events also clear `targets_hit` and `processed_at`: every
     /// target is in `targets_hit`, so the runner's "skip already-hit" filter
@@ -121,101 +141,115 @@ impl PulseManager {
     ///
     /// `failed_times` is preserved — manual retry is an impulse, not an
     /// erasure of history.
-    pub fn reschedule_event(&self, ev_id: &str) -> anyhow::Result<ScanEvent> {
-        let now = chrono::Utc::now().naive_utc();
-        let current: ScanEvent = scan_events
-            .find(ev_id)
-            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
-            .map_err(|e| match e {
-                diesel::result::Error::NotFound => anyhow::anyhow!("event {ev_id} not found"),
-                other => other.into(),
-            })?;
-
-        let status = ProcessStatus::from_str(&current.process_status)
-            .map_err(|()| anyhow::anyhow!("event {ev_id} has unknown process_status"))?;
-
-        let updated: ScanEvent = match status {
-            ProcessStatus::Complete => diesel::update(scan_events.find(ev_id))
+    pub async fn reschedule_event(&self, ev_id: &str) -> anyhow::Result<ScanEvent> {
+        let ev_id = ev_id.to_owned();
+        let updated = self
+            .database(move |conn| {
+                let now = chrono::Utc::now().naive_utc();
+                diesel::update(
+                    scan_events
+                        .find(&ev_id)
+                        .filter(process_status.eq_any(["complete", "failed", "retry"])),
+                )
                 .set((
-                    process_status.eq::<String>(ProcessStatus::Retry.into()),
-                    next_retry_at.eq(Some(now)),
+                    process_status.eq("retry"),
+                    next_retry_at.eq(diesel::dsl::case_when::<_, _, Nullable<Timestamp>>(
+                        process_status.ne("retry").or(next_retry_at.gt(now)),
+                        Some(now),
+                    )
+                    .otherwise(next_retry_at)),
                     updated_at.eq(now),
-                    targets_hit.eq(String::new()),
-                    processed_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                    targets_hit.eq(diesel::dsl::case_when::<_, _, Text>(
+                        process_status.eq("complete"),
+                        "",
+                    )
+                    .otherwise(targets_hit)),
+                    processed_at.eq(diesel::dsl::case_when::<_, _, Nullable<Timestamp>>(
+                        process_status.eq("complete"),
+                        None::<chrono::NaiveDateTime>,
+                    )
+                    .otherwise(processed_at)),
                 ))
-                .get_result(&mut get_conn(&self.pool)?)?,
-            ProcessStatus::Failed | ProcessStatus::Retry => diesel::update(scan_events.find(ev_id))
-                .set((
-                    process_status.eq::<String>(ProcessStatus::Retry.into()),
-                    next_retry_at.eq(Some(now)),
-                    updated_at.eq(now),
-                ))
-                .get_result(&mut get_conn(&self.pool)?)?,
-            ProcessStatus::Pending => {
-                anyhow::bail!("event {ev_id} is not in a retryable state")
-            }
-        };
+                .get_result::<ScanEvent>(conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::NotFound => {
+                        anyhow::anyhow!("event {ev_id} not found or not in a retryable state")
+                    }
+                    other => other.into(),
+                })
+            })
+            .await?;
 
         self.publish(EventType::Retrying, &updated);
         Ok(updated)
     }
 
-    pub fn get_stats(&self) -> anyhow::Result<Stats> {
-        diesel::sql_query(
-            "SELECT \
-                COUNT(*) as total, \
-                COALESCE(SUM(CASE WHEN process_status = 'complete' THEN 1 ELSE 0 END), 0) as processed, \
-                COALESCE(SUM(CASE WHEN process_status = 'retry' THEN 1 ELSE 0 END), 0) as retrying, \
-                COALESCE(SUM(CASE WHEN process_status = 'failed' THEN 1 ELSE 0 END), 0) as failed, \
-                COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending \
-            FROM scan_events",
-        )
-        .get_result::<Stats>(&mut get_conn(&self.pool)?)
-        .map_err(Into::into)
+    pub async fn get_stats(&self) -> anyhow::Result<Stats> {
+        self.database(|conn| {
+            diesel::sql_query(
+                "SELECT \
+                    COUNT(*) as total, \
+                    COALESCE(SUM(CASE WHEN process_status = 'complete' THEN 1 ELSE 0 END), 0) as processed, \
+                    COALESCE(SUM(CASE WHEN process_status = 'retry' THEN 1 ELSE 0 END), 0) as retrying, \
+                    COALESCE(SUM(CASE WHEN process_status = 'failed' THEN 1 ELSE 0 END), 0) as failed, \
+                    COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending \
+                FROM scan_events",
+            )
+            .get_result::<Stats>(conn)
+            .map_err(Into::into)
+        })
+        .await
     }
 
-    pub fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
-        let now = chrono::Utc::now().naive_utc();
-        let result = get_conn(&self.pool)?.upsert_pending(ev, now)?;
+    pub async fn add_event(&self, ev: &NewScanEvent) -> anyhow::Result<ScanEvent> {
+        let ev = ev.clone();
+        let result = self
+            .database(move |conn| conn.upsert_pending(&ev, chrono::Utc::now().naive_utc()))
+            .await?;
 
         self.publish(EventType::New, &result);
 
         Ok(result)
     }
 
-    pub fn get_event(&self, ev_id: &String) -> anyhow::Result<Option<ScanEvent>> {
-        // `.optional()` (not `.ok()`) so pool/decode errors don't masquerade as 404s.
-        scan_events
-            .find(ev_id)
-            .first::<ScanEvent>(&mut get_conn(&self.pool)?)
-            .optional()
-            .map_err(Into::into)
+    pub async fn get_event(&self, ev_id: &str) -> anyhow::Result<Option<ScanEvent>> {
+        let ev_id = ev_id.to_owned();
+        self.database(move |conn| {
+            // `.optional()` (not `.ok()`) so pool/decode errors don't masquerade as 404s.
+            scan_events
+                .find(ev_id)
+                .select(ScanEvent::as_select())
+                .first(conn)
+                .optional()
+                .map_err(Into::into)
+        })
+        .await
     }
 
     /// Total matching rows for pagination (independent of LIMIT/OFFSET).
-    pub fn count_events(
+    pub async fn count_events(
         &self,
         status: Option<String>,
         search: Option<String>,
     ) -> anyhow::Result<i64> {
-        let mut query = scan_events.into_boxed();
+        self.database(move |conn| {
+            let mut query = scan_events.into_boxed();
 
-        if let Some(status) = status {
-            query = query.filter(process_status.eq(status));
-        }
+            if let Some(status) = status {
+                query = query.filter(process_status.eq(status));
+            }
 
-        if let Some(search) = search {
-            let escaped = escape_like_pattern(&search.to_lowercase());
-            query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
-        }
+            if let Some(search) = search {
+                let escaped = escape_like_pattern(&search.to_lowercase());
+                query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
+            }
 
-        query
-            .count()
-            .get_result::<i64>(&mut get_conn(&self.pool)?)
-            .map_err(Into::into)
+            query.count().get_result::<i64>(conn).map_err(Into::into)
+        })
+        .await
     }
 
-    pub fn get_events(
+    pub async fn get_events(
         &self,
         mut limit: u8,
         page: u64,
@@ -223,64 +257,74 @@ impl PulseManager {
         status: Option<String>,
         search: Option<String>,
     ) -> anyhow::Result<Vec<ScanEvent>> {
-        let page = page.max(1);
-        let mut query = scan_events.into_boxed();
+        self.database(move |conn| {
+            let page = page.max(1);
+            let mut query = scan_events.into_boxed();
 
-        if let Some(status) = status {
-            query = query.filter(process_status.eq(status));
-        }
-
-        if limit > 100 {
-            limit = 100;
-        }
-
-        if let Some(mut sort) = sort {
-            let mut direction = "desc";
-
-            if sort.starts_with('-') {
-                direction = "asc";
-                sort = sort[1..].to_string();
+            if let Some(status) = status {
+                query = query.filter(process_status.eq(status));
             }
 
-            if direction == "asc" {
-                query = match sort.as_str() {
-                    "id" => query.order(id.asc()),
-                    "file_path" => query.order(file_path.asc()),
-                    "process_status" => query.order(process_status.asc()),
-                    "event_source" => query.order(event_source.asc()),
-                    "created_at" => query.order(created_at.asc()),
-                    "updated_at" => query.order(updated_at.asc()),
-                    _ => {
-                        return Err(anyhow::anyhow!("invalid sort field"));
-                    }
+            if limit > 100 {
+                limit = 100;
+            }
+
+            if let Some(mut sort) = sort {
+                let mut direction = "desc";
+
+                if sort.starts_with('-') {
+                    direction = "asc";
+                    sort = sort[1..].to_string();
+                }
+
+                if direction == "asc" {
+                    query = match sort.as_str() {
+                        "id" => query.order(id.asc()),
+                        "file_path" => query.order(file_path.asc()),
+                        "process_status" => query.order(process_status.asc()),
+                        "event_source" => query.order(event_source.asc()),
+                        "created_at" => query.order(created_at.asc()),
+                        "updated_at" => query.order(updated_at.asc()),
+                        _ => {
+                            return Err(anyhow::anyhow!("invalid sort field"));
+                        }
+                    };
+                    query = query.then_order_by(id.asc());
+                } else {
+                    query = match sort.as_str() {
+                        "id" => query.order(id.desc()),
+                        "file_path" => query.order(file_path.desc()),
+                        "process_status" => query.order(process_status.desc()),
+                        "event_source" => query.order(event_source.desc()),
+                        "created_at" => query.order(created_at.desc()),
+                        "updated_at" => query.order(updated_at.desc()),
+                        _ => {
+                            return Err(anyhow::anyhow!("invalid sort field"));
+                        }
+                    };
+                    query = query.then_order_by(id.desc());
                 }
             } else {
-                query = match sort.as_str() {
-                    "id" => query.order(id.desc()),
-                    "file_path" => query.order(file_path.desc()),
-                    "process_status" => query.order(process_status.desc()),
-                    "event_source" => query.order(event_source.desc()),
-                    "created_at" => query.order(created_at.desc()),
-                    "updated_at" => query.order(updated_at.desc()),
-                    _ => {
-                        return Err(anyhow::anyhow!("invalid sort field"));
-                    }
-                }
+                query = query.order((created_at.desc(), id.desc()));
             }
-        } else {
-            query = query.order(created_at.desc());
-        }
 
-        if let Some(search) = search {
-            let escaped = escape_like_pattern(&search.to_lowercase());
-            query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
-        }
+            if let Some(search) = search {
+                let escaped = escape_like_pattern(&search.to_lowercase());
+                query = query.filter(lower(file_path).like(format!("%{escaped}%")).escape('\\'));
+            }
 
-        query
-            .limit(limit.into())
-            .offset(((page - 1) * u64::from(limit)) as i64)
-            .load::<ScanEvent>(&mut get_conn(&self.pool)?)
-            .map_err(Into::into)
+            let offset = (page - 1)
+                .checked_mul(u64::from(limit))
+                .and_then(|offset| i64::try_from(offset).ok())
+                .ok_or_else(|| anyhow::anyhow!("pagination offset is too large"))?;
+            query
+                .limit(limit.into())
+                .offset(offset)
+                .select(ScanEvent::as_select())
+                .load(conn)
+                .map_err(Into::into)
+        })
+        .await
     }
 
     pub async fn start(&self) -> anyhow::Result<()> {
@@ -383,7 +427,7 @@ impl PulseManager {
                     ..Default::default()
                 };
 
-                match manager.add_event(&new_scan_event) {
+                match manager.add_event(&new_scan_event).await {
                     Err(e) => error!("failed to add notify event: {:?}", e),
                     Ok(_) => {
                         info!(

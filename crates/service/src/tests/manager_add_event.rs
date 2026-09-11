@@ -11,7 +11,9 @@ use autopulse_database::models::NewScanEvent;
 use autopulse_database::models::{FoundStatus, ProcessStatus};
 use chrono::{Duration, Utc};
 #[cfg(feature = "sqlite")]
-use std::sync::{Arc, Barrier};
+use std::sync::Arc;
+#[cfg(feature = "sqlite")]
+use tokio::sync::Barrier;
 
 fn new_event(source: &str, path: &str, can_process_secs: i64) -> NewScanEvent {
     NewScanEvent {
@@ -22,15 +24,17 @@ fn new_event(source: &str, path: &str, can_process_secs: i64) -> NewScanEvent {
     }
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn dedupes_pending_event_across_triggers_with_same_path() {
+async fn dedupes_pending_event_across_triggers_with_same_path() {
     let m = fresh_manager("dedupe-cross-source");
     let a = m
         .add_event(&new_event("sonarr", "/media/a.mkv", 30))
+        .await
         .unwrap();
     let b = m
         .add_event(&new_event("notify", "/media/a.mkv", 30))
+        .await
         .unwrap();
     assert_eq!(
         a.id, b.id,
@@ -39,29 +43,33 @@ fn dedupes_pending_event_across_triggers_with_same_path() {
     assert_eq!(b.event_source, "sonarr", "original event_source preserved");
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn dedupe_keeps_the_later_can_process_time() {
+async fn dedupe_keeps_the_later_can_process_time() {
     let m = fresh_manager("dedupe-can-process");
     let first = m
         .add_event(&new_event("sonarr", "/media/b.mkv", 10))
+        .await
         .unwrap();
     let second = m
         .add_event(&new_event("notify", "/media/b.mkv", 60))
+        .await
         .unwrap();
     assert!(second.can_process >= first.can_process);
     assert!(second.can_process > Utc::now().naive_utc() + Duration::seconds(30));
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn dedupe_never_shortens_can_process_time() {
+async fn dedupe_never_shortens_can_process_time() {
     let m = fresh_manager("dedupe-no-shorten");
     let first = m
         .add_event(&new_event("sonarr", "/media/long.mkv", 60))
+        .await
         .unwrap();
     let second = m
         .add_event(&new_event("notify", "/media/long.mkv", 10))
+        .await
         .unwrap();
     assert_eq!(first.id, second.id, "must coalesce");
     assert_eq!(
@@ -70,35 +78,36 @@ fn dedupe_never_shortens_can_process_time() {
     );
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn dedupe_does_not_regress_found_status() {
+async fn dedupe_does_not_regress_found_status() {
     let m = fresh_manager("dedupe-found");
     let mut found = new_event("sonarr", "/media/c.mkv", 30);
     found.found_status = FoundStatus::Found.into();
-    let inserted = m.add_event(&found).unwrap();
+    let inserted = m.add_event(&found).await.unwrap();
     assert_eq!(inserted.found_status, "found");
 
     let notfound = new_event("notify", "/media/c.mkv", 30);
-    let after = m.add_event(&notfound).unwrap();
+    let after = m.add_event(&notfound).await.unwrap();
     assert_eq!(
         after.found_status, "found",
         "must not downgrade found→not_found on coalesce"
     );
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn dedupe_preserves_later_file_hash_when_existing_row_has_none() {
+async fn dedupe_preserves_later_file_hash_when_existing_row_has_none() {
     let m = fresh_manager("dedupe-file-hash");
     let first = m
         .add_event(&new_event("notify", "/media/hash.mkv", 30))
+        .await
         .unwrap();
     assert_eq!(first.file_hash, None);
 
     let mut with_hash = new_event("manual", "/media/hash.mkv", 30);
     with_hash.file_hash = Some("sha256:abc123".to_string());
-    let after = m.add_event(&with_hash).unwrap();
+    let after = m.add_event(&with_hash).await.unwrap();
 
     assert_eq!(after.id, first.id, "same pending path should coalesce");
     assert_eq!(
@@ -108,9 +117,9 @@ fn dedupe_preserves_later_file_hash_when_existing_row_has_none() {
     );
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
+async fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
     const THREADS: usize = 32;
 
     for attempt in 0..8 {
@@ -121,13 +130,14 @@ fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
         for thread in 0..THREADS {
             let m = m.clone();
             let barrier = barrier.clone();
-            handles.push(std::thread::spawn(move || {
-                barrier.wait();
+            handles.push(tokio::spawn(async move {
+                barrier.wait().await;
                 m.add_event(&new_event(
                     &format!("source-{thread}"),
                     "/media/concurrent.mkv",
                     thread as i64,
                 ))
+                .await
             }));
         }
 
@@ -135,7 +145,7 @@ fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
         for handle in handles {
             ids.push(
                 handle
-                    .join()
+                    .await
                     .expect("worker thread should not panic")
                     .unwrap()
                     .id,
@@ -148,12 +158,12 @@ fn concurrent_same_path_add_event_coalesces_without_unique_errors() {
     }
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "postgres")]
-fn postgres_upsert_conflict_target_matches_partial_index() {
-    let Ok(url) = std::env::var("AUTOPULSE_TEST_POSTGRES_URL") else {
-        return;
-    };
+#[ignore = "requires AUTOPULSE_TEST_POSTGRES_URL; run explicitly in PostgreSQL CI"]
+async fn postgres_upsert_conflict_target_matches_partial_index() {
+    let url = std::env::var("AUTOPULSE_TEST_POSTGRES_URL")
+        .expect("PostgreSQL integration test requires AUTOPULSE_TEST_POSTGRES_URL");
 
     let pool = get_pool(&url).expect("postgres test database pool should initialize");
     get_conn(&pool)
@@ -171,19 +181,26 @@ fn postgres_upsert_conflict_target_matches_partial_index() {
             .expect("current timestamp should fit in nanos")
     );
 
-    let first = m.add_event(&new_event("sonarr", &unique_path, 30)).unwrap();
-    let second = m.add_event(&new_event("notify", &unique_path, 60)).unwrap();
+    let first = m
+        .add_event(&new_event("sonarr", &unique_path, 30))
+        .await
+        .unwrap();
+    let second = m
+        .add_event(&new_event("notify", &unique_path, 60))
+        .await
+        .unwrap();
 
     assert_eq!(first.id, second.id, "postgres upsert should coalesce");
     assert!(second.can_process > first.can_process);
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn retry_event_coalesces_with_new_arrival() {
+async fn retry_event_coalesces_with_new_arrival() {
     let m = fresh_manager("dedupe-retry");
     let inserted = m
         .add_event(&new_event("sonarr", "/media/r.mkv", 30))
+        .await
         .unwrap();
 
     // Match the state the runner sets before retrying.
@@ -196,6 +213,7 @@ fn retry_event_coalesces_with_new_arrival() {
 
     let again = m
         .add_event(&new_event("notify", "/media/r.mkv", 60))
+        .await
         .unwrap();
     assert_eq!(
         again.id, inserted.id,
@@ -204,12 +222,13 @@ fn retry_event_coalesces_with_new_arrival() {
     assert!(again.can_process > inserted.can_process);
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn completed_event_does_not_coalesce_with_new_event() {
+async fn completed_event_does_not_coalesce_with_new_event() {
     let m = fresh_manager("dedupe-complete");
     let inserted = m
         .add_event(&new_event("sonarr", "/media/d.mkv", 0))
+        .await
         .unwrap();
 
     use autopulse_database::diesel::{self, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -221,16 +240,18 @@ fn completed_event_does_not_coalesce_with_new_event() {
 
     let again = m
         .add_event(&new_event("notify", "/media/d.mkv", 0))
+        .await
         .unwrap();
     assert_ne!(again.id, inserted.id, "completed row must not be reopened");
 }
 
-#[test]
+#[tokio::test]
 #[cfg(feature = "sqlite")]
-fn failed_event_does_not_coalesce_with_new_event() {
+async fn failed_event_does_not_coalesce_with_new_event() {
     let m = fresh_manager("dedupe-failed");
     let inserted = m
         .add_event(&new_event("sonarr", "/media/e.mkv", 0))
+        .await
         .unwrap();
 
     use autopulse_database::diesel::{self, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -242,6 +263,7 @@ fn failed_event_does_not_coalesce_with_new_event() {
 
     let again = m
         .add_event(&new_event("notify", "/media/e.mkv", 0))
+        .await
         .unwrap();
     assert_ne!(again.id, inserted.id, "failed row must not be reopened");
 }

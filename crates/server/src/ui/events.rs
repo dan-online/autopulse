@@ -29,7 +29,7 @@ fn default_page() -> u64 {
 
 /// `outerHTML` swap target for filter and search. Search input is
 /// `hx-preserve`d so focus survives swaps.
-fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
+async fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
     let status = q.status.as_deref().filter(|s| !s.is_empty());
     let search = q.search.as_deref().filter(|s| !s.is_empty());
     // Normalize once so the rows fragment and the load-more URL agree on
@@ -44,13 +44,18 @@ fn events_section(manager: &PulseManager, q: &EventsQuery) -> Result<Markup> {
             status.map(String::from),
             search.map(String::from),
         )
+        .await
         .map_err(ErrorInternalServerError)?;
     let total = manager
         .count_events(status.map(String::from), search.map(String::from))
+        .await
         .map_err(ErrorInternalServerError)?;
 
     let base = manager.settings.app.base_path.as_str();
-    let stats = manager.get_stats().map_err(ErrorInternalServerError)?;
+    let stats = manager
+        .get_stats()
+        .await
+        .map_err(ErrorInternalServerError)?;
 
     let filter_qs = filter_query(status, search);
 
@@ -222,7 +227,7 @@ pub async fn events_page(
     csrf: CsrfToken,
     req: HttpRequest,
 ) -> Result<Markup> {
-    let section = events_section(&manager, &q)?;
+    let section = events_section(&manager, &q).await?;
     if req.headers().contains_key("HX-Request") {
         Ok(section)
     } else {
@@ -241,7 +246,10 @@ pub async fn events_stats(
     let status = q.status.as_deref().filter(|s| !s.is_empty());
     let search = q.search.as_deref().filter(|s| !s.is_empty());
     let base = manager.settings.app.base_path.as_str();
-    let stats = manager.get_stats().map_err(ErrorInternalServerError)?;
+    let stats = manager
+        .get_stats()
+        .await
+        .map_err(ErrorInternalServerError)?;
     Ok(stats_cards(base, &stats, status, search))
 }
 
@@ -261,7 +269,7 @@ pub async fn events_rows(
             &ctx,
             "events",
             "events",
-            events_section(&manager, &q)?,
+            events_section(&manager, &q).await?,
         ));
     }
     let status = q.status.as_deref().filter(|s| !s.is_empty());
@@ -275,6 +283,7 @@ pub async fn events_rows(
             status.map(String::from),
             search.map(String::from),
         )
+        .await
         .map_err(ErrorInternalServerError)?;
     let base = manager.settings.app.base_path.as_str();
     Ok(events_view::rows_page(
@@ -293,6 +302,7 @@ pub async fn event_retry(
     csrf::require_header(&req, &csrf)?;
     let ev = manager
         .reschedule_event(&id)
+        .await
         .map_err(ErrorInternalServerError)?;
     let base = manager.settings.app.base_path.as_str();
     Ok(events_view::event_row(base, &ev))

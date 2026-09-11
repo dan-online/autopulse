@@ -285,6 +285,7 @@ pub async fn add_post(
 
     let ev = manager
         .add_event(&new_scan_event)
+        .await
         .map_err(ErrorInternalServerError)?;
 
     // Mirror /triggers/manual: legacy callers fire the New webhook after

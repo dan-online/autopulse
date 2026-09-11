@@ -24,6 +24,7 @@ pub async fn event_detail(
 ) -> Result<Markup> {
     let ev = manager
         .get_event(&id)
+        .await
         .map_err(ErrorInternalServerError)?
         .ok_or_else(|| ErrorNotFound("event not found"))?;
 

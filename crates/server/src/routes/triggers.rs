@@ -95,7 +95,7 @@ pub async fn trigger_post(
                     ..Default::default()
                 };
 
-                match manager.add_event(&new_scan_event) {
+                match manager.add_event(&new_scan_event).await {
                     Ok(scan_event) => {
                         queued_paths.push(path.clone());
                         scan_events.push(scan_event);
@@ -164,7 +164,7 @@ async fn trigger_get_inner(
                     ..Default::default()
                 };
 
-                let scan_event = match manager.add_event(&new_scan_event) {
+                let scan_event = match manager.add_event(&new_scan_event).await {
                     Ok(ev) => ev,
                     Err(e) => {
                         return Ok(HttpResponse::InternalServerError().body(e.to_string()));
@@ -218,7 +218,7 @@ async fn trigger_get_inner(
                     ..Default::default()
                 };
 
-                let scan_event = match manager.add_event(&new_scan_event) {
+                let scan_event = match manager.add_event(&new_scan_event).await {
                     Ok(ev) => ev,
                     Err(e) => {
                         return Ok(HttpResponse::InternalServerError().body(e.to_string()));
