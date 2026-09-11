@@ -11,6 +11,7 @@ use autopulse_service::settings::triggers::autoscan::Autoscan;
 use autopulse_service::settings::triggers::Trigger;
 use autopulse_service::settings::Settings;
 use autopulse_utils::Rewrite;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // `Rewrite::single` is `#[cfg(test)]`-gated inside autopulse-utils, so build
@@ -21,11 +22,15 @@ fn rewrite(from: &str, to: &str) -> Rewrite {
 }
 
 fn test_manager() -> PulseManager {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique_id = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
-    let database_url = format!("sqlite:///tmp/autopulse-server-autoscan-rewrite-{unique_id}.db");
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let pid = std::process::id();
+    let database_url =
+        format!("sqlite:///tmp/autopulse-server-autoscan-rewrite-{pid}-{unique_id}-{seq}.db");
 
     let mut settings = Settings::default();
     settings.app.database_url = database_url.clone();
