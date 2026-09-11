@@ -250,8 +250,10 @@ impl AnyConnection {
                 .filter(process_status.eq_any(["pending", "retry"]))
                 .filter(failed_times.eq(previous.failed_times))
                 .filter(targets_hit.eq(&previous.targets_hit))
+                // A manual acceleration can race with selection as a retry
+                // becomes due. It must not invalidate work already dispatched.
                 .filter(
-                    next_retry_at.eq(previous.next_retry_at).or(next_retry_at
+                    next_retry_at.le(previous.next_retry_at).or(next_retry_at
                         .is_null()
                         .and(previous.next_retry_at.is_none().into_sql::<Bool>())),
                 ),

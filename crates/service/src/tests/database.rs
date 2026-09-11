@@ -39,23 +39,70 @@ async fn persistence_regressions(manager: PulseManager) {
     assert!(retry.targets_hit.is_empty());
     assert!(retry.next_retry_at.is_some());
 
+    let retry = manager
+        .database(move |conn| {
+            Ok(diesel::update(scan_events.find(retry.id))
+                .set(next_retry_at.eq(Some(
+                    chrono::Utc::now().naive_utc() + chrono::Duration::seconds(60),
+                )))
+                .get_result::<autopulse_database::models::ScanEvent>(conn)?)
+        })
+        .await
+        .unwrap();
     let previous = retry.clone();
     let newer = manager.reschedule_event(&retry.id).await.unwrap();
+    assert!(newer.next_retry_at < previous.next_retry_at);
     let failed = manager
         .database(move |conn| {
             let mut failed = retry.clone();
             failed.process_status = "failed".into();
             failed.next_retry_at = None;
-            assert!(
-                conn.update_process(&previous, &failed)?.is_none(),
-                "manual retry supersedes the old runner snapshot"
-            );
-            Ok(conn.update_process(&newer, &failed)?.unwrap())
+            Ok(conn
+                .update_process(&previous, &failed)?
+                .expect("an accelerated deadline must not discard a target result"))
         })
         .await
         .unwrap();
     assert_eq!(failed.next_retry_at, None);
     assert_eq!(failed.process_status, "failed");
+
+    for due_at in [
+        None,
+        Some(chrono::Utc::now().naive_utc() - chrono::Duration::seconds(60)),
+    ] {
+        let event_id = failed.id.clone();
+        let in_flight = manager
+            .database(move |conn| {
+                Ok(diesel::update(scan_events.find(event_id))
+                    .set((
+                        process_status.eq("retry"),
+                        next_retry_at.eq(due_at),
+                        can_process
+                            .eq(chrono::Utc::now().naive_utc() - chrono::Duration::seconds(60)),
+                        targets_hit.eq(""),
+                        processed_at.eq(None::<chrono::NaiveDateTime>),
+                    ))
+                    .get_result::<autopulse_database::models::ScanEvent>(conn)?)
+            })
+            .await
+            .unwrap();
+        let manual = manager.reschedule_event(&in_flight.id).await.unwrap();
+        assert_eq!(manual.next_retry_at, in_flight.next_retry_at);
+        let completed = manager
+            .database(move |conn| {
+                let mut completed = in_flight.clone();
+                completed.process_status = "complete".into();
+                completed.next_retry_at = None;
+                completed.targets_hit = "plex".into();
+                completed.processed_at = Some(chrono::Utc::now().naive_utc());
+                conn.update_process(&in_flight, &completed)
+            })
+            .await
+            .unwrap()
+            .expect("manual retry must not discard an in-flight target result");
+        assert_eq!(completed.process_status, "complete");
+        assert_eq!(completed.targets_hit, "plex");
+    }
 
     let pending = manager
         .add_event(&NewScanEvent {

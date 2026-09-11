@@ -12,8 +12,8 @@ use autopulse_database::schema::scan_events::{
 use autopulse_database::{
     conn::{get_conn, AnyConnection, DbPool},
     diesel::{
-        self, EscapeExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
-        SelectableHelper, TextExpressionMethods,
+        self, BoolExpressionMethods, EscapeExpressionMethods, ExpressionMethods, OptionalExtension,
+        QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
     },
     models::{FoundStatus, NewScanEvent, ScanEvent},
     schema::scan_events::{dsl::scan_events, process_status},
@@ -131,9 +131,8 @@ impl PulseManager {
         });
     }
 
-    /// Manual retry. Pending is excluded so we never clobber an event the
-    /// runner is mid-pipeline (would dispatch duplicate target scans — the
-    /// thing this service exists to prevent).
+    /// Manual retry. Pending is excluded. Already-due retries keep their
+    /// deadline so a manual request cannot invalidate an in-flight result.
     ///
     /// Complete events also clear `targets_hit` and `processed_at`: every
     /// target is in `targets_hit`, so the runner's "skip already-hit" filter
@@ -154,7 +153,11 @@ impl PulseManager {
                 )
                 .set((
                     process_status.eq("retry"),
-                    next_retry_at.eq(Some(now)),
+                    next_retry_at.eq(diesel::dsl::case_when::<_, _, Nullable<Timestamp>>(
+                        process_status.ne("retry").or(next_retry_at.gt(now)),
+                        Some(now),
+                    )
+                    .otherwise(next_retry_at)),
                     updated_at.eq(now),
                     targets_hit.eq(diesel::dsl::case_when::<_, _, Text>(
                         process_status.eq("complete"),
