@@ -36,6 +36,7 @@ We use the following terminology:
   - [Manual](#manual) (default: /triggers/manual)
     - Fileflows ([sub-flow](https://github.com/dan-online/autopulse/issues/5#issuecomment-2333917695))
   - Sonarr
+  - Sportarr
   - Radarr
   - Lidarr
   - Readarr
@@ -89,21 +90,11 @@ The easiest way to get started with autopulse is to use the provided docker imag
 
 #### Unraid
 
-An Unraid Community Apps template lives in [`unraid/autopulse.xml`](unraid/autopulse.xml).
+autopulse is available in [Unraid Community Apps](https://ca.unraid.net/apps/autopulse-0johea90dq8mp9). The template lives in [`unraid/autopulse.xml`](unraid/autopulse.xml).
 
-Once autopulse is listed in Community Apps, open the **Apps** tab in Unraid, search for `autopulse`, and click **Install**. Until then, install it as a private Community App:
-
-1. Make sure Community Applications is installed (it ships with Unraid via the Apps tab).
-2. SSH to your Unraid server and run:
-
-   ```bash
-   mkdir -p /boot/config/plugins/community.applications/private/autopulse
-   wget -O /boot/config/plugins/community.applications/private/autopulse/autopulse.xml \
-     https://raw.githubusercontent.com/dan-online/autopulse/main/unraid/autopulse.xml
-   ```
-
-3. In the WebUI, open **Apps** and select **Private apps** from the left sidebar, then click **Install** on autopulse.
-4. Adjust the **Media share** path and change **AUTOPULSE__AUTH__PASSWORD** from the default `change-me` before clicking Apply.
+1. Open the **Apps** tab in Unraid and install Community Applications if prompted.
+2. Search for `autopulse` and click **Install**.
+3. Adjust the **Media share** path and change **AUTOPULSE__AUTH__PASSWORD** from the default `change-me` before clicking Apply.
 
 #### Compose
 
@@ -175,6 +166,12 @@ triggers:
     filter:
       exclude:
         - "^/tvshows/extras/"
+
+  my_sportarr:
+    type: "sportarr"
+    rewrite:
+      from: "/downloads"
+      to: "/sports"
 
   my_radarr:
     type: "radarr"

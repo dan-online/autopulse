@@ -2,10 +2,10 @@ use crate::settings::path_filter::PathFilter;
 use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, RuntimePath};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 use tracing::error;
 
 use super::{Request, RequestBuilderPerform};
@@ -45,6 +45,14 @@ enum Command {
     RefreshMovie(RefreshMovie),
 }
 
+fn matching_movie_id(path: &str, movies: &[RadarrMovie]) -> Option<i64> {
+    let event = RuntimePath::new(path);
+    movies
+        .iter()
+        .find(|movie| event.starts_with(RuntimePath::new(&movie.path)))
+        .map(|movie| movie.id)
+}
+
 impl Radarr {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
@@ -70,17 +78,12 @@ impl Radarr {
 
         for ev in evs {
             let ev_path = ev.get_path(&self.rewrite);
-            let ev_path = Path::new(&ev_path);
 
-            for movie in &movies {
-                let movie_path = Path::new(&movie.path);
-                if ev_path.starts_with(movie_path) {
-                    to_be_refreshed
-                        .entry(movie.id)
-                        .or_default()
-                        .push(ev.id.clone());
-                    break;
-                }
+            if let Some(movie_id) = matching_movie_id(&ev_path, &movies) {
+                to_be_refreshed
+                    .entry(movie_id)
+                    .or_default()
+                    .push(ev.id.clone());
             }
         }
 
@@ -114,5 +117,41 @@ impl TargetProcess for Radarr {
         }
 
         Ok(succeeded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matches_windows_movie_case_insensitively_by_components() {
+        let movies = vec![RadarrMovie {
+            id: 24,
+            path: r"\\SERVER\Movies\The Matrix".to_string(),
+        }];
+
+        assert_eq!(
+            matching_movie_id(r"\\server\movies\the matrix\The Matrix (1999).mkv", &movies),
+            Some(24)
+        );
+    }
+
+    #[test]
+    fn rejects_movie_text_prefix_and_mixed_flavor() {
+        let windows = vec![RadarrMovie {
+            id: 24,
+            path: r"C:\Movies\Alien".to_string(),
+        }];
+        let unix = vec![RadarrMovie {
+            id: 12,
+            path: "/movies/Alien".to_string(),
+        }];
+
+        assert_eq!(
+            matching_movie_id(r"C:\Movies\Aliens\Aliens.mkv", &windows),
+            None
+        );
+        assert_eq!(matching_movie_id(r"C:\movies\Alien\Alien.mkv", &unix), None);
     }
 }

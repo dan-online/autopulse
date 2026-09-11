@@ -4,3 +4,4 @@ pub mod path_filter;
 pub mod radarr;
 pub mod readarr;
 pub mod sonarr;
+pub mod sportarr;

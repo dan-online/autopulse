@@ -83,6 +83,9 @@ futures = { version = "0.3.31" }
 # URL parsing
 url = "2.5.4"
 
+# Path handling
+typed-path = "0.12"
+
 # [dev-dependencies]
 # # Standardize logging output
 # tracing-test = "0.2.5"

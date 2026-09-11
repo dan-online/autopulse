@@ -12,6 +12,9 @@
 # opts:
   # check_path: true # Check if the path exists, assuming the path is available to the container
   # max_retries: 5 # Exponential backoff when a target fails
+  # log_file: /app/logs/autopulse.log
+  # log_file_rollover: daily
+  # log_file_max_files: 30 # Maximum number of log files to retain
 
 # triggers:
   # sonarr:

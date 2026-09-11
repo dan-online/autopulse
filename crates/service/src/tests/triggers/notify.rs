@@ -76,11 +76,10 @@ mod tests {
         let result = timeout(Duration::from_secs(5), async {
             let mut events = vec![];
             // Collect events for a few seconds
-            loop {
-                match tokio::time::timeout(Duration::from_secs(3), rx.recv()).await {
-                    Ok(Some(event)) => events.push(event),
-                    _ => break,
-                }
+            while let Ok(Some(event)) =
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            {
+                events.push(event);
             }
             events
         })
@@ -134,11 +133,10 @@ mod tests {
         // Collect all events over a window longer than the debounce timeout
         let result = timeout(Duration::from_secs(5), async {
             let mut events = vec![];
-            loop {
-                match tokio::time::timeout(Duration::from_secs(3), rx.recv()).await {
-                    Ok(Some(event)) => events.push(event),
-                    _ => break,
-                }
+            while let Ok(Some(event)) =
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            {
+                events.push(event);
             }
             events
         })
@@ -186,11 +184,10 @@ mod tests {
         // Collect events
         let result = timeout(Duration::from_secs(5), async {
             let mut events = vec![];
-            loop {
-                match tokio::time::timeout(Duration::from_secs(3), rx.recv()).await {
-                    Ok(Some(event)) => events.push(event),
-                    _ => break,
-                }
+            while let Ok(Some(event)) =
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            {
+                events.push(event);
             }
             events
         })
@@ -233,11 +230,10 @@ mod tests {
 
         let result = timeout(Duration::from_secs(5), async {
             let mut events = vec![];
-            loop {
-                match tokio::time::timeout(Duration::from_secs(3), rx.recv()).await {
-                    Ok(Some(event)) => events.push(event),
-                    _ => break,
-                }
+            while let Ok(Some(event)) =
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            {
+                events.push(event);
             }
             events
         })

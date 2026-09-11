@@ -4,11 +4,11 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::{get_url, what_is, PathType};
+use autopulse_utils::{get_url, RuntimePath};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 use tracing::{debug, error, trace};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -95,6 +95,10 @@ struct FileFlowsLibraryFile {
 // Next get each file and check their status
 // If they are processed, send a reprocess request individually
 // For the rest, send a manual-add request, again still in a group with their library
+
+fn path_in_library(path: &str, library_path: &str) -> bool {
+    RuntimePath::new(path).starts_with(RuntimePath::new(library_path))
+}
 
 impl FileFlows {
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
@@ -222,15 +226,10 @@ impl TargetProcess for FileFlows {
             let files = evs
                 .iter()
                 .filter_map(|ev| {
-                    let ev_path = ev.get_path(&self.rewrite);
-                    let ev_path = Path::new(&ev_path);
-                    let lib_path = Path::new(library.path.as_deref()?);
+                    let event_path = ev.get_path(&self.rewrite);
+                    let library_path = library.path.as_deref()?;
 
-                    if ev_path.starts_with(lib_path) {
-                        Some(*ev)
-                    } else {
-                        None
-                    }
+                    path_in_library(&event_path, library_path).then_some(*ev)
                 })
                 .collect::<Vec<_>>();
 
@@ -254,8 +253,8 @@ impl TargetProcess for FileFlows {
             let mut library_files = HashMap::new();
 
             for ev in evs {
-                let what_is_path = what_is(ev.get_path(&self.rewrite));
-                if matches!(what_is_path, PathType::Directory) {
+                let event_path = ev.get_path(&self.rewrite);
+                if RuntimePath::new(&event_path).is_directory() {
                     succeeded.push(ev.id.clone());
                     continue;
                 }
@@ -321,5 +320,26 @@ impl TargetProcess for FileFlows {
         }
 
         Ok(succeeded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matches_windows_fileflows_library_by_runtime_components() {
+        assert!(path_in_library(
+            r"D:\MEDIA\Incoming\Film\Film.mkv",
+            r"d:\media\incoming"
+        ));
+        assert!(!path_in_library(
+            r"D:\Media\Incoming-Archive\Film.mkv",
+            r"D:\Media\Incoming"
+        ));
+        assert!(!path_in_library(
+            r"D:\Media\Incoming\Film.mkv",
+            "/Media/Incoming"
+        ));
     }
 }

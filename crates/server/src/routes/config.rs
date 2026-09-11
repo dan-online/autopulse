@@ -137,6 +137,7 @@ fn generate_config_template(
                 TriggerType::Autoscan => Trigger::Autoscan(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Radarr => Trigger::Radarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Sonarr => Trigger::Sonarr(serde_json::from_str(r#"{}"#)?),
+                TriggerType::Sportarr => Trigger::Sportarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Lidarr => Trigger::Lidarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Readarr => Trigger::Readarr(serde_json::from_str(r#"{}"#)?),
                 TriggerType::Notify => {

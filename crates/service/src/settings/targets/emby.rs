@@ -4,10 +4,10 @@ use crate::settings::rewrite::Rewrite;
 use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
-use autopulse_utils::get_url;
+use autopulse_utils::{get_url, RuntimePath};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, io::Cursor, path::Path};
+use std::{collections::HashMap, fmt::Display, io::Cursor};
 use struson::{
     json_path,
     reader::{JsonReader, JsonStreamReader},
@@ -161,16 +161,12 @@ impl Emby {
     }
 
     fn path_prefix_matches(&self, location: &str, ev_path: &str) -> bool {
-        // Trailing `/` or `\` on library locations shouldn't break the prefix check.
-        let trimmed = location.trim_end_matches(['/', '\\']);
+        let location = RuntimePath::new(location);
+        let event = RuntimePath::new(ev_path);
 
         match self.path_match {
-            PathMatch::CaseSensitive => Path::new(ev_path).starts_with(trimmed),
-            PathMatch::CaseInsensitive => {
-                let lhs = ev_path.to_ascii_lowercase();
-                let rhs = trimmed.to_ascii_lowercase();
-                Path::new(&lhs).starts_with(&rhs)
-            }
+            PathMatch::CaseSensitive => event.starts_with_case_sensitive(location),
+            PathMatch::CaseInsensitive => event.starts_with_ascii_case_insensitive(location),
         }
     }
 
@@ -535,5 +531,53 @@ mod tests {
         let libs = vec![lib("TV", &["/Media/TV"])];
         let m = target().get_libraries(&libs, "/media/tv/Show.mkv");
         assert_eq!(m.len(), 0);
+    }
+
+    #[test]
+    fn case_sensitive_mode_parses_windows_paths_but_preserves_case_policy() {
+        let libs = vec![lib("TV", &[r"C:\Media\TV\"])];
+        assert_eq!(
+            target()
+                .get_libraries(&libs, r"C:\Media\TV\Show\S01E01.mkv")
+                .len(),
+            1
+        );
+        assert_eq!(
+            target()
+                .get_libraries(&libs, r"c:\media\tv\Show\S01E01.mkv")
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn case_insensitive_mode_folds_windows_ascii_case() {
+        let mut emby = target();
+        emby.path_match = PathMatch::CaseInsensitive;
+        let libs = vec![lib("TV", &[r"\\SERVER\MEDIA\TV"])];
+
+        assert_eq!(
+            emby.get_libraries(&libs, r"\\server\media\tv\Show\S01E01.mkv")
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn library_prefix_requires_a_component_boundary() {
+        let libs = vec![lib("TV", &[r"\\server\media"])];
+        assert!(target()
+            .get_libraries(&libs, r"\\server\media-archive\Film.mkv")
+            .is_empty());
+    }
+
+    #[test]
+    fn library_prefix_does_not_cross_runtime_flavors() {
+        let mut emby = target();
+        emby.path_match = PathMatch::CaseInsensitive;
+        let libs = vec![lib("TV", &["/media/TV"])];
+        assert!(emby
+            .get_libraries(&libs, r"C:\media\TV\Show\S01E01.mkv")
+            .is_empty());
     }
 }

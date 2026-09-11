@@ -1,6 +1,6 @@
 use anyhow::{Context, Ok};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::rolling::RollingFileAppender;
 pub use tracing_appender::rolling::Rotation;
@@ -49,6 +49,7 @@ pub fn setup_logs(
     log_level: &LogLevel,
     log_file: &Option<PathBuf>,
     log_file_rollover: &Rotation,
+    log_file_max_files: usize,
     api_logging: bool,
 ) -> anyhow::Result<Option<WorkerGuard>> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339()
@@ -73,15 +74,7 @@ pub fn setup_logs(
         // suffix and rotation boundary track the local timezone instead of
         // UTC. Without that feature, log filenames would be a day off the
         // record timestamps inside them (#208).
-        let writer = RollingFileAppender::new(
-            log_file_rollover.clone(),
-            log_file
-                .parent()
-                .ok_or_else(|| anyhow::anyhow!("failed to get parent directory of log file"))?,
-            log_file
-                .file_name()
-                .ok_or_else(|| anyhow::anyhow!("failed to get file name of log file"))?,
-        );
+        let writer = rolling_file_appender(log_file, log_file_rollover, log_file_max_files)?;
 
         let (non_blocking, guard) = tracing_appender::non_blocking(writer);
         file_guard = Some(guard);
@@ -108,4 +101,79 @@ pub fn setup_logs(
         registry.with(console_layer).init();
     }
     Ok(file_guard)
+}
+
+fn rolling_file_appender(
+    log_file: &Path,
+    rotation: &Rotation,
+    max_log_files: usize,
+) -> anyhow::Result<RollingFileAppender> {
+    let directory = log_file
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("failed to get parent directory of log file"))?;
+    let filename = log_file
+        .file_name()
+        .ok_or_else(|| anyhow::anyhow!("failed to get file name of log file"))?;
+    let filename = filename.to_string_lossy();
+
+    RollingFileAppender::builder()
+        .rotation(rotation.clone())
+        .filename_prefix(filename)
+        .max_log_files(max_log_files)
+        .build(directory)
+        .context("failed to initialize rolling file appender")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn rolling_appender_prunes_files_beyond_the_configured_limit() {
+        let directory = tempfile::tempdir().expect("temp directory should be created");
+        let log_file = directory.path().join("autopulse.log");
+
+        for day in 1..=31 {
+            fs::write(
+                directory
+                    .path()
+                    .join(format!("autopulse.log.2020-01-{day:02}")),
+                "old log",
+            )
+            .expect("old log should be created");
+        }
+
+        let appender = rolling_file_appender(&log_file, &Rotation::DAILY, 30)
+            .expect("appender should be created");
+        drop(appender);
+
+        let retained_logs = fs::read_dir(directory.path())
+            .expect("log directory should be readable")
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("autopulse.log")
+            })
+            .count();
+
+        assert_eq!(retained_logs, 30);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rolling_appender_accepts_non_utf8_log_filenames() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let directory = tempfile::tempdir().expect("temp directory should be created");
+        let filename = OsString::from_vec(b"autopulse-\xff.log".to_vec());
+        let log_file = directory.path().join(filename);
+
+        let appender = rolling_file_appender(&log_file, &Rotation::NEVER, 30)
+            .expect("appender should accept a non-UTF-8 filename");
+        drop(appender);
+    }
 }

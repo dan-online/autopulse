@@ -6,6 +6,7 @@ version.workspace = true
 
 [dev-dependencies]
 serde_json = { workspace = true }
+tempfile = "3"
 
 [dependencies]
 # Core
@@ -14,6 +15,7 @@ url = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true, features = ["macros"] }
 serde = { workspace = true }
+typed-path = { workspace = true }
 
 # Logs
 tracing-subscriber = { version = "0.3.19", features = [
