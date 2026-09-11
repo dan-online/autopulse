@@ -22,6 +22,10 @@ pub struct Plex {
     /// Whether to analyze the file (default: false)
     #[serde(default)]
     pub analyze: bool,
+    /// Empty library trash after scans finish (default: false).
+    /// Removes all unavailable items in each scanned library, not just the scanned paths.
+    #[serde(default)]
+    pub empty_trash: bool,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
     /// Path filter matched against the target-rewritten path.
@@ -76,8 +80,17 @@ struct Location {
 struct Library {
     title: String,
     key: String,
+    refreshing: Option<bool>,
+    #[serde(rename = "scannedAt")]
+    scanned_at: Option<u64>,
     #[serde(rename = "Location")]
     location: Vec<Location>,
+}
+
+struct LibraryCleanup {
+    scanned_at: Option<u64>,
+    event_ids: HashSet<String>,
+    scan_failed: bool,
 }
 
 #[doc(hidden)]
@@ -387,6 +400,41 @@ impl Plex {
 
         client.get(url).perform().await.map(|_| ())
     }
+
+    async fn empty_library_trash(&self, key: &str, scanned_at: Option<u64>) -> anyhow::Result<()> {
+        tokio::time::timeout(std::time::Duration::from_secs(300), async {
+            let mut observed_scan = false;
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                let library = self
+                    .libraries()
+                    .await?
+                    .into_iter()
+                    .find(|library| library.key == key)
+                    .context("scanned library no longer exists")?;
+                match library.refreshing {
+                    Some(true) => observed_scan = true,
+                    Some(false) => {
+                        // Idle alone can mean queued. A newer timestamp also catches
+                        // short scans that start and finish between polls.
+                        let scan_finished = scanned_at
+                            .zip(library.scanned_at)
+                            .is_some_and(|(before, after)| after > before);
+                        if observed_scan || scan_finished {
+                            return Ok::<_, anyhow::Error>(());
+                        }
+                    }
+                    None => anyhow::bail!("Plex did not report the library scan status"),
+                }
+            }
+        })
+        .await
+        .context("timed out waiting for Plex library scan to finish")??;
+
+        let client = self.get_client()?;
+        let url = get_url(&self.url)?.join(&format!("library/sections/{key}/emptyTrash"))?;
+        client.put(url).perform().await.map(|_| ())
+    }
 }
 
 impl TargetProcess for Plex {
@@ -394,6 +442,7 @@ impl TargetProcess for Plex {
         let libraries = self.libraries().await.context("failed to get libraries")?;
 
         let mut succeeded: HashMap<String, bool> = HashMap::new();
+        let mut cleanups: HashMap<String, LibraryCleanup> = HashMap::new();
 
         for ev in evs {
             let succeeded_entry = succeeded.entry(ev.id.clone()).or_insert(true);
@@ -414,7 +463,21 @@ impl TargetProcess for Plex {
             for library in matched_libraries {
                 trace!("found library '{}' for {ev_path}", library.title);
 
-                match self.scan(ev, &library).await {
+                let scan_result = self.scan(ev, &library).await;
+                if self.empty_trash {
+                    let cleanup =
+                        cleanups
+                            .entry(library.key.clone())
+                            .or_insert_with(|| LibraryCleanup {
+                                scanned_at: library.scanned_at,
+                                event_ids: HashSet::new(),
+                                scan_failed: false,
+                            });
+                    cleanup.event_ids.insert(ev.id.clone());
+                    cleanup.scan_failed |= scan_result.is_err();
+                }
+
+                match scan_result {
                     Ok(()) => {
                         debug!("scanned '{}'", ev_path);
 
@@ -501,6 +564,24 @@ impl TargetProcess for Plex {
             }
         }
 
+        for (key, cleanup) in cleanups {
+            let result = if cleanup.scan_failed {
+                Err(anyhow::anyhow!("a scan failed for this library"))
+            } else {
+                self.empty_library_trash(&key, cleanup.scanned_at).await
+            };
+
+            match result {
+                Ok(()) => debug!("emptied trash for library '{key}'"),
+                Err(e) => {
+                    error!("failed to empty trash for library '{key}': {e:#}");
+                    for id in cleanup.event_ids {
+                        succeeded.insert(id, false);
+                    }
+                }
+            }
+        }
+
         Ok(succeeded
             .into_iter()
             .filter_map(|(k, v)| if v { Some(k) } else { None })
@@ -518,6 +599,7 @@ mod tests {
             token: String::new(),
             refresh: false,
             analyze: false,
+            empty_trash: false,
             rewrite: None,
             filter: PathFilter::default(),
             request: Request::default(),
@@ -560,6 +642,7 @@ mod tests {
             token: String::new(),
             refresh: false,
             analyze: false,
+            empty_trash: false,
             rewrite: None,
             filter: PathFilter::default(),
             request: Request::default(),
@@ -568,6 +651,8 @@ mod tests {
         let libraries = [Library {
             title: "Movies".to_string(),
             key: "library_key_movies".to_string(),
+            refreshing: None,
+            scanned_at: None,
             location: vec![Location {
                 path: "/media/movies".to_string(),
             }],
@@ -581,6 +666,8 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "library_key_movies".to_string(),
+                refreshing: None,
+                scanned_at: None,
                 location: vec![Location {
                     path: "/media/movies".to_string(),
                 }],
@@ -588,6 +675,8 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "library_key_movies_4k".to_string(),
+                refreshing: None,
+                scanned_at: None,
                 location: vec![Location {
                     path: "/media/movies/4k".to_string(),
                 }],
@@ -607,6 +696,8 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "movies".to_string(),
+                refreshing: None,
+                scanned_at: None,
                 location: vec![Location {
                     path: r"\\server\media".to_string(),
                 }],
@@ -614,6 +705,8 @@ mod tests {
             Library {
                 title: "4K Movies".to_string(),
                 key: "movies-4k".to_string(),
+                refreshing: None,
+                scanned_at: None,
                 location: vec![Location {
                     path: r"\\SERVER\MEDIA\4K".to_string(),
                 }],

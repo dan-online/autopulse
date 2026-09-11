@@ -132,6 +132,7 @@ pub mod fileflows;
 ///     token: "<PLEX_TOKEN>"
 ///     refresh: true
 ///     analyze: true
+///     empty_trash: true
 /// ```
 ///
 /// See [`Plex`] for all options
