@@ -1,17 +1,22 @@
 use std::{
-    fs,
+    env, fs,
     hash::{Hash, Hasher},
     path::Path,
     process::Command,
 };
 
 fn main() {
-    let git_hash = Command::new("git")
-        .args(["describe", "--always", "--tags"])
-        .output()
+    println!("cargo:rerun-if-env-changed=GIT_REVISION");
+    let git_hash = env::var("GIT_REVISION")
         .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .or_else(|| {
+            Command::new("git")
+                .args(["describe", "--always", "--tags"])
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+        })
         .unwrap_or_else(|| "unknown".to_string());
 
     println!("cargo:rustc-env=GIT_REVISION={}", git_hash.trim());
