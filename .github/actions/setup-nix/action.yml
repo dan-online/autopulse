@@ -1,0 +1,24 @@
+name: Setup cached Nix
+description: Share Nix build artifacts between checks, documentation, images, and releases
+inputs:
+  cache-name:
+    description: Distinguishes concurrent cache writers
+    required: true
+  github-token:
+    description: Token for authenticated Nix input downloads
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      with:
+        github_access_token: ${{ inputs.github-token }}
+        extra_nix_config: |
+          keep-outputs = true
+    - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+      with:
+        primary-key: nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}-${{ inputs.cache-name }}
+        restore-prefixes-first-match: |
+          nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-
+          nix-${{ runner.arch }}-
+        restore-prefixes-all-matches: nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}-

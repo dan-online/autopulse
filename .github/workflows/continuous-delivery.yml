@@ -12,72 +12,73 @@ concurrency:
   group: continuous-delivery-${{ github.ref }}
   cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
-env:
-  CARGO_INCREMENTAL: 0
-  CARGO_NET_GIT_FETCH_WITH_CLI: true
-  CARGO_NET_RETRY: 10
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  RUSTFLAGS: -D warnings
-  RUSTUP_MAX_RETRIES: 10
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: sccache
-
 defaults:
   run:
     shell: bash
 
 jobs:
-  upload-assets:
+  linux:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04-arm
           - target: aarch64-unknown-linux-musl
             os: ubuntu-22.04-arm
-          # - target: aarch64-apple-darwin
-          #   os: macos-12
-          # - target: aarch64-pc-windows-msvc
-          #   os: windows-2022
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
-
-          - target: x86_64-pc-windows-msvc
-            os: windows-2025
-          # - target: x86_64-apple-darwin
-          #   os: macos-latest
-          # - target: x86_64-pc-windows-msvc
-          #   os: windows-2022
-          # - target: x86_64-unknown-freebsd
-          #   os: ubuntu-22.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
-      # - name: Install dependencies on Linux
-      #   if: contains(matrix.os, 'freebsd')
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y libpq-dev libsqlite3-dev
+      - uses: ./.github/actions/setup-nix
+        with:
+          cache-name: release-static
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Install dependencies on macOS
-      #   if: startsWith(matrix.os, 'macos')
-      #   run: |
-      #     brew update
-      #     brew install libpq sqlite3
+      - name: Build and test portable Linux binary
+        run: |
+          system=$(nix eval --impure --raw --expr builtins.currentSystem)
+          nix build --no-update-lock-file --print-build-logs --no-link \
+            ".#checks.$system.test-static" \
+            ".#checks.$system.doctest-static"
+          nix build --no-update-lock-file --print-build-logs .#static
+          result/bin/autopulse --version
 
-      # - name: Install dependencies on Windows
-      #   if: startsWith(matrix.os, 'windows')
-      #   run: |
-      #     choco install postgresql libsqlite3
+      - name: Package binary
+        env:
+          TARGET: ${{ matrix.target }}
+        run: tar -czf "autopulse-$TARGET.tar.gz" -C result/bin autopulse
+
+      - name: Upload release asset
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          TARGET: ${{ matrix.target }}
+        run: gh release upload "$RELEASE_TAG" "autopulse-$TARGET.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
+
+  windows:
+    name: x86_64-pc-windows-msvc
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_NET_GIT_FETCH_WITH_CLI: true
+      CARGO_NET_RETRY: 10
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -D warnings
+      RUSTUP_MAX_RETRIES: 10
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
@@ -90,55 +91,29 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-x86_64-pc-windows-msvc-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-release-${{ matrix.target }}-full-
+            ${{ runner.os }}-cargo-release-x86_64-pc-windows-msvc-full-
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: x86_64-pc-windows-msvc
           components: rustfmt,clippy
 
       - uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
         with:
-          target: ${{ matrix.target }}
+          target: x86_64-pc-windows-msvc
 
-      # - uses: taiki-e/install-action@cross
-      #   if: contains(matrix.target, '-musl')
-
-      # - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-      #   if: endsWith(matrix.target, 'windows-msvc')
-
-      # - run: |
-      #     echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-      #     vcpkg install openssl:x64-windows-static-md
-      #   if: startsWith(matrix.os, 'windows')
-
-      - run : |
-          sudo apt update -y && \
-          sudo apt install -y libssl-dev libpq-dev libsqlite3-dev
-        if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
-
-      - name: Use Strawberry Perl for OpenSSL build (Windows)
-        if: runner.os == 'Windows'
-        run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl" >> $GITHUB_ENV
-
-      # SQLite and PostgreSQL installations removed - vendored feature uses
-      # pq-sys/bundled and libsqlite3-sys/bundled which compile from source
-
-      # - run : |
-      #     brew update
-      #     brew install postgresql@14
-      #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
-      #   if: startsWith(matrix.os, 'macos')
+      - name: Use Strawberry Perl for OpenSSL build
+        run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl" >> "$GITHUB_ENV"
 
       - uses: taiki-e/upload-rust-binary-action@9db2ba52f2d913fae376c843748c9d2c2ac2c9ba # main
         with:
           bin: autopulse
-          target: ${{ matrix.target }}
+          target: x86_64-pc-windows-msvc
           tar: all
           zip: windows
-          features: ${{ (contains(matrix.target, '-musl') || startsWith(matrix.os, 'windows')) && 'vendored' || '' }}
+          features: vendored
           token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: ${{ github.event_name != 'release' }}

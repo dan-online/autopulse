@@ -89,25 +89,23 @@ pub struct AcquireHook {
 
 impl diesel::r2d2::CustomizeConnection<AnyConnection, diesel::r2d2::Error> for AcquireHook {
     fn on_acquire(&self, conn: &mut AnyConnection) -> Result<(), diesel::r2d2::Error> {
-        (|| {
-            match conn {
-                #[cfg(feature = "sqlite")]
-                AnyConnection::Sqlite(ref mut conn) => {
-                    conn.batch_execute("PRAGMA busy_timeout = 5000")?;
-                    conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
-                    conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")?;
-                    conn.batch_execute("PRAGMA foreign_keys = ON;")?;
+        match conn {
+            #[cfg(feature = "sqlite")]
+            AnyConnection::Sqlite(ref mut conn) => (|| {
+                conn.batch_execute("PRAGMA busy_timeout = 5000")?;
+                conn.batch_execute("PRAGMA synchronous = NORMAL;")?;
+                conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")?;
+                conn.batch_execute("PRAGMA foreign_keys = ON;")?;
 
-                    if self.setup {
-                        conn.batch_execute("PRAGMA journal_mode = WAL;")?;
-                    }
+                if self.setup {
+                    conn.batch_execute("PRAGMA journal_mode = WAL;")?;
                 }
-                #[cfg(feature = "postgres")]
-                AnyConnection::Postgresql(_) => {}
-            }
-            Ok(())
-        })()
-        .map_err(diesel::r2d2::Error::QueryError)
+                Ok(())
+            })()
+            .map_err(diesel::r2d2::Error::QueryError),
+            #[cfg(feature = "postgres")]
+            AnyConnection::Postgresql(_) => Ok(()),
+        }
     }
 }
 

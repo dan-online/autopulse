@@ -12,60 +12,14 @@ jobs:
   server:
     name: Server Build and Check
     runs-on: ubuntu-latest
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      AUTOPULSE_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/autopulse_test
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: autopulse_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: Checkout Project
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.11
-
-      - uses: rrbutani/use-nix-shell-action@v1
-
-      - name: Cargo Cache
-        uses: actions/cache@v6
+      - uses: ./.github/actions/setup-nix
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          restore-keys: |
-            ${{ runner.os }}-cargo-release-x86_64-unknown-linux-musl-
-          key: ${{ runner.os }}-cargo-release-x86_64-unknown-linux-musl-${{ hashFiles('**/Cargo.lock') }}
+          cache-name: checks
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build
-        run: cargo build --release
-
-      - name: Format Check
-        run: cargo fmt -- --check
-
-      - name: Clippy Check
-        run: cargo clippy --release --workspace -- -D warnings
-
-      - name: Test
-        run: cargo nextest run --release --workspace
-
-      - name: PostgreSQL Integration Tests
-        run: cargo test --locked --release -p autopulse-service --features sqlite,postgres --lib postgres_ -- --ignored --test-threads=1
-
-      - name: Backend Feature Checks
-        run: |
-          cargo check --locked -p autopulse-database --no-default-features --features sqlite
-          cargo check --locked -p autopulse-database --no-default-features --features postgres
+      - name: Build, format, lint, and test
+        run: nix flake check --no-update-lock-file --print-build-logs

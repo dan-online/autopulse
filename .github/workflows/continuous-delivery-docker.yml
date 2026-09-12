@@ -37,9 +37,6 @@ jobs:
   
   build:
     name: Build - ${{ matrix.platform.name }} - ${{ matrix.feature }}
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
     strategy:
       matrix:
         feature:
@@ -49,11 +46,9 @@ jobs:
         platform:
           - name: linux/amd64
             runner: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
             tag: -amd64
           - name: linux/arm64
             runner: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-musl
             tag: -arm64
     runs-on: ${{ matrix.platform.runner }}
     steps:
@@ -61,11 +56,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: ./.github/actions/setup-nix
+        with:
+          cache-name: image-${{ matrix.feature }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to the GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
@@ -80,27 +74,6 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata (labels)
-        id: meta
-        uses: docker/metadata-action@c3b064c6d7c32446d6bc214ea075f1caad2de35a
-        with:
-          images: ghcr.io/dan-online/autopulse,danonline/autopulse
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.11
-
-      - name: Cargo Cache
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-release-${{ matrix.platform.target }}-
 
       - name: Pull Request suffix
         run: |
@@ -117,68 +90,38 @@ jobs:
           fi
         id: tag
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
-          components: rustfmt,clippy
-
-      - uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
-        with:
-          target: ${{ matrix.platform.target }}
-
-      - name: Test binary
-        if: matrix.feature == 'full'
-        run: cargo test --locked --release --features vendored --target ${{ matrix.platform.target }} --workspace
-
-      - name: Build binary
-        if: matrix.feature == 'full'
-        run: cargo build --locked --release --features vendored --target ${{ matrix.platform.target }}
-
-      - name: Test binary
-        if: matrix.feature != 'full'
-        run: cargo test --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }} --workspace
-
-      - name: Build binary
-        if: matrix.feature != 'full'
-        run: cargo build --locked --release --no-default-features --features vendored,${{ matrix.feature }} --target ${{ matrix.platform.target }}
-
-      - name: Copy binary
+      - name: Build and test Nix image
         run: |
-          cp target/${{ matrix.platform.target }}/release/autopulse ./autopulse
+          system=$(nix eval --impure --raw --expr builtins.currentSystem)
+          nix build --no-update-lock-file --print-build-logs --no-link \
+            ".#checks.$system.test-${{ matrix.feature }}" \
+            ".#checks.$system.doctest-${{ matrix.feature }}"
+          nix build --no-update-lock-file --print-build-logs .#image-${{ matrix.feature }}
 
-          file ./autopulse
+      - name: Load and smoke-test image
+        run: |
+          docker load --input result
+          docker run --rm autopulse:${{ matrix.feature }} /bin/autopulse --help
 
-      # "latest-platform?" tag, full feature-set
-      - name: Create Docker Image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        if: matrix.feature == 'full'
-        with:
-          push: true
-          context: .
-          tags: |
-            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-            danonline/autopulse:${{ steps.tag.outputs.tag }}${{ matrix.platform.tag }}
-            ${{ steps.tag.outputs.tag_stable && format('ghcr.io/dan-online/autopulse:{0}{1}', steps.tag.outputs.tag_stable, matrix.platform.tag) || '' }}
-            ${{ steps.tag.outputs.tag_stable && format('danonline/autopulse:{0}{1}', steps.tag.outputs.tag_stable, matrix.platform.tag) || '' }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platform.name }}
-          build-args: ${{ matrix.platform.build_args }}
-
-      # "feature-platform?" tag, selected feature-set
-      - name: Build and push
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        if: matrix.feature != 'full'
-        with:
-          push: true
-          context: .
-          tags: |
-            ghcr.io/dan-online/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
-            danonline/autopulse:${{ steps.tag.outputs.tag }}-${{ matrix.feature }}${{ matrix.platform.tag }}
-            ${{ steps.tag.outputs.tag_stable && format('ghcr.io/dan-online/autopulse:{0}-{1}{2}', steps.tag.outputs.tag_stable, matrix.feature, matrix.platform.tag) || '' }}
-            ${{ steps.tag.outputs.tag_stable && format('danonline/autopulse:{0}-{1}{2}', steps.tag.outputs.tag_stable, matrix.feature, matrix.platform.tag) || '' }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platform.name }}
-          build-args: ${{ matrix.platform.build_args }}
+      - name: Push image
+        env:
+          FEATURE: ${{ matrix.feature }}
+          PLATFORM_SUFFIX: ${{ matrix.platform.tag }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_STABLE: ${{ steps.tag.outputs.tag_stable }}
+        run: |
+          FEATURE_SUFFIX=""
+          if [ "$FEATURE" != full ]; then
+            FEATURE_SUFFIX="-$FEATURE"
+          fi
+          for REPOSITORY in ghcr.io/dan-online/autopulse danonline/autopulse; do
+            for IMAGE_TAG in "$TAG" "$TAG_STABLE"; do
+              [ -n "$IMAGE_TAG" ] || continue
+              IMAGE="$REPOSITORY:$IMAGE_TAG$FEATURE_SUFFIX$PLATFORM_SUFFIX"
+              docker tag "autopulse:$FEATURE" "$IMAGE"
+              docker push "$IMAGE"
+            done
+          done
 
       
       
@@ -222,95 +165,22 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create and push manifests
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_STABLE: ${{ steps.tag.outputs.tag_stable }}
         run: |
           GHCR_BASE="ghcr.io/dan-online/autopulse"
-          DOCKERHUB_BASE="danonline/autopulse"
-          TAG="${{ steps.tag.outputs.tag }}"
-          TAG_STABLE="${{ steps.tag.outputs.tag_stable }}"
-          
-          # First, create and push all manifests to GHCR
-          # Get digests from GHCR only
-          AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-amd64 | jq -r '.manifests[0].digest')
-          ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-arm64 | jq -r '.manifests[0].digest')
-
-          POSTGRES_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-postgres-amd64 | jq -r '.manifests[0].digest')
-          POSTGRES_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-postgres-arm64 | jq -r '.manifests[0].digest')
-
-          SQLITE_AMD64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-sqlite-amd64 | jq -r '.manifests[0].digest')
-          SQLITE_ARM64_DIGEST=$(docker manifest inspect ${GHCR_BASE}:${TAG}-sqlite-arm64 | jq -r '.manifests[0].digest')
-
-          # Build manifests on GHCR
-          echo "Creating manifests on GHCR..."
-          
-          # Main manifest
-          docker manifest create ${GHCR_BASE}:${TAG} \
-              --amend ${GHCR_BASE}@${AMD64_DIGEST} \
-              --amend ${GHCR_BASE}@${ARM64_DIGEST}
-          
-          # Postgres manifest
-          docker manifest create ${GHCR_BASE}:${TAG}-postgres \
-              --amend ${GHCR_BASE}@${POSTGRES_AMD64_DIGEST} \
-              --amend ${GHCR_BASE}@${POSTGRES_ARM64_DIGEST}
-          
-          # SQLite manifest
-          docker manifest create ${GHCR_BASE}:${TAG}-sqlite \
-              --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
-              --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
-
-          docker manifest push ${GHCR_BASE}:${TAG}-postgres
-          docker manifest push ${GHCR_BASE}:${TAG}-sqlite
-          docker manifest push ${GHCR_BASE}:${TAG}
-
-          docker buildx imagetools create \
-            --tag danonline/autopulse:${TAG} \
-            ghcr.io/dan-online/autopulse:${TAG}
-
-          docker buildx imagetools create \
-            --tag danonline/autopulse:${TAG}-postgres \
-            ghcr.io/dan-online/autopulse:${TAG}-postgres
-
-          docker buildx imagetools create \
-            --tag danonline/autopulse:${TAG}-sqlite \
-            ghcr.io/dan-online/autopulse:${TAG}-sqlite
-          
-          if [ -n "$TAG_STABLE" ]; then
-            echo "Creating stable manifests..."
-            docker manifest create ${GHCR_BASE}:${TAG_STABLE} \
-                --amend ${GHCR_BASE}@${AMD64_DIGEST} \
-                --amend ${GHCR_BASE}@${ARM64_DIGEST}
-            docker manifest create ${GHCR_BASE}:${TAG_STABLE}-postgres \
-                --amend ${GHCR_BASE}@${POSTGRES_AMD64_DIGEST} \
-                --amend ${GHCR_BASE}@${POSTGRES_ARM64_DIGEST}
-            docker manifest create ${GHCR_BASE}:${TAG_STABLE}-sqlite \
-                --amend ${GHCR_BASE}@${SQLITE_AMD64_DIGEST} \
-                --amend ${GHCR_BASE}@${SQLITE_ARM64_DIGEST}
-
-            docker manifest push ${GHCR_BASE}:${TAG_STABLE}-postgres
-            docker manifest push ${GHCR_BASE}:${TAG_STABLE}-sqlite
-            docker manifest push ${GHCR_BASE}:${TAG_STABLE}
-
-            docker buildx imagetools create \
-              --tag danonline/autopulse:${TAG_STABLE} \
-              ghcr.io/dan-online/autopulse:${TAG_STABLE}
-
-            docker buildx imagetools create \
-              --tag danonline/autopulse:${TAG_STABLE}-postgres \
-              ghcr.io/dan-online/autopulse:${TAG_STABLE}-postgres
-
-            docker buildx imagetools create \
-              --tag danonline/autopulse:${TAG_STABLE}-sqlite \
-              ghcr.io/dan-online/autopulse:${TAG_STABLE}-sqlite
-          fi
-          
-          echo "Copy images over to Docker Hub..."
-          # docker pull ${GHCR_BASE}:${TAG} -q
-          # docker pull ${GHCR_BASE}:${TAG}-postgres -q
-          # docker pull ${GHCR_BASE}:${TAG}-sqlite -q
-
-          # docker tag ${GHCR_BASE}:${TAG} ${DOCKERHUB_BASE}:${TAG}
-          # docker tag ${GHCR_BASE}:${TAG}-postgres ${DOCKERHUB_BASE}:${TAG}-postgres
-          # docker tag ${GHCR_BASE}:${TAG}-sqlite ${DOCKERHUB_BASE}:${TAG}-sqlite
-          
-          # docker push ${DOCKERHUB_BASE}:${TAG}-postgres -q
-          # docker push ${DOCKERHUB_BASE}:${TAG}-sqlite -q
-          # docker push ${DOCKERHUB_BASE}:${TAG} -q
+          for FEATURE_SUFFIX in "" -postgres -sqlite; do
+            SOURCE="${GHCR_BASE}:${TAG}${FEATURE_SUFFIX}"
+            for IMAGE_TAG in "$TAG" "$TAG_STABLE"; do
+              [ -n "$IMAGE_TAG" ] || continue
+              DESTINATION="${GHCR_BASE}:${IMAGE_TAG}${FEATURE_SUFFIX}"
+              docker manifest create "$DESTINATION" \
+                --amend "${SOURCE}-amd64" \
+                --amend "${SOURCE}-arm64"
+              docker manifest push "$DESTINATION"
+              docker buildx imagetools create \
+                --tag "danonline/autopulse:${IMAGE_TAG}${FEATURE_SUFFIX}" \
+                "$DESTINATION"
+            done
+          done
