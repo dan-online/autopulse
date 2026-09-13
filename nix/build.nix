@@ -131,7 +131,7 @@ let
           cargoExtraArgs = "--locked -p autopulse-service --no-default-features --features ${lib.concatStringsSep "," databaseFeatures}";
           cargoTestExtraArgs = "--lib postgres_ -- --ignored --test-threads=1";
           doInstallCargoArtifacts = false;
-          nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ pkgs.postgresql_17 ];
+          nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ pkgs.postgresql_18 ];
           preCheck = ''
             export PGDATA="$TMPDIR/postgres"
             export PGHOST="$TMPDIR"
