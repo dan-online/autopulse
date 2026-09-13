@@ -98,7 +98,7 @@ jobs:
             ".#checks.$system.doctest-${{ matrix.feature }}"
           nix build --no-update-lock-file --print-build-logs .#image-${{ matrix.feature }}
 
-      - name: Load and smoke-test image
+      - name: Load and check cli
         run: |
           docker load --input result
           docker run --rm autopulse:${{ matrix.feature }} /bin/autopulse --help

@@ -66,15 +66,43 @@ let
           OPENSSL_NO_VENDOR = "1";
         };
       };
-      cargoArtifacts = builder.buildDepsOnly commonArgs;
+      cargoArtifacts = builder.buildDepsOnly (
+        commonArgs
+        // {
+          buildPhaseCargoCommand = "cargoWithProfile build ${commonArgs.cargoExtraArgs}";
+          doCheck = false;
+        }
+      );
       appArgs = commonArgs // {
         inherit cargoArtifacts;
         env = commonArgs.env // {
           GIT_REVISION = self.shortRev or self.dirtyShortRev or "unknown";
         };
       };
-      testArgs = appArgs // {
-        env = appArgs.env // {
+      ciArgs = commonArgs // {
+        CARGO_PROFILE = "ci";
+      };
+      checkArgs = ciArgs // {
+        cargoArtifacts = builder.buildDepsOnly (
+          ciArgs
+          // {
+            buildPhaseCargoCommand = "cargoWithProfile check ${commonArgs.cargoExtraArgs} --all-targets";
+          }
+        );
+        env = appArgs.env;
+      };
+      testArtifacts = builder.mkCargoDerivation (
+        checkArgs
+        // {
+          pnameSuffix = "-test-artifacts";
+          buildPhaseCargoCommand = "cargoWithProfile test ${commonArgs.cargoExtraArgs} --no-run";
+          doCheck = false;
+          doInstallCargoArtifacts = true;
+        }
+      );
+      testArgs = checkArgs // {
+        cargoArtifacts = testArtifacts;
+        env = checkArgs.env // {
           SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
         };
       };
@@ -110,14 +138,14 @@ let
         }
       );
       clippy = builder.cargoClippy (
-        appArgs
+        checkArgs
         // {
           cargoClippyExtraArgs = "-- --deny warnings";
           doInstallCargoArtifacts = false;
         }
       );
       database = builder.mkCargoDerivation (
-        appArgs
+        checkArgs
         // {
           pnameSuffix = "-database-check";
           buildPhaseCargoCommand = "cargoWithProfile check --locked -p autopulse-database --no-default-features --features ${lib.concatStringsSep "," databaseFeatures}";
@@ -128,7 +156,6 @@ let
       postgresTest = builder.cargoTest (
         testArgs
         // {
-          cargoExtraArgs = "--locked -p autopulse-service --no-default-features --features ${lib.concatStringsSep "," databaseFeatures}";
           cargoTestExtraArgs = "--lib postgres_ -- --ignored --test-threads=1";
           doInstallCargoArtifacts = false;
           nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ pkgs.postgresql_18 ];
@@ -147,7 +174,7 @@ let
         }
       );
       docs = builder.cargoDoc (
-        appArgs
+        checkArgs
         // {
           postInstall = ''
             echo '<meta http-equiv="refresh" content="0;url=/autopulse/index.html">' > "$out/share/doc/index.html"

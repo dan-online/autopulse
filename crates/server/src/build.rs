@@ -22,7 +22,7 @@ fn main() {
     println!("cargo:rustc-env=GIT_REVISION={}", git_hash.trim());
 
     // Content hash → cache-buster on /ui/static/*. Stable across no-op rebuilds.
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/build.rs");
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     hash_dir(Path::new("static"), &mut hasher);
     println!("cargo:rustc-env=ASSETS_VERSION={:x}", hasher.finish());
