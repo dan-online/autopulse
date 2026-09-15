@@ -7,6 +7,9 @@ inputs:
   github-token:
     description: Token for authenticated Nix input downloads
     required: true
+  save-cache:
+    description: Save built outputs to the cache
+    default: "true"
 runs:
   using: composite
   steps:
@@ -17,8 +20,9 @@ runs:
           keep-outputs = true
     - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
       with:
-        primary-key: nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}-${{ inputs.cache-name }}
+        save: ${{ inputs.save-cache }}
+        primary-key: nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ inputs.cache-name }}-${{ github.sha }}
         restore-prefixes-first-match: |
+          nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ inputs.cache-name }}-
           nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-
           nix-${{ runner.arch }}-
-        restore-prefixes-all-matches: nix-${{ runner.arch }}-${{ hashFiles('flake.lock', 'flake.nix', 'nix/**/*.nix', 'Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}-

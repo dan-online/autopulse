@@ -22,8 +22,10 @@ jobs:
 
       - uses: ./.github/actions/setup-nix
         with:
-          cache-name: docs
+          # Main CI caches docs for main pushes and PRs to main.
+          cache-name: ${{ github.event_name == 'pull_request' && github.base_ref != 'main' && 'docs' || 'checks' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          save-cache: ${{ github.event_name == 'pull_request' && github.base_ref != 'main' }}
 
       - name: Build docs
         run: |
