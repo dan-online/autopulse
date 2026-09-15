@@ -89,7 +89,6 @@ let
             buildPhaseCargoCommand = "cargoWithProfile check ${commonArgs.cargoExtraArgs} --all-targets";
           }
         );
-        env = appArgs.env;
       };
       testArtifacts = builder.mkCargoDerivation (
         checkArgs

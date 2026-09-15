@@ -22,4 +22,19 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build, format, lint, and test
-        run: nix flake check --no-update-lock-file --print-build-logs
+        run: |
+          nix flake check --no-update-lock-file --no-build
+          system=$(nix eval --impure --raw --expr builtins.currentSystem)
+          # Required Docker jobs cover native release builds.
+          checks=$(nix eval --no-update-lock-file --raw ".#checks.$system" --apply '
+            checks: builtins.concatStringsSep "\n" (
+              builtins.attrNames (builtins.removeAttrs checks [
+                "build-full" "build-postgres" "build-sqlite"
+              ])
+            )
+          ')
+          targets=()
+          while IFS= read -r check; do
+            targets+=(".#checks.$system.$check")
+          done <<< "$checks"
+          nix build --no-update-lock-file --print-build-logs --no-link "${targets[@]}"

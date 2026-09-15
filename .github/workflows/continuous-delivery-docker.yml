@@ -90,13 +90,20 @@ jobs:
           fi
         id: tag
 
-      - name: Build and test Nix image
+      - name: Test build
+        # Main CI covers x86 tests for main pushes and PRs targeting main.
+        if: >-
+          matrix.platform.name == 'linux/arm64' ||
+          github.event_name == 'release' ||
+          (github.event_name == 'pull_request' && github.base_ref != 'main')
         run: |
           system=$(nix eval --impure --raw --expr builtins.currentSystem)
           nix build --no-update-lock-file --print-build-logs --no-link \
             ".#checks.$system.test-${{ matrix.feature }}" \
             ".#checks.$system.doctest-${{ matrix.feature }}"
-          nix build --no-update-lock-file --print-build-logs .#image-${{ matrix.feature }}
+
+      - name: Build Nix image
+        run: nix build --no-update-lock-file --print-build-logs .#image-${{ matrix.feature }}
 
       - name: Load and check cli
         run: |
