@@ -1,23 +1,28 @@
 use std::{
-    fs,
+    env, fs,
     hash::{Hash, Hasher},
     path::Path,
     process::Command,
 };
 
 fn main() {
-    let git_hash = Command::new("git")
-        .args(["describe", "--always", "--tags"])
-        .output()
+    println!("cargo:rerun-if-env-changed=GIT_REVISION");
+    let git_hash = env::var("GIT_REVISION")
         .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .or_else(|| {
+            Command::new("git")
+                .args(["describe", "--always", "--tags"])
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+        })
         .unwrap_or_else(|| "unknown".to_string());
 
     println!("cargo:rustc-env=GIT_REVISION={}", git_hash.trim());
 
     // Content hash → cache-buster on /ui/static/*. Stable across no-op rebuilds.
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/build.rs");
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     hash_dir(Path::new("static"), &mut hasher);
     println!("cargo:rustc-env=ASSETS_VERSION={:x}", hasher.finish());

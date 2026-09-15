@@ -6,6 +6,8 @@
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
     flake-utils.url = "github:numtide/flake-utils";
+
+    crane.url = "github:ipetkov/crane";
   };
 
   outputs =
@@ -14,6 +16,7 @@
       nixpkgs,
       rust-overlay,
       flake-utils,
+      crane,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -27,6 +30,15 @@
         llvmPackages = pkgs.llvmPackages;
 
         rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+        build = import ./nix/build.nix {
+          inherit
+            self
+            pkgs
+            rust
+            crane
+            ;
+        };
 
         formatterPackage = pkgs.nixfmt-tree;
 
@@ -49,6 +61,9 @@
       in
       {
         formatter = formatterPackage;
+
+        packages = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux build.packages;
+        checks = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux build.checks;
 
         devShells.default = pkgs.mkShell {
           packages = [

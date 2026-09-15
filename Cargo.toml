@@ -43,6 +43,11 @@ clap = { version = "4.5.29", default-features = false, features = [
 [profile.release]
 lto = true
 
+[profile.ci]
+inherits = "release"
+opt-level = 1
+lto = false
+
 [workspace]
 members = ["crates/*"]
 
