@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "blast-radius": {
+      "source": "cursor/plugins",
+      "sourceType": "github",
+      "skillPath": "pstack/skills/blast-radius/SKILL.md",
+      "computedHash": "748de95ad5aae5efa666a8ca5656eb38684b4c64be7b58e27827c9038dc4214c"
+    }
+  }
+}
