@@ -8,7 +8,7 @@ use autopulse_utils::{get_url, RuntimePath};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Plex {
@@ -22,7 +22,7 @@ pub struct Plex {
     /// Whether to analyze the file (default: false)
     #[serde(default)]
     pub analyze: bool,
-    /// Empty library trash after scans finish (default: false).
+    /// Empty library trash when Plex reports scan completion (default: false).
     /// Removes all unavailable items in each scanned library, not just the scanned paths.
     #[serde(default)]
     pub empty_trash: bool,
@@ -401,8 +401,13 @@ impl Plex {
         client.get(url).perform().await.map(|_| ())
     }
 
-    async fn empty_library_trash(&self, key: &str, scanned_at: Option<u64>) -> anyhow::Result<()> {
-        tokio::time::timeout(std::time::Duration::from_secs(300), async {
+    async fn empty_library_trash(
+        &self,
+        key: &str,
+        scanned_at: Option<u64>,
+    ) -> anyhow::Result<bool> {
+        let scan_finished = tokio::time::timeout(std::time::Duration::from_secs(300), async {
+            let started_at = tokio::time::Instant::now();
             let mut observed_scan = false;
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -421,19 +426,26 @@ impl Plex {
                             .zip(library.scanned_at)
                             .is_some_and(|(before, after)| after > before);
                         if observed_scan || scan_finished {
-                            return Ok::<_, anyhow::Error>(());
+                            return Ok::<_, anyhow::Error>(true);
                         }
                     }
                     None => anyhow::bail!("Plex did not report the library scan status"),
+                }
+                if !observed_scan && started_at.elapsed() >= std::time::Duration::from_secs(5) {
+                    return Ok(false);
                 }
             }
         })
         .await
         .context("timed out waiting for Plex library scan to finish")??;
 
+        if !scan_finished {
+            return Ok(false);
+        }
+
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("library/sections/{key}/emptyTrash"))?;
-        client.put(url).perform().await.map(|_| ())
+        client.put(url).perform().await.map(|_| true)
     }
 }
 
@@ -572,7 +584,8 @@ impl TargetProcess for Plex {
             };
 
             match result {
-                Ok(()) => debug!("emptied trash for library '{key}'"),
+                Ok(true) => debug!("emptied trash for library '{key}'"),
+                Ok(false) => warn!("skipped trash for library '{key}': Plex did not report a scan"),
                 Err(e) => {
                     error!("failed to empty trash for library '{key}': {e:#}");
                     for id in cleanup.event_ids {
