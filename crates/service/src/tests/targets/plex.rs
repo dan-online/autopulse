@@ -54,6 +54,15 @@ async fn process(
     events: &[&ScanEvent],
     responses: Vec<(&'static str, u16, Value)>,
 ) -> Vec<String> {
+    process_with_optional_responses(empty_trash, events, responses, false).await
+}
+
+async fn process_with_optional_responses(
+    empty_trash: Option<bool>,
+    events: &[&ScanEvent],
+    responses: Vec<(&'static str, u16, Value)>,
+    allow_unused: bool,
+) -> Vec<String> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/plex/", listener.local_addr().unwrap());
     let expected = responses
@@ -108,7 +117,12 @@ async fn process(
     let plex: Plex = serde_json::from_value(config).unwrap();
     let result = plex.process(events).await.unwrap();
     server.abort();
-    assert_eq!(*requests.lock().unwrap(), expected);
+    let requests = requests.lock().unwrap();
+    if allow_unused {
+        assert!(expected.starts_with(&requests));
+    } else {
+        assert_eq!(*requests, expected);
+    }
     result
 }
 
@@ -207,6 +221,21 @@ async fn recognizes_scan_that_finishes_between_polls() {
             ]
         )
         .await,
+        vec!["one"]
+    );
+}
+
+#[tokio::test]
+async fn undetected_scan_skips_cleanup_without_retrying() {
+    let ev = event("one");
+    let mut responses = vec![
+        (LIBRARIES, 200, libraries(json!(false))),
+        (SCAN, 200, json!({})),
+    ];
+    responses.extend((0..6).map(|_| (LIBRARIES, 200, libraries(json!(false)))));
+
+    assert_eq!(
+        process_with_optional_responses(Some(true), &[&ev], responses, true).await,
         vec!["one"]
     );
 }
