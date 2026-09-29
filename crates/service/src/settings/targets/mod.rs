@@ -293,6 +293,12 @@ pub enum Target {
 }
 
 impl Target {
+    pub(crate) fn queue_event(&self, ev: &ScanEvent) {
+        if let Self::Plex(target) = self {
+            target.queue_event(ev);
+        }
+    }
+
     fn rewrite(&self) -> &Option<Rewrite> {
         match self {
             Self::Plex(t) => &t.rewrite,

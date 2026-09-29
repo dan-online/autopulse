@@ -124,6 +124,18 @@ impl PulseManager {
 
     /// `send` error (no subscribers) is swallowed.
     pub fn publish(&self, kind: EventType, event: &ScanEvent) {
+        if kind == EventType::New {
+            for (name, target) in &self.settings.targets {
+                let excluded = self
+                    .settings
+                    .triggers
+                    .get(&event.event_source)
+                    .is_some_and(|trigger| trigger.excludes().contains(name));
+                if !excluded && target.should_process_event(event) {
+                    target.queue_event(event);
+                }
+            }
+        }
         let _ = self.bus.send(EventBroadcast {
             kind,
             event: event.clone(),

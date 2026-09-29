@@ -5,9 +5,13 @@ use crate::settings::targets::TargetProcess;
 use anyhow::Context;
 use autopulse_database::models::ScanEvent;
 use autopulse_utils::{get_url, RuntimePath};
+use futures::StreamExt;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use tracing::{debug, error, trace, warn};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -34,6 +38,8 @@ pub struct Plex {
     /// HTTP request options
     #[serde(default)]
     pub request: Request,
+    #[serde(skip)]
+    runtime: Arc<PlexRuntime>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -80,17 +86,287 @@ struct Location {
 struct Library {
     title: String,
     key: String,
-    refreshing: Option<bool>,
-    #[serde(rename = "scannedAt")]
-    scanned_at: Option<u64>,
     #[serde(rename = "Location")]
     location: Vec<Location>,
 }
 
 struct LibraryCleanup {
-    scanned_at: Option<u64>,
-    event_ids: HashSet<String>,
     scan_failed: bool,
+}
+
+#[derive(Default)]
+struct PlexRuntime {
+    libraries: Mutex<Vec<Library>>,
+    generations: Mutex<HashMap<String, u64>>,
+    cleanups: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
+}
+
+#[derive(Deserialize, Debug)]
+struct Notification {
+    #[serde(rename = "NotificationContainer")]
+    container: NotificationContainer,
+}
+
+#[derive(Deserialize, Debug, Default)]
+struct NotificationContainer {
+    #[serde(rename = "ActivityNotification", default)]
+    activities: Vec<ActivityNotification>,
+}
+
+#[derive(Deserialize, Debug)]
+struct ActivityNotification {
+    event: String,
+    uuid: String,
+    #[serde(rename = "Activity")]
+    activity: Activity,
+}
+
+#[derive(Deserialize, Debug)]
+struct Activity {
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(rename = "Context")]
+    context: Option<ActivityContext>,
+}
+
+#[derive(Deserialize, Debug)]
+struct ActivityContext {
+    #[serde(rename = "librarySectionID")]
+    library_section_id: Option<String>,
+}
+
+#[derive(Default)]
+struct ScanNotificationState {
+    active: HashMap<String, Option<String>>,
+    completed_sections: HashSet<String>,
+    last_scan_notification: HashMap<String, tokio::time::Instant>,
+}
+
+impl ScanNotificationState {
+    fn apply(&mut self, notification: Notification) {
+        for notification in notification.container.activities {
+            if notification.activity.kind != "library.update.section" {
+                continue;
+            }
+            let section = notification
+                .activity
+                .context
+                .and_then(|context| context.library_section_id)
+                .or_else(|| self.active.get(&notification.uuid).cloned().flatten());
+
+            match notification.event.as_str() {
+                "started" | "updated" => {
+                    if let Some(section) = &section {
+                        self.last_scan_notification
+                            .insert(section.clone(), tokio::time::Instant::now());
+                    }
+                    self.active.insert(notification.uuid, section);
+                }
+                "ended" => {
+                    self.active.remove(&notification.uuid);
+                    if let Some(section) = section {
+                        self.last_scan_notification
+                            .insert(section.clone(), tokio::time::Instant::now());
+                        self.completed_sections.insert(section);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn completion_confirmed(&self, section: &str) -> bool {
+        self.completed_sections.contains(section)
+            && !self.active.values().any(|active_section| {
+                active_section
+                    .as_deref()
+                    .is_some_and(|active| active == section)
+            })
+    }
+}
+
+type PlexWebSocket = WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
+
+#[cfg(not(test))]
+const SCAN_QUIET_PERIOD: Duration = Duration::from_secs(5);
+#[cfg(test)]
+const SCAN_QUIET_PERIOD: Duration = Duration::from_millis(10);
+
+struct ScanNotifications {
+    receiver: tokio::sync::mpsc::UnboundedReceiver<NotificationStreamEvent>,
+    state: ScanNotificationState,
+    reader: tokio::task::JoinHandle<()>,
+}
+
+enum NotificationStreamEvent {
+    Notification(Notification),
+    Reconnected,
+}
+
+impl ScanNotifications {
+    async fn connect(url: url::Url) -> anyhow::Result<Self> {
+        let (socket, _) = connect_async(url.as_str())
+            .await
+            .context("failed to connect to Plex notification websocket")?;
+        debug!("connected to Plex notification websocket");
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+        let reader = tokio::spawn(Self::read_notifications(url, socket, sender));
+        Ok(Self {
+            receiver,
+            state: ScanNotificationState::default(),
+            reader,
+        })
+    }
+
+    async fn reconnect(url: &url::Url) -> PlexWebSocket {
+        let mut delay = Duration::from_secs(1);
+        loop {
+            warn!(
+                "Plex notification websocket disconnected; reconnecting in {} second(s)",
+                delay.as_secs()
+            );
+            tokio::time::sleep(delay).await;
+            match connect_async(url.as_str()).await {
+                Ok((socket, _)) => {
+                    debug!("reconnected to Plex notification websocket");
+                    return socket;
+                }
+                Err(error) => {
+                    warn!("failed to reconnect to Plex notification websocket: {error}");
+                    delay = (delay * 2).min(Duration::from_secs(30));
+                }
+            }
+        }
+    }
+
+    async fn read_notifications(
+        url: url::Url,
+        mut socket: PlexWebSocket,
+        sender: tokio::sync::mpsc::UnboundedSender<NotificationStreamEvent>,
+    ) {
+        loop {
+            match socket.next().await {
+                Some(Ok(Message::Text(payload))) => {
+                    match serde_json::from_str::<Notification>(&payload) {
+                        Ok(notification) => {
+                            if sender
+                                .send(NotificationStreamEvent::Notification(notification))
+                                .is_err()
+                            {
+                                return;
+                            }
+                        }
+                        Err(error) => trace!("ignored malformed Plex notification: {error}"),
+                    }
+                }
+                Some(Ok(Message::Binary(payload))) => {
+                    match serde_json::from_slice::<Notification>(&payload) {
+                        Ok(notification) => {
+                            if sender
+                                .send(NotificationStreamEvent::Notification(notification))
+                                .is_err()
+                            {
+                                return;
+                            }
+                        }
+                        Err(error) => trace!("ignored malformed Plex notification: {error}"),
+                    }
+                }
+                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => {
+                    socket = Self::reconnect(&url).await;
+                    if sender.send(NotificationStreamEvent::Reconnected).is_err() {
+                        return;
+                    }
+                }
+                Some(Ok(_)) => {}
+            }
+        }
+    }
+
+    fn apply(&mut self, event: NotificationStreamEvent) {
+        match event {
+            NotificationStreamEvent::Notification(notification) => self.state.apply(notification),
+            NotificationStreamEvent::Reconnected => {
+                // Events may have been lost while disconnected. Require fresh completion
+                // evidence per section instead of risking cleanup after a missed scan.
+                self.state.active.clear();
+                self.state.completed_sections.clear();
+                self.state.last_scan_notification.clear();
+            }
+        }
+    }
+
+    fn drain_pending(&mut self) -> anyhow::Result<()> {
+        loop {
+            match self.receiver.try_recv() {
+                Ok(event) => self.apply(event),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => return Ok(()),
+                Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                    anyhow::bail!("Plex notification websocket reader stopped")
+                }
+            }
+        }
+    }
+
+    async fn wait_for_scan(&mut self, section: &str) -> anyhow::Result<()> {
+        tokio::time::timeout(Duration::from_secs(300), async {
+            loop {
+                self.drain_pending()?;
+                let quiet_until = self.state.completion_confirmed(section).then(|| {
+                    self.state
+                        .last_scan_notification
+                        .get(section)
+                        .copied()
+                        .expect("a completed section has a notification timestamp")
+                        + SCAN_QUIET_PERIOD
+                });
+
+                if let Some(deadline) = quiet_until {
+                    if tokio::time::Instant::now() >= deadline {
+                        // Give the always-running reader a chance to enqueue socket data that
+                        // became readable at the same instant as the quiet-period timer.
+                        tokio::task::yield_now().await;
+                        self.drain_pending()?;
+                        if self.state.completion_confirmed(section)
+                            && self
+                                .state
+                                .last_scan_notification
+                                .get(section)
+                                .is_some_and(|last| {
+                                    *last + SCAN_QUIET_PERIOD <= tokio::time::Instant::now()
+                                })
+                        {
+                            return Ok::<_, anyhow::Error>(());
+                        }
+                        continue;
+                    }
+
+                    tokio::select! {
+                        biased;
+                        event = self.receiver.recv() => {
+                            self.apply(event.context("Plex notification websocket reader stopped")?);
+                        }
+                        () = tokio::time::sleep_until(deadline) => {}
+                    }
+                } else {
+                    let event = self
+                        .receiver
+                        .recv()
+                        .await
+                        .context("Plex notification websocket reader stopped")?;
+                    self.apply(event);
+                }
+            }
+        })
+        .await
+        .context("timed out waiting for Plex library scans to finish")?
+    }
+}
+
+impl Drop for ScanNotifications {
+    fn drop(&mut self) {
+        self.reader.abort();
+    }
 }
 
 #[doc(hidden)]
@@ -155,6 +431,88 @@ fn scan_directory(path: &str) -> &str {
 }
 
 impl Plex {
+    pub(crate) fn queue_event(&self, ev: &ScanEvent) {
+        if !self.empty_trash {
+            return;
+        }
+        let path = ev.get_path(&self.rewrite);
+        let libraries = self.runtime.libraries.lock().unwrap();
+        let sections = self
+            .get_libraries(&libraries, &path)
+            .into_iter()
+            .map(|library| library.key)
+            .collect::<HashSet<_>>();
+        drop(libraries);
+        self.invalidate_cleanups(&sections);
+    }
+
+    fn invalidate_cleanups(&self, sections: &HashSet<String>) -> HashMap<String, u64> {
+        let mut generations = self.runtime.generations.lock().unwrap();
+        let mut current = HashMap::new();
+        for section in sections {
+            let generation = generations.entry(section.clone()).or_default();
+            *generation = generation.wrapping_add(1);
+            current.insert(section.clone(), *generation);
+        }
+        drop(generations);
+
+        let mut cleanups = self.runtime.cleanups.lock().unwrap();
+        for section in sections {
+            if let Some(cleanup) = cleanups.remove(section) {
+                cleanup.abort();
+            }
+        }
+        current
+    }
+
+    fn cleanup_generation(&self, section: &str) -> u64 {
+        self.runtime
+            .generations
+            .lock()
+            .unwrap()
+            .get(section)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn schedule_cleanup(
+        &self,
+        section: String,
+        generation: u64,
+        mut notifications: ScanNotifications,
+    ) {
+        let plex = self.clone();
+        let task_section = section.clone();
+        let cleanup = tokio::spawn(async move {
+            let result = notifications.wait_for_scan(&task_section).await;
+            if plex.cleanup_generation(&task_section) != generation {
+                debug!("cancelled stale trash cleanup for library '{task_section}'");
+                return;
+            }
+            match result {
+                Ok(()) => match plex.empty_library_trash(&task_section).await {
+                    Ok(()) => debug!("emptied trash for library '{task_section}'"),
+                    Err(error) => {
+                        error!("failed to empty trash for library '{task_section}': {error:#}")
+                    }
+                },
+                Err(error) => {
+                    error!("failed to empty trash for library '{task_section}': {error:#}")
+                }
+            }
+        });
+
+        if let Some(previous) = self
+            .runtime
+            .cleanups
+            .lock()
+            .unwrap()
+            .insert(section, cleanup)
+        {
+            previous.abort();
+        }
+    }
+
     fn get_client(&self) -> anyhow::Result<reqwest::Client> {
         let mut headers = header::HeaderMap::new();
 
@@ -165,6 +523,18 @@ impl Plex {
             .client_builder(headers)
             .build()
             .map_err(Into::into)
+    }
+
+    fn notification_url(&self) -> anyhow::Result<url::Url> {
+        let mut url = get_url(&self.url)?.join(":/websockets/notifications")?;
+        match url.scheme() {
+            "http" => url.set_scheme("ws").expect("ws is a valid URL scheme"),
+            "https" => url.set_scheme("wss").expect("wss is a valid URL scheme"),
+            scheme => anyhow::bail!("unsupported Plex URL scheme '{scheme}'"),
+        }
+        url.query_pairs_mut()
+            .append_pair("X-Plex-Token", &self.token);
+        Ok(url)
     }
 
     async fn libraries(&self) -> anyhow::Result<Vec<Library>> {
@@ -401,57 +771,51 @@ impl Plex {
         client.get(url).perform().await.map(|_| ())
     }
 
-    async fn empty_library_trash(
-        &self,
-        key: &str,
-        scanned_at: Option<u64>,
-    ) -> anyhow::Result<bool> {
-        let scan_finished = tokio::time::timeout(std::time::Duration::from_secs(300), async {
-            let started_at = tokio::time::Instant::now();
-            let mut observed_scan = false;
-            loop {
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                let library = self
-                    .libraries()
-                    .await?
-                    .into_iter()
-                    .find(|library| library.key == key)
-                    .context("scanned library no longer exists")?;
-                match library.refreshing {
-                    Some(true) => observed_scan = true,
-                    Some(false) => {
-                        // Idle alone can mean queued. A newer timestamp also catches
-                        // short scans that start and finish between polls.
-                        let scan_finished = scanned_at
-                            .zip(library.scanned_at)
-                            .is_some_and(|(before, after)| after > before);
-                        if observed_scan || scan_finished {
-                            return Ok::<_, anyhow::Error>(true);
-                        }
-                    }
-                    None => anyhow::bail!("Plex did not report the library scan status"),
-                }
-                if !observed_scan && started_at.elapsed() >= std::time::Duration::from_secs(5) {
-                    return Ok(false);
-                }
-            }
-        })
-        .await
-        .context("timed out waiting for Plex library scan to finish")??;
-
-        if !scan_finished {
-            return Ok(false);
-        }
-
+    async fn empty_library_trash(&self, key: &str) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let url = get_url(&self.url)?.join(&format!("library/sections/{key}/emptyTrash"))?;
-        client.put(url).perform().await.map(|_| true)
+        client.put(url).perform().await.map(|_| ())
     }
 }
 
 impl TargetProcess for Plex {
     async fn process(&self, evs: &[&ScanEvent]) -> anyhow::Result<Vec<String>> {
         let libraries = self.libraries().await.context("failed to get libraries")?;
+        *self.runtime.libraries.lock().unwrap() = libraries.clone();
+
+        let cleanup_sections = if self.empty_trash {
+            evs.iter()
+                .flat_map(|ev| {
+                    let path = ev.get_path(&self.rewrite);
+                    self.get_libraries(&libraries, &path)
+                        .into_iter()
+                        .map(|library| library.key)
+                })
+                .collect::<HashSet<_>>()
+        } else {
+            HashSet::new()
+        };
+        let cleanup_generations = self.invalidate_cleanups(&cleanup_sections);
+        let mut notifications = HashMap::new();
+        if !cleanup_sections.is_empty() {
+            match self.notification_url() {
+                Ok(url) => {
+                    for section in &cleanup_sections {
+                        match ScanNotifications::connect(url.clone()).await {
+                            Ok(watcher) => {
+                                notifications.insert(section.clone(), watcher);
+                            }
+                            Err(error) => error!(
+                                "failed to watch Plex section '{section}'; trash cleanup will be skipped: {error:#}"
+                            ),
+                        }
+                    }
+                }
+                Err(error) => error!(
+                    "failed to build Plex notification URL; trash cleanup will be skipped: {error:#}"
+                ),
+            }
+        }
 
         let mut succeeded: HashMap<String, bool> = HashMap::new();
         let mut cleanups: HashMap<String, LibraryCleanup> = HashMap::new();
@@ -477,15 +841,9 @@ impl TargetProcess for Plex {
 
                 let scan_result = self.scan(ev, &library).await;
                 if self.empty_trash {
-                    let cleanup =
-                        cleanups
-                            .entry(library.key.clone())
-                            .or_insert_with(|| LibraryCleanup {
-                                scanned_at: library.scanned_at,
-                                event_ids: HashSet::new(),
-                                scan_failed: false,
-                            });
-                    cleanup.event_ids.insert(ev.id.clone());
+                    let cleanup = cleanups
+                        .entry(library.key.clone())
+                        .or_insert_with(|| LibraryCleanup { scan_failed: false });
                     cleanup.scan_failed |= scan_result.is_err();
                 }
 
@@ -576,22 +934,19 @@ impl TargetProcess for Plex {
             }
         }
 
-        for (key, cleanup) in cleanups {
-            let result = if cleanup.scan_failed {
-                Err(anyhow::anyhow!("a scan failed for this library"))
-            } else {
-                self.empty_library_trash(&key, cleanup.scanned_at).await
-            };
+        let mut cleanups = cleanups.into_iter().collect::<Vec<_>>();
+        cleanups.sort_by(|(key_a, _), (key_b, _)| key_a.cmp(key_b));
 
-            match result {
-                Ok(true) => debug!("emptied trash for library '{key}'"),
-                Ok(false) => warn!("skipped trash for library '{key}': Plex did not report a scan"),
-                Err(e) => {
-                    error!("failed to empty trash for library '{key}': {e:#}");
-                    for id in cleanup.event_ids {
-                        succeeded.insert(id, false);
-                    }
-                }
+        for (key, cleanup) in cleanups {
+            if cleanup.scan_failed {
+                error!("skipped trash cleanup for library '{key}': a scan failed");
+            } else if let (Some(watcher), Some(generation)) = (
+                notifications.remove(&key),
+                cleanup_generations.get(&key).copied(),
+            ) {
+                self.schedule_cleanup(key, generation, watcher);
+            } else {
+                error!("skipped trash cleanup for library '{key}': notifications are unavailable");
             }
         }
 
@@ -606,6 +961,25 @@ impl TargetProcess for Plex {
 mod tests {
     use super::*;
 
+    fn notification(value: serde_json::Value) -> Notification {
+        serde_json::from_value(serde_json::json!({"NotificationContainer": value})).unwrap()
+    }
+
+    fn activity(event: &str, uuid: &str, kind: &str, section: Option<&str>) -> Notification {
+        notification(serde_json::json!({
+            "ActivityNotification": [{
+                "event": event,
+                "uuid": uuid,
+                "Activity": {
+                    "type": kind,
+                    "Context": section.map(|section| serde_json::json!({
+                        "librarySectionID": section
+                    }))
+                }
+            }]
+        }))
+    }
+
     fn test_plex() -> Plex {
         Plex {
             url: String::new(),
@@ -616,7 +990,107 @@ mod tests {
             rewrite: None,
             filter: PathFilter::default(),
             request: Request::default(),
+            runtime: Arc::default(),
         }
+    }
+
+    #[test]
+    fn scan_notifications_correlate_uuid_with_the_exact_section() {
+        let mut state = ScanNotificationState::default();
+        // Metadata completion and a completed scan in another section do not count.
+        state.apply(activity(
+            "ended",
+            "metadata",
+            "library.update.item.metadata",
+            None,
+        ));
+        state.apply(activity(
+            "started",
+            "other-scan",
+            "library.update.section",
+            Some("2"),
+        ));
+        state.apply(activity(
+            "ended",
+            "other-scan",
+            "library.update.section",
+            None,
+        ));
+        assert!(!state.completion_confirmed("1"));
+
+        // Plex may omit Context on started/ended; the updated event associates the UUID.
+        state.apply(activity(
+            "started",
+            "target-scan",
+            "library.update.section",
+            None,
+        ));
+        state.apply(activity(
+            "updated",
+            "target-scan",
+            "library.update.section",
+            Some("1"),
+        ));
+        state.apply(activity(
+            "ended",
+            "target-scan",
+            "library.update.section",
+            None,
+        ));
+        assert!(state.completion_confirmed("1"));
+    }
+
+    #[test]
+    fn another_active_section_does_not_block_section_cleanup() {
+        let mut state = ScanNotificationState::default();
+        state.apply(activity(
+            "ended",
+            "target-scan",
+            "library.update.section",
+            Some("1"),
+        ));
+        state.apply(activity(
+            "started",
+            "other-scan",
+            "library.update.section",
+            Some("2"),
+        ));
+        assert!(state.completion_confirmed("1"));
+        assert!(!state.completion_confirmed("2"));
+    }
+
+    #[test]
+    fn unidentified_active_scan_is_ignored_until_its_section_is_known() {
+        let mut state = ScanNotificationState::default();
+        state.apply(activity(
+            "ended",
+            "target-scan",
+            "library.update.section",
+            Some("1"),
+        ));
+        state.apply(activity(
+            "started",
+            "unknown-scan",
+            "library.update.section",
+            None,
+        ));
+        assert!(state.completion_confirmed("1"));
+
+        state.apply(activity(
+            "updated",
+            "unknown-scan",
+            "library.update.section",
+            Some("1"),
+        ));
+        assert!(!state.completion_confirmed("1"));
+
+        state.apply(activity(
+            "ended",
+            "unknown-scan",
+            "library.update.section",
+            None,
+        ));
+        assert!(state.completion_confirmed("1"));
     }
 
     #[test]
@@ -659,13 +1133,12 @@ mod tests {
             rewrite: None,
             filter: PathFilter::default(),
             request: Request::default(),
+            runtime: Arc::default(),
         };
 
         let libraries = [Library {
             title: "Movies".to_string(),
             key: "library_key_movies".to_string(),
-            refreshing: None,
-            scanned_at: None,
             location: vec![Location {
                 path: "/media/movies".to_string(),
             }],
@@ -679,8 +1152,6 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "library_key_movies".to_string(),
-                refreshing: None,
-                scanned_at: None,
                 location: vec![Location {
                     path: "/media/movies".to_string(),
                 }],
@@ -688,8 +1159,6 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "library_key_movies_4k".to_string(),
-                refreshing: None,
-                scanned_at: None,
                 location: vec![Location {
                     path: "/media/movies/4k".to_string(),
                 }],
@@ -709,8 +1178,6 @@ mod tests {
             Library {
                 title: "Movies".to_string(),
                 key: "movies".to_string(),
-                refreshing: None,
-                scanned_at: None,
                 location: vec![Location {
                     path: r"\\server\media".to_string(),
                 }],
@@ -718,8 +1185,6 @@ mod tests {
             Library {
                 title: "4K Movies".to_string(),
                 key: "movies-4k".to_string(),
-                refreshing: None,
-                scanned_at: None,
                 location: vec![Location {
                     path: r"\\SERVER\MEDIA\4K".to_string(),
                 }],
