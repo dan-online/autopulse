@@ -214,14 +214,13 @@ dependencies = [
 
 [[package]]
 name = "actix-web-lab"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa94d1f993226d9deb081514d4cf57333b4cdfe4be7a78a7f5f68f23cc45e6ef"
+checksum = "88f46320eddc82b76edb37ecb1d23ae94788c1d9a97e2893cd19f7661040c925"
 dependencies = [
  "actix-http",
  "actix-router",
  "actix-service",
- "actix-utils",
  "actix-web",
  "actix-web-lab-derive",
  "ahash",
@@ -252,9 +251,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-lab-derive"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be816c3dd3bd37625fbf969c1f3728209162ee76ddf0904f1e19b7f0c175431f"
+checksum = "858a518656f4bc669e57f809c3c248888f4729b06335846d1af5de2e2cc8c3fd"
 dependencies = [
  "quote",
  "syn 3.0.0",
@@ -3071,7 +3070,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
