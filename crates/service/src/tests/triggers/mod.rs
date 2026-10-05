@@ -5,3 +5,4 @@ pub mod radarr;
 pub mod readarr;
 pub mod sonarr;
 pub mod sportarr;
+pub mod tdarr;
