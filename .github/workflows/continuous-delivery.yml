@@ -133,7 +133,7 @@ jobs:
       #     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install sqlite
       #   if: startsWith(matrix.os, 'macos')
 
-      - uses: taiki-e/upload-rust-binary-action@83da96bda7236fccb55e1886b220e1115df5f1a8 # main
+      - uses: taiki-e/upload-rust-binary-action@c9fd34ac3f25588d61a93f54c84c0aa13b5af439 # main
         with:
           bin: autopulse
           target: ${{ matrix.target }}
