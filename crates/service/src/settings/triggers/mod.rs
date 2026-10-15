@@ -231,6 +231,73 @@ pub mod sonarr;
 ///
 /// See [`Sportarr`] for all options
 pub mod sportarr;
+/// Tdarr - Tdarr trigger
+///
+/// Processes JSON notifications with `path`, `original_path`, and/or `dir`.
+/// Also accepts `?path=` (with an optional `hash`) or `?dir=` query parameters.
+///
+/// # Example
+///
+/// ```yml
+/// triggers:
+///   my_tdarr:
+///     type: tdarr
+/// ```
+///
+/// or
+///
+/// ```yml
+/// triggers:
+///   my_tdarr:
+///     type: tdarr
+///     rewrite:
+///       from: "^/tdarr-media"
+///       to: "/media"
+///     timer:
+///       wait: 30
+///     excludes: [ "ignored_target" ]
+/// ```
+///
+/// # Flows (recommended)
+///
+/// After **Replace Original File**, add a **Send Web Request** node:
+///
+/// - Method: `post`
+/// - URL: `http://<autopulse-host>:2875/triggers/my_tdarr`
+/// - Headers: `Content-Type: application/json`, `Authorization: Basic <base64 user:pass>`
+///   using autopulse's auth credentials.
+///
+/// Body:
+///
+/// ```json
+/// {"path": "{{{args.inputFileObj._id}}}", "original_path": "{{{args.originalLibraryFile._id}}}"}
+/// ```
+///
+/// Set **Output 2 Status Codes** (e.g. `400-599`) and **Output 2 On Network Error**,
+/// and route that output so notification failures do not fail the transcode job.
+/// Prefer the body over query templating: Tdarr does not URL-encode template values.
+/// Paths containing `"` or Windows backslashes still need proper JSON escaping.
+///
+/// # Classic plugin: Trigger Plex_Autoscan (TD01)
+///
+/// TD01 always calls `/triggers/manual?dir=<parent dir>/`. Replace the default manual
+/// trigger with:
+///
+/// ```yml
+/// triggers:
+///   manual:
+///     type: tdarr
+/// ```
+///
+/// Set the plugin's address/port to autopulse (default `2875`) and username/password
+/// to autopulse's auth credentials; its defaults `Batman` / `SecretPassword` are sent
+/// unless changed.
+///
+/// If autopulse also has a Tdarr target, set `excludes: [<your tdarr target>]` using
+/// its configured target name to prevent re-queue loops.
+///
+/// See [`Tdarr`] for all options and [`TdarrRequest`] for the JSON body
+pub mod tdarr;
 
 use crate::settings::path_filter::PathFilter;
 use crate::settings::timer::EventTimers;
@@ -245,6 +312,7 @@ use {
     readarr::{Readarr, ReadarrRequest},
     sonarr::{Sonarr, SonarrRequest},
     sportarr::{Sportarr, SportarrRequest},
+    tdarr::{Tdarr, TdarrRequest},
 };
 
 pub trait TriggerRequest {
@@ -275,6 +343,7 @@ pub enum TriggerType {
     Bazarr,
     Sonarr,
     Sportarr,
+    Tdarr,
     Lidarr,
     Readarr,
     Notify,
@@ -289,6 +358,7 @@ pub enum Trigger {
     Radarr(Radarr),
     Sonarr(Sonarr),
     Sportarr(Sportarr),
+    Tdarr(Tdarr),
     Lidarr(Lidarr),
     Readarr(Readarr),
     Notify(Notify),
@@ -302,6 +372,7 @@ impl Trigger {
             Self::Radarr(trigger) => trigger,
             Self::Sonarr(trigger) => trigger,
             Self::Sportarr(trigger) => trigger,
+            Self::Tdarr(trigger) => trigger,
             Self::Lidarr(trigger) => trigger,
             Self::Readarr(trigger) => trigger,
             Self::Notify(trigger) => trigger,
@@ -333,6 +404,7 @@ impl Trigger {
         let paths = match &self {
             Self::Sonarr(_) => Ok(SonarrRequest::from_json(body)?.paths()),
             Self::Sportarr(_) => Ok(SportarrRequest::from_json(body)?.paths()),
+            Self::Tdarr(_) => Ok(TdarrRequest::from_json(body)?.paths()),
             Self::Radarr(_) => Ok(RadarrRequest::from_json(body)?.paths()),
             Self::Lidarr(_) => Ok(LidarrRequest::from_json(body)?.paths()),
             Self::Readarr(_) => Ok(ReadarrRequest::from_json(body)?.paths()),
