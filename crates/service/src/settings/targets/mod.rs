@@ -90,6 +90,7 @@ pub mod command;
 ///     token: "<API_KEY>"
 ///     # refresh_metadata: false # To disable metadata refresh
 ///     # metadata_refresh_mode: "validation_only" # To change metadata refresh mode
+///     # replace_all_metadata: false # To only fill in missing metadata and images on refresh
 /// ```
 ///
 /// See [`Emby`] for all options
