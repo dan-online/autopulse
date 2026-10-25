@@ -84,7 +84,7 @@ futures = { version = "0.3.31" }
 url = "2.5.4"
 
 # Path handling
-typed-path = "0.12"
+typed-path = "0.13"
 
 # [dev-dependencies]
 # # Standardize logging output
