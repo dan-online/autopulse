@@ -32,6 +32,15 @@ pub struct Emby {
     /// Whether to try to refresh metadata for the item instead of scan (default: true)
     #[serde(default = "default_true")]
     pub refresh_metadata: bool,
+    /// Whether a metadata refresh replaces all existing metadata (default: true)
+    ///
+    /// Set to `false` to only fill in what is missing, e.g. images that were
+    /// removed from the item's folder.
+    #[serde(default = "default_true")]
+    pub replace_all_metadata: bool,
+    /// Whether a metadata refresh replaces all existing images (default: false)
+    #[serde(default)]
+    pub replace_all_images: bool,
     /// Rewrite path for the file
     pub rewrite: Option<Rewrite>,
     /// Path filter matched against the target-rewritten path.
@@ -346,25 +355,26 @@ impl Emby {
             .map(|_| ())
     }
 
+    fn refresh_query(&self) -> Vec<(&'static str, String)> {
+        let mode = self.metadata_refresh_mode.to_string();
+
+        vec![
+            ("MetadataRefreshMode", mode.clone()),
+            ("ImageRefreshMode", mode),
+            ("ReplaceAllMetadata", self.replace_all_metadata.to_string()),
+            ("Recursive", "true".to_string()),
+            ("ReplaceAllImages", self.replace_all_images.to_string()),
+            ("RegenerateTrickplay", "false".to_string()),
+        ]
+    }
+
     async fn refresh_item(&self, item: &Item) -> anyhow::Result<()> {
         let client = self.get_client()?;
         let mut url = get_url(&self.url)?.join(&format!("Items/{}/Refresh", item.id))?;
 
-        url.query_pairs_mut().append_pair(
-            "MetadataRefreshMode",
-            &self.metadata_refresh_mode.to_string(),
-        );
-        url.query_pairs_mut()
-            .append_pair("ImageRefreshMode", &self.metadata_refresh_mode.to_string());
-        url.query_pairs_mut()
-            .append_pair("ReplaceAllMetadata", "true");
-        url.query_pairs_mut().append_pair("Recursive", "true");
-
-        // TODO: Possible options in future?
-        url.query_pairs_mut()
-            .append_pair("ReplaceAllImages", "false");
-        url.query_pairs_mut()
-            .append_pair("RegenerateTrickplay", "false");
+        for (key, value) in self.refresh_query() {
+            url.query_pairs_mut().append_pair(key, &value);
+        }
 
         client.post(url).perform().await.map(|_| ())
     }
@@ -481,11 +491,48 @@ mod tests {
             token: "t".to_string(),
             metadata_refresh_mode: EmbyMetadataRefreshMode::default(),
             refresh_metadata: true,
+            replace_all_metadata: true,
+            replace_all_images: false,
             rewrite: None,
             filter: PathFilter::default(),
             request: Request::default(),
             path_match: PathMatch::default(),
         }
+    }
+
+    fn query_value(t: &Emby, key: &str) -> String {
+        t.refresh_query()
+            .into_iter()
+            .find(|(k, _)| *k == key)
+            .map(|(_, v)| v)
+            .unwrap()
+    }
+
+    #[test]
+    fn refresh_query_defaults_keep_previous_behaviour() {
+        let t = target();
+        assert_eq!(query_value(&t, "ReplaceAllMetadata"), "true");
+        assert_eq!(query_value(&t, "ReplaceAllImages"), "false");
+        assert_eq!(query_value(&t, "MetadataRefreshMode"), "FullRefresh");
+        assert_eq!(query_value(&t, "ImageRefreshMode"), "FullRefresh");
+    }
+
+    #[test]
+    fn refresh_query_follows_replace_options() {
+        let t = Emby {
+            replace_all_metadata: false,
+            replace_all_images: true,
+            ..target()
+        };
+        assert_eq!(query_value(&t, "ReplaceAllMetadata"), "false");
+        assert_eq!(query_value(&t, "ReplaceAllImages"), "true");
+    }
+
+    #[test]
+    fn replace_options_default_when_absent_from_config() {
+        let t: Emby = serde_json::from_str(r#"{"url":"http://x","token":"t"}"#).unwrap();
+        assert!(t.replace_all_metadata);
+        assert!(!t.replace_all_images);
     }
 
     #[test]
