@@ -35,10 +35,13 @@ pub struct Emby {
     /// Whether a metadata refresh replaces all existing metadata (default: true)
     ///
     /// Set to `false` to only fill in what is missing, e.g. images that were
-    /// removed from the item's folder.
+    /// removed from the item's folder. Only applies when `metadata_refresh_mode`
+    /// is `full_refresh`.
     #[serde(default = "default_true")]
     pub replace_all_metadata: bool,
     /// Whether a metadata refresh replaces all existing images (default: false)
+    ///
+    /// Only applies when `metadata_refresh_mode` is `full_refresh`.
     #[serde(default)]
     pub replace_all_images: bool,
     /// Rewrite path for the file
