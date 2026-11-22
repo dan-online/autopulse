@@ -40,7 +40,7 @@ base64 = "0.23.0"
 figment = { version = "0.10", features = ["toml", "yaml", "json", "env"] }
 
 # File system notifications
-notify-debouncer-full = "0.7.0"
+notify-debouncer-full = "0.8.0"
 
 # HTML encoding
 html-escape = "0.3"
